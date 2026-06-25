@@ -1,0 +1,1 @@
+default_app_config = 'apps.tech_master.sales.apps.SalesConfig'

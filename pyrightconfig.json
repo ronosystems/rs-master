@@ -1,0 +1,9 @@
+{
+    "include": ["apps", "config"],
+    "exclude": ["venv", "static", "media", "logs"],
+    "reportAttributeAccessIssue": "none",
+    "reportMissingImports": "warning",
+    "reportGeneralTypeIssues": "none",
+    "reportOptionalMemberAccess": "none",
+    "reportUnusedImport": "warning"
+}

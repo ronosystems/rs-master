@@ -1,0 +1,193 @@
+{% extends "shared/base_super_admin.html" %}
+
+{% block title %}Subscription Users - Super Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Subscription Users
+                    </h5>
+                    <div>
+                        <span class="badge bg-light text-dark me-2">Total: {{ tenants|length }}</span>
+                        <a href="{% url 'tenants:tenant_list' %}" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left me-2"></i>Back
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Stats -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h6>Active Users</h6>
+                                    <h3>{{ active_count|default:0 }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h6>Expired Users</h6>
+                                    <h3>{{ expired_count|default:0 }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body text-center">
+                                    <h6>Expiring Soon</h6>
+                                    <h3>{{ expiring_soon_count|default:0 }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h6>Total Revenue</h6>
+                                    <h3>KES {{ total_revenue|floatformat:0|default:"0" }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Users Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="subscriptionsTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Company</th>
+                                    <th>Plan</th>
+                                    <th>Amount</th>
+                                    <th>Start</th>
+                                    <th>End</th>
+                                    <th>Status</th>
+                                    <th>Days Left</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tenant in tenants %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ tenant.company_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ tenant.project_type.name|default:"No Project" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if tenant.subscription_plan %}
+                                            <span class="badge bg-primary">{{ tenant.subscription_plan }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No Plan</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if tenant.subscription_plan %}
+                                            {% with plan=tenant.get_subscription_plan %}
+                                                {% if plan %}
+                                                    KES {{ plan.price_monthly|floatformat:0 }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ tenant.subscription_start|date:"Y-m-d"|default:"-" }}</td>
+                                    <td>{{ tenant.subscription_end|date:"Y-m-d"|default:"-" }}</td>
+                                    <td>
+                                        {% if tenant.is_subscription_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% elif tenant.subscription_end %}
+                                            <span class="badge bg-danger">Expired</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No Plan</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if tenant.days_remaining > 0 %}
+                                            <span class="text-success">{{ tenant.days_remaining }} days</span>
+                                        {% elif tenant.days_remaining == 0 and tenant.subscription_end %}
+                                            <span class="text-warning">Today</span>
+                                        {% elif tenant.subscription_end %}
+                                            <span class="text-danger">Expired</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'tenants:tenant_subscription' tenant.id %}" class="btn btn-info" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'tenants:renew_subscription' tenant.id %}" class="btn btn-success" title="Renew">
+                                                <i class="fas fa-sync"></i>
+                                            </a>
+                                            <a href="{% url 'tenants:tenant_detail' tenant.id %}" class="btn btn-primary" title="Company">
+                                                <i class="fas fa-building"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                        No subscription users found
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Search functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const table = document.getElementById('subscriptionsTable');
+        if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Search company...';
+            searchInput.className = 'form-control form-control-sm w-25 mb-3';
+            searchInput.style.display = 'inline-block';
+            
+            const cardBody = document.querySelector('.card-body');
+            cardBody.insertBefore(searchInput, cardBody.querySelector('.table-responsive'));
+            
+            searchInput.addEventListener('keyup', function() {
+                const searchTerm = this.value.toLowerCase();
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+        }
+    });
+</script>
+
+<style>
+    .table th {
+        white-space: nowrap;
+    }
+    .table td {
+        vertical-align: middle;
+    }
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+{% endblock %}

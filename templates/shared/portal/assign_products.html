@@ -1,0 +1,429 @@
+{% extends "shared/base_main.html" %}
+
+{% block title %}Assign Products to Sales Agents{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-tag text-primary me-2"></i>Assign Products to Sales Agents
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="assignForm">
+                        {% csrf_token %}
+                        
+                        <!-- 3 Columns Layout -->
+                        <div class="row g-3">
+                            <!-- Column A: 20% - Agent Selection -->
+                            <div class="col-md-3 col-lg-2">
+                                <div class="card border h-100">
+                                    <div class="card-header bg-light py-2">
+                                        <label class="form-label fw-semibold mb-0">
+                                            <i class="fas fa-user-circle me-1"></i> Select Agent
+                                        </label>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <select name="agent_id" id="agentSelect" class="form-select form-select-sm" required>
+                                            <option value="">-- Select Agent --</option>
+                                            {% for agent in sales_agents %}
+                                            <option value="{{ agent.id }}" data-agent-name="{{ agent.username }}">
+                                                {{ agent.username }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Column B: 40% - Unit List with Checkbox -->
+                            <div class="col-md-5 col-lg-5">
+                                <div class="card border h-100">
+                                    <div class="card-header bg-light py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="form-label fw-semibold mb-0">
+                                                <i class="fas fa-boxes me-1"></i> Available Products
+                                            </label>
+                                            <div>
+                                                <button type="button" id="selectAllBtn" class="btn btn-sm btn-outline-primary">Select All</button>
+                                                <button type="button" id="deselectAllBtn" class="btn btn-sm btn-outline-secondary ms-1">Clear</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-2" style="height: 500px; overflow-y: auto;">
+                                        <!-- Search Box -->
+                                        <div class="mb-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white">
+                                                    <i class="fas fa-search fa-sm"></i>
+                                                </span>
+                                                <input type="text" id="skuSearchInput" class="form-control form-control-sm" placeholder="Search by SKU, Name, or Brand...">
+                                                <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Products List -->
+                                        <div id="productList">
+                                            {% for product in products %}
+                                            <div class="form-check product-checkbox mb-2 p-2 border rounded" 
+                                                 data-product-id="{{ product.id }}" 
+                                                 data-product-sku="{{ product.sku|lower }}" 
+                                                 data-product-name="{{ product.name|lower }}" 
+                                                 data-product-brand="{{ product.brand|lower }}">
+                                                <input class="form-check-input" type="checkbox" name="product_ids" value="{{ product.id }}" id="product_{{ product.id }}">
+                                                <label class="form-check-label" for="product_{{ product.id }}">
+                                                    <strong>{{ product.name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        SKU: {{ product.sku }} | Price: KES {{ product.selling_price|floatformat:2 }} | Stock: {{ product.stock_quantity }}
+                                                    </small>
+                                                </label>
+                                            </div>
+                                            {% empty %}
+                                            <p class="text-muted text-center py-3">No products available</p>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <!-- No Results Message -->
+                                        <div id="noResultsMsg" class="text-center text-muted py-3" style="display: none;">
+                                            <i class="fas fa-search fa-2x mb-2 d-block"></i>
+                                            <p>No products found</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Column C: 40% - Checked Units Preview -->
+                            <div class="col-md-4 col-lg-5">
+                                <div class="card border h-100">
+                                    <div class="card-header bg-light py-2">
+                                        <label class="form-label fw-semibold mb-0">
+                                            <i class="fas fa-check-circle text-success me-1"></i> Selected Products 
+                                            (<span id="selectedCount">0</span>)
+                                        </label>
+                                    </div>
+                                    <div class="card-body p-2" style="height: 500px; overflow-y: auto;">
+                                        <div id="selectedPreview">
+                                            <div class="text-muted text-center py-5">
+                                                <i class="fas fa-arrow-left fa-2x mb-2 d-block"></i>
+                                                <p>Select products from the list</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="mt-4 text-end">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i>Assign Selected Products
+                            </button>
+                            <a href="{% url 'users:user_list' %}" class="btn btn-secondary px-4">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .product-checkbox {
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+    .product-checkbox:hover {
+        background-color: #f8f9fa;
+    }
+    .product-checkbox.highlight {
+        background-color: #e3f2fd;
+        border-left: 3px solid #0d6efd;
+    }
+    .product-checkbox.selected {
+        background-color: #e8f5e9;
+        border-left: 3px solid #28a745;
+    }
+    .selected-item {
+        background-color: #f8f9fa;
+        border-left: 3px solid #28a745;
+        transition: all 0.2s;
+    }
+    .selected-item:hover {
+        background-color: #e8f5e9;
+    }
+    .remove-selected {
+        opacity: 0.6;
+        transition: opacity 0.2s;
+    }
+    .remove-selected:hover {
+        opacity: 1;
+    }
+    #skuSearchInput:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    }
+    .card-header {
+        background-color: #f8f9fa;
+    }
+</style>
+
+<script>
+    // Store all products for filtering
+    const allProducts = Array.from(document.querySelectorAll('.product-checkbox'));
+    const noResultsMsg = document.getElementById('noResultsMsg');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const selectedPreview = document.getElementById('selectedPreview');
+    
+    // Update selected products preview
+    function updateSelectedPreview() {
+        const checkedBoxes = document.querySelectorAll('input[name="product_ids"]:checked');
+        const count = checkedBoxes.length;
+        selectedCountSpan.textContent = count;
+        
+        if (count === 0) {
+            selectedPreview.innerHTML = `
+                <div class="text-muted text-center py-5">
+                    <i class="fas fa-arrow-left fa-2x mb-2 d-block"></i>
+                    <p>Select products from the list</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="list-group list-group-flush">';
+        checkedBoxes.forEach(checkbox => {
+            const productDiv = checkbox.closest('.product-checkbox');
+            const productName = productDiv.querySelector('strong')?.innerText || '';
+            const productSku = productDiv.getAttribute('data-product-sku') || '';
+            const productId = checkbox.value;
+            
+            // Extract price and stock from the label
+            const labelText = productDiv.querySelector('small')?.innerText || '';
+            const priceMatch = labelText.match(/Price: KES ([\d.]+)/);
+            const stockMatch = labelText.match(/Stock: (\d+)/);
+            const price = priceMatch ? priceMatch[1] : '0';
+            const stock = stockMatch ? stockMatch[1] : '0';
+            
+            html += `
+                <div class="selected-item d-flex justify-content-between align-items-center p-2 mb-1 border rounded" data-product-id="${productId}">
+                    <div class="flex-grow-1">
+                        <strong class="small">${escapeHtml(productName)}</strong>
+                        <br>
+                        <small class="text-muted">SKU: ${escapeHtml(productSku)} | KES ${price} | Stock: ${stock}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-selected" data-product-id="${productId}" title="Remove">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+        });
+        html += '</div>';
+        selectedPreview.innerHTML = html;
+        
+        // Add remove event listeners
+        document.querySelectorAll('.remove-selected').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const productId = this.getAttribute('data-product-id');
+                const checkbox = document.querySelector(`input[name="product_ids"][value="${productId}"]`);
+                if (checkbox) {
+                    checkbox.checked = false;
+                    updateSelectedPreview();
+                    updateSelectedCount();
+                    updateCheckboxStyle(checkbox);
+                }
+            });
+        });
+    }
+    
+    // Update checkbox styling
+    function updateCheckboxStyle(checkbox) {
+        const productDiv = checkbox.closest('.product-checkbox');
+        if (checkbox.checked) {
+            productDiv.classList.add('selected');
+        } else {
+            productDiv.classList.remove('selected');
+        }
+    }
+    
+    // Update selected count
+    function updateSelectedCount() {
+        const checkedBoxes = document.querySelectorAll('input[name="product_ids"]:checked');
+        selectedCountSpan.textContent = checkedBoxes.length;
+    }
+    
+    // Search/filter functionality
+    function filterProducts() {
+        const searchTerm = document.getElementById('skuSearchInput').value.toLowerCase().trim();
+        let visibleCount = 0;
+        
+        allProducts.forEach(product => {
+            const sku = product.getAttribute('data-product-sku') || '';
+            const name = product.getAttribute('data-product-name') || '';
+            const brand = product.getAttribute('data-product-brand') || '';
+            
+            const matches = searchTerm === '' || 
+                           sku.includes(searchTerm) || 
+                           name.includes(searchTerm) || 
+                           brand.includes(searchTerm);
+            
+            if (matches) {
+                product.style.display = '';
+                visibleCount++;
+                if (searchTerm !== '') {
+                    product.classList.add('highlight');
+                } else {
+                    product.classList.remove('highlight');
+                }
+            } else {
+                product.style.display = 'none';
+                product.classList.remove('highlight');
+            }
+        });
+        
+        noResultsMsg.style.display = (visibleCount === 0 && searchTerm !== '') ? 'block' : 'none';
+    }
+    
+    // Live search
+    const searchInput = document.getElementById('skuSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', filterProducts);
+        searchInput.addEventListener('input', filterProducts);
+    }
+    
+    // Clear search button
+    document.getElementById('clearSearchBtn')?.addEventListener('click', function() {
+        if (searchInput) {
+            searchInput.value = '';
+            filterProducts();
+            searchInput.focus();
+        }
+    });
+    
+    // Select All button
+    document.getElementById('selectAllBtn')?.addEventListener('click', function() {
+        const visibleProducts = document.querySelectorAll('.product-checkbox:not([style*="display: none"])');
+        visibleProducts.forEach(product => {
+            const checkbox = product.querySelector('input[type="checkbox"]');
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+                updateCheckboxStyle(checkbox);
+            }
+        });
+        updateSelectedPreview();
+        updateSelectedCount();
+    });
+    
+    // Deselect All button
+    document.getElementById('deselectAllBtn')?.addEventListener('click', function() {
+        document.querySelectorAll('input[name="product_ids"]').forEach(checkbox => {
+            checkbox.checked = false;
+            updateCheckboxStyle(checkbox);
+        });
+        updateSelectedPreview();
+        updateSelectedCount();
+    });
+    
+    // Update when checkboxes change
+    document.querySelectorAll('input[name="product_ids"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectedPreview();
+            updateSelectedCount();
+            updateCheckboxStyle(this);
+        });
+        updateCheckboxStyle(checkbox);
+    });
+    
+    // Load current assignments when agent is selected
+    document.getElementById('agentSelect').addEventListener('change', function() {
+        const agentId = this.value;
+        if (agentId) {
+            fetch(`/portal/api/agent-products/${agentId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    // Clear all checkboxes
+                    document.querySelectorAll('input[name="product_ids"]').forEach(cb => {
+                        cb.checked = false;
+                        updateCheckboxStyle(cb);
+                    });
+                    // Check assigned products
+                    if (data.product_ids && data.product_ids.length > 0) {
+                        data.product_ids.forEach(productId => {
+                            const checkbox = document.querySelector(`input[name="product_ids"][value="${productId}"]`);
+                            if (checkbox) {
+                                checkbox.checked = true;
+                                updateCheckboxStyle(checkbox);
+                            }
+                        });
+                    }
+                    updateSelectedPreview();
+                    updateSelectedCount();
+                    
+                    const agentName = this.options[this.selectedIndex]?.text || 'Agent';
+                    const count = data.product_ids?.length || 0;
+                    if (count > 0) {
+                        showToast(`Loaded ${count} assigned product(s) for ${agentName}`, 'success');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading assignments:', error);
+                    showToast('Error loading assignments', 'danger');
+                });
+        } else {
+            // Clear all selections when no agent selected
+            document.querySelectorAll('input[name="product_ids"]').forEach(cb => {
+                cb.checked = false;
+                updateCheckboxStyle(cb);
+            });
+            updateSelectedPreview();
+            updateSelectedCount();
+        }
+    });
+    
+    function showToast(message, type) {
+        const toastMsg = document.createElement('div');
+        toastMsg.className = `alert alert-${type} alert-dismissible fade show position-fixed bottom-0 end-0 m-3`;
+        toastMsg.style.zIndex = '9999';
+        toastMsg.innerHTML = `
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(toastMsg);
+        setTimeout(() => toastMsg.remove(), 3000);
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // Initialize
+    updateSelectedPreview();
+    updateSelectedCount();
+    
+    // Keyboard shortcut - Ctrl+F to focus search
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+    });
+</script>
+{% endblock %}

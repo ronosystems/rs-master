@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@journeyapps/wa-sqlite": "^0.3.0",
+    "@powersync/web": "^1.7.0"
+  }
+}

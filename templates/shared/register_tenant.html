@@ -1,0 +1,397 @@
+{% extends "shared/base_super_admin.html" %}
+{% load static %}
+
+{% block title %}Register New Tenant{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h4 class="mb-0"><i class="fas fa-building me-2"></i>Register New Tenant</h4>
+                    <p class="mb-0 small">Create a new company account</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- Project Type Selection -->
+                        <div class="card border-2 mb-4" style="border-color: #0f67b3;">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-project-diagram me-2"></i>
+                                    Select Sub-Project / Business Type
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Project Type *</label>
+                                        <select name="project_type" class="form-select form-select-lg" required id="projectTypeSelect">
+                                            <option value="">-- Select Business Type --</option>
+                                            {% for project in project_types %}
+                                            <option value="{{ project.id }}" 
+                                                    data-icon="{{ project.icon }}"
+                                                    data-color="{{ project.color }}"
+                                                    data-description="{{ project.description }}">
+                                                <i class="fas {{ project.icon }}"></i>
+                                                {{ project.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Select the type of business this tenant will run
+                                        </small>
+                                    </div>
+                                    
+                                    <!-- Project Preview Card -->
+                                    <div class="col-12 mt-2">
+                                        <div id="projectPreview" class="border rounded p-3 bg-light" style="display: none;">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="project-icon-display" id="projectIconDisplay">
+                                                    <i class="fas fa-building fa-2x text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0" id="projectNameDisplay">Project Name</h6>
+                                                    <small class="text-muted" id="projectDescriptionDisplay">Project description</small>
+                                                    <br>
+                                                    <span class="badge bg-primary" id="projectBadgeDisplay">Active</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Company Details Section -->
+                        <div class="card border mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-building text-primary me-2"></i>Company Details</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company Name *</label>
+                                        <input type="text" name="company_name" class="form-control" required>
+                                    </div>
+                                    
+                                    <!-- Logo Upload Field -->
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company Logo</label>
+                                        <input type="file" name="logo" class="form-control" accept="image/*" id="logoInput">
+                                        <small class="text-muted">Upload your company logo (PNG, JPG, JPEG - Max 5MB)</small>
+                                        
+                                        <!-- Logo Preview -->
+                                        <div id="logoPreview" class="mt-2" style="display: none;">
+                                            <div class="border rounded p-2 d-inline-block">
+                                                <img id="previewImage" src="#" alt="Logo Preview" style="max-width: 100px; max-height: 100px; object-fit: contain;">
+                                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearLogo()">
+                                                    <i class="fas fa-trash"></i> Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company Address</label>
+                                        <textarea name="company_address" class="form-control" rows="2"></textarea>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company Phone</label>
+                                        <input type="text" name="company_phone" class="form-control">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company Email</label>
+                                        <input type="email" name="company_email" class="form-control">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company PIN / Tax ID</label>
+                                        <input type="text" name="company_pin" class="form-control">
+                                        <small class="text-muted">Registration number or tax identification number</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ============================================ -->
+                        <!-- SUBSCRIPTION SECTION WITH DYNAMIC PLANS       -->
+                        <!-- ============================================ -->
+                        <div class="card border-2 mb-4" style="border-color: #fd7e14;">
+                            <div class="card-header bg-warning text-dark py-2">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-crown me-2"></i>
+                                    Subscription Management
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subscription Plan *</label>
+                                        <select name="subscription_plan" class="form-select" required>
+                                            <option value="">-- Select Plan --</option>
+                                            {% for plan in subscription_plans %}
+                                            <option value="{{ plan.code }}">
+                                                {{ plan.name }} - KES {{ plan.price_monthly|floatformat:0 }}/month
+                                                ({{ plan.max_users }} users, {{ plan.max_products }} products)
+                                            </option>
+                                            {% empty %}
+                                            <option value="">No subscription plans available</option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Select a subscription plan for this tenant
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subscription Start Date</label>
+                                        <input type="date" name="subscription_start" class="form-control" value="{{ today|date:'Y-m-d' }}">
+                                        <small class="text-muted">When the subscription started</small>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subscription Expiry Date</label>
+                                        <input type="date" name="subscription_end" class="form-control">
+                                        <small class="text-muted">When the subscription expires</small>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Auto Renew</label>
+                                        <select name="auto_renew" class="form-select">
+                                            <option value="true">Yes - Auto Renew</option>
+                                            <option value="false" selected>No - Manual Renew</option>
+                                        </select>
+                                        <small class="text-muted">Automatically renew subscription</small>
+                                    </div>
+                                    
+                                    <!-- Plan Details Preview -->
+                                    <div class="col-12 mt-2">
+                                        <div id="planPreview" class="border rounded p-3 bg-light" style="display: none;">
+                                            <div class="row g-2">
+                                                <div class="col-12">
+                                                    <h6 class="mb-1" id="planNameDisplay">Plan Name</h6>
+                                                    <small class="text-muted" id="planDetailsDisplay">Select a plan to see details</small>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <span class="badge bg-primary" id="planUsersDisplay">0 Users</span>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <span class="badge bg-success" id="planProductsDisplay">0 Products</span>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <span class="badge bg-info text-white" id="planStorageDisplay">0 GB Storage</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tenant Admin (Owner) Details Section -->
+                        <div class="card border mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-user-cog text-primary me-2"></i>Tenant Admin (Owner) Details</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Username *</label>
+                                        <input type="text" name="username" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Full Name *</label>
+                                        <input type="text" name="full_name" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Email *</label>
+                                        <input type="email" name="email" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Phone Number</label>
+                                        <input type="text" name="phone_number" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Password *</label>
+                                        <input type="password" name="password" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Confirm Password *</label>
+                                        <input type="password" name="confirm_password" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold">PIN Code (4-6 digits for POS)</label>
+                                        <input type="password" name="pin_code" class="form-control" maxlength="6" pattern="[0-9]{4,6}">
+                                        <small class="text-muted">Optional: Set a numeric PIN for POS access</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-check-circle me-2"></i>Register Tenant
+                            </button>
+                            <a href="{% url 'portal:login' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Login
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Logo preview functionality
+    const logoInput = document.getElementById('logoInput');
+    const logoPreview = document.getElementById('logoPreview');
+    const previewImage = document.getElementById('previewImage');
+    
+    logoInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                previewImage.src = event.target.result;
+                logoPreview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        } else {
+            logoPreview.style.display = 'none';
+            previewImage.src = '#';
+        }
+    });
+    
+    function clearLogo() {
+        logoInput.value = '';
+        logoPreview.style.display = 'none';
+        previewImage.src = '#';
+    }
+    
+    // Project Type Preview
+    const projectTypeSelect = document.getElementById('projectTypeSelect');
+    const projectPreview = document.getElementById('projectPreview');
+    const projectIconDisplay = document.getElementById('projectIconDisplay');
+    const projectNameDisplay = document.getElementById('projectNameDisplay');
+    const projectDescriptionDisplay = document.getElementById('projectDescriptionDisplay');
+    const projectBadgeDisplay = document.getElementById('projectBadgeDisplay');
+    
+    projectTypeSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (this.value) {
+            const icon = selectedOption.getAttribute('data-icon') || 'fa-building';
+            const color = selectedOption.getAttribute('data-color') || 'primary';
+            const name = selectedOption.text.trim();
+            const description = selectedOption.getAttribute('data-description') || 'No description available';
+            
+            projectIconDisplay.innerHTML = `<i class="fas ${icon} fa-2x text-${color}"></i>`;
+            projectNameDisplay.textContent = name;
+            projectDescriptionDisplay.textContent = description;
+            projectBadgeDisplay.className = `badge bg-${color}`;
+            projectBadgeDisplay.textContent = name + ' Sub-Project';
+            
+            projectPreview.style.display = 'block';
+        } else {
+            projectPreview.style.display = 'none';
+        }
+    });
+    
+    // ============================================
+    // SUBSCRIPTION PLAN PREVIEW
+    // ============================================
+    const planSelect = document.querySelector('select[name="subscription_plan"]');
+    const planPreview = document.getElementById('planPreview');
+    const planNameDisplay = document.getElementById('planNameDisplay');
+    const planDetailsDisplay = document.getElementById('planDetailsDisplay');
+    const planUsersDisplay = document.getElementById('planUsersDisplay');
+    const planProductsDisplay = document.getElementById('planProductsDisplay');
+    const planStorageDisplay = document.getElementById('planStorageDisplay');
+    
+    // Store plan data from Django
+    const planData = {
+        {% for plan in subscription_plans %}
+        "{{ plan.code }}": {
+            name: "{{ plan.name|escapejs }}",
+            users: {{ plan.max_users }},
+            products: {{ plan.max_products }},
+            storage: {{ plan.max_storage_gb }},
+            branches: {{ plan.max_branches }},
+            price_monthly: {{ plan.price_monthly }},
+            price_yearly: {{ plan.price_yearly }},
+            description: "{{ plan.description|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+    
+    planSelect.addEventListener('change', function() {
+        const planCode = this.value;
+        
+        if (planCode && planData[planCode]) {
+            const plan = planData[planCode];
+            
+            planNameDisplay.textContent = plan.name;
+            planDetailsDisplay.textContent = `KES ${plan.price_monthly.toFixed(2)}/month | ${plan.price_yearly.toFixed(2)}/year`;
+            planUsersDisplay.textContent = `${plan.users} Users`;
+            planProductsDisplay.textContent = `${plan.products.toLocaleString()} Products`;
+            planStorageDisplay.textContent = `${plan.storage} GB Storage`;
+            
+            // Add branch info if available
+            if (plan.branches) {
+                planDetailsDisplay.textContent += ` | ${plan.branches} Branches`;
+            }
+            
+            planPreview.style.display = 'block';
+        } else {
+            planPreview.style.display = 'none';
+        }
+    });
+    
+    // Trigger preview on page load if there's a pre-selected value
+    if (planSelect.value) {
+        planSelect.dispatchEvent(new Event('change'));
+    }
+    
+    // Trigger preview on page load for project type
+    if (projectTypeSelect.value) {
+        projectTypeSelect.dispatchEvent(new Event('change'));
+    }
+</script>
+
+<style>
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .card-header {
+        border-bottom: none;
+    }
+    #projectPreview {
+        transition: all 0.3s ease;
+        background: var(--bs-body-bg);
+    }
+    .project-icon-display {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .form-select:focus, .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .border-2 {
+        border-width: 2px !important;
+    }
+</style>
+{% endblock %}

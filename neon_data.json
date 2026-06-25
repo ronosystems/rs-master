@@ -1,0 +1,214 @@
+✅ Database host resolved: ep-young-mode-abqbijob-pooler.eu-west-2.aws.neon.tech -> 13.43.29.36
+📶 ONLINE MODE - Using PostgreSQL database
+🗄️  Using PostgreSQL
+🔧 Environment: production
+🗄️  Database: django.db.backends.postgresql
+📴 Offline Mode: False
+🌐 Neon Auth: https://bitter-brook-59546241.neonauth.aws.neon.tech
+🔄 PowerSync: https://6a38344d0ef84ed671a39215.powersync.journeyapps.com
+✅ Project types synced: 0 created, 6 updated
+[
+{
+  "model": "admin.logentry",
+  "pk": 1,
+  "fields": {
+    "action_time": "2026-06-21T23:14:51.584Z",
+    "user": 1,
+    "content_type": 7,
+    "object_id": "1",
+    "object_repr": "FIELDMAX ELECTRONICS",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Logo\"]}}]"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "3xmh4ajlepftjejw38jzx4mmnwzh4inh",
+  "fields": {
+    "session_data": ".eJxVjj0OAiEUhO9CbQj_sJb2noE84CGrhk0WtjLeXdZsoc0UM99M5kU8bL34reHq50TORJDTrxcgPrDuQbpDvS00LrWvc6A7Qo-00euS8Hk52L-BAq2MttbMhey0QZNQMYWgRQDOrEnOIGdS5YxSZjkUjNOTVTZqKbK0IBRMY7Rjhdq_L_n7AwSZPBA:1wbPMR:WnLJoQNODDlTY76Uc59vvAz2R_mysEBmIqGcjtyaYZY",
+    "expire_date": "2026-07-05T21:05:47.038Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "dkn92dh5j2it0evo7aa86h3qoe30fxw7",
+  "fields": {
+    "session_data": ".eJxVjDsOwyAQBe9CHSE-hsUp0_sMaGEhOIlAMnYV5e6xJRdJ-2bmvZnHbS1-62nxM7Erk-zyuwWMz1QPQA-s98Zjq-syB34o_KSdT43S63a6fwcFe9lrxOBAx5jAaqFAOGFyHoSwUiml5UBujNqhBZmMJgwjmV3MBAYiGGvY5wvE6jbh:1wbMb8:78ezQlN47nDIY-sP9N-M4dZ4JFShAXS95-eKGRkVBXo",
+    "expire_date": "2026-07-05T18:08:46.559Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "i4owfq8safkqwqr1bz9n2m7in6yicwe9",
+  "fields": {
+    "session_data": ".eJxVjDsOwyAQBe9CHSE-hsUp0_sMaGEhOIlAMnYV5e6xJRdJ-2bmvZnHbS1-62nxM7Erk-zyuwWMz1QPQA-s98Zjq-syB34o_KSdT43S63a6fwcFe9lrxOBAx5jAaqFAOGFyHoSwUiml5UBujNqhBZmMJgwjmV3MBAYiGGvY5wvE6jbh:1wbPGW:FXfKaOuR-ECfUFVt7uC0xiYIAcb34C8BUbQyPkbFB6w",
+    "expire_date": "2026-07-05T20:59:40.553Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "ut7kxtjpx2sceyhf2sx3egnk2xqbnges",
+  "fields": {
+    "session_data": ".eJxVjj0OAiEUhO9CbQj_sJb2noE84CGrhk0WtjLeXdZsoc0UM99M5kU8bL34reHq50TORJDTrxcgPrDuQbpDvS00LrWvc6A7Qo-00euS8Hk52L-BAq2MttbMhey0QZNQMYWgRQDOrEnOIGdS5YxSZjkUjNOTVTZqKbK0IBRMY7Rjhdq_L_n7AwSZPBA:1wbb5b:Da6jt9JEmRuwDMh7BdjHnCrqPYMNoApDn3Tvz8vita4",
+    "expire_date": "2026-07-06T09:37:11.740Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "wd8geu2dlho32bnd6pml8cqbkuppde1b",
+  "fields": {
+    "session_data": ".eJxVjDsOwyAQBe9CHSE-hsUp0_sMaGEhOIlAMnYV5e6xJRdJ-2bmvZnHbS1-62nxM7Erk-zyuwWMz1QPQA-s98Zjq-syB34o_KSdT43S63a6fwcFe9lrxOBAx5jAaqFAOGFyHoSwUiml5UBujNqhBZmMJgwjmV3MBAYiGGvY5wvE6jbh:1wbO9h:TEEjdiOdprxmn4LhR-0OVAeQhv3YpcQm87DB6DC5ABs",
+    "expire_date": "2026-07-05T19:48:33.567Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "ylmekz69rmnsnbz1yg9o22doxf9it1i8",
+  "fields": {
+    "session_data": ".eJxVjDsOwyAQBe9CHSE-hsUp0_sMaGEhOIlAMnYV5e6xJRdJ-2bmvZnHbS1-62nxM7Erk-zyuwWMz1QPQA-s98Zjq-syB34o_KSdT43S63a6fwcFe9lrxOBAx5jAaqFAOGFyHoSwUiml5UBujNqhBZmMJgwjmV3MBAYiGGvY5wvE6jbh:1wbP9u:cNiwFkK4aUyvCX8cCzyvomRbbI4IMhVOl0mx1HzDm3M",
+    "expire_date": "2026-07-05T20:52:50.747Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "zpqv0z18u7hqi5775cisk8e1headpsah",
+  "fields": {
+    "session_data": ".eJxVjj0OAiEUhO9CbQj_sJb2noE84CGrhk0WtjLeXdZsoc0UM99M5kU8bL34reHq50TORJDTrxcgPrDuQbpDvS00LrWvc6A7Qo-00euS8Hk52L-BAq2MttbMhey0QZNQMYWgRQDOrEnOIGdS5YxSZjkUjNOTVTZqKbK0IBRMY7Rjhdq_L_n7AwSZPBA:1wbYm5:qO__bDkSXkOo6jFJYtlPAiYZVXFYqkVkTO3dWIqc94U",
+    "expire_date": "2026-07-06T07:08:53.089Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 1,
+  "fields": {
+    "name": "TECH MASTER",
+    "code": "TECH_MASTER",
+    "description": "POS & Inventory for Electronics",
+    "icon": "fa-microchip",
+    "color": "#0d6efd",
+    "is_active": true,
+    "created_at": "2026-06-21T17:49:56.571Z",
+    "updated_at": "2026-06-22T12:17:39.036Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 2,
+  "fields": {
+    "name": "HOTEL MASTER",
+    "code": "HOTEL_MASTER",
+    "description": "Hotel & Booking Management",
+    "icon": "fa-hotel",
+    "color": "#fd7e14",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:02.268Z",
+    "updated_at": "2026-06-22T12:17:40.165Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 3,
+  "fields": {
+    "name": "FOOD MASTER",
+    "code": "FOOD_MASTER",
+    "description": "Restaurant & Kitchen Management",
+    "icon": "fa-utensils",
+    "color": "#198754",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:06.826Z",
+    "updated_at": "2026-06-22T12:17:41.392Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 4,
+  "fields": {
+    "name": "RETAIL MASTER",
+    "code": "RETAIL_MASTER",
+    "description": "General Retail Management",
+    "icon": "fa-store",
+    "color": "#6f42c1",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:09.499Z",
+    "updated_at": "2026-06-22T12:17:42.620Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 5,
+  "fields": {
+    "name": "HEALTH MASTER",
+    "code": "HEALTH_MASTER",
+    "description": "Pharmacy & Health Management",
+    "icon": "fa-heartbeat",
+    "color": "#dc3545",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:11.339Z",
+    "updated_at": "2026-06-22T12:17:43.848Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 6,
+  "fields": {
+    "name": "FASHION MASTER",
+    "code": "FASHION_MASTER",
+    "description": "Fashion & Clothing Management",
+    "icon": "fa-tshirt",
+    "color": "#e83e8c",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:13.182Z",
+    "updated_at": "2026-06-22T12:17:44.850Z"
+  }
+},
+{
+  "model": "tenants.tenant",
+  "pk": 1,
+  "fields": {
+    "company_name": "FIELDMAX ELECTRONICS",
+    "company_address": "ELDORET, KENYA",
+    "company_phone": "0722558544",
+    "company_email": "fieldmaxsupliers@gmail.com",
+    "company_pin": "P1234567890K",
+    "logo": "tenant_logos/LOGO_f8ID7Xu.jpg",
+    "owner": 2,
+    "project_type": 1,
+    "code": "FIELDMAX_ELECTRONICS",
+    "status": "active",
+    "subscription_plan": "BASIC",
+    "subscription_start": "2026-06-20T21:00:00Z",
+    "subscription_end": "2026-07-21T21:00:00Z",
+    "auto_renew": true,
+    "created_at": "2026-06-21T21:04:21.262Z",
+    "updated_at": "2026-06-21T23:14:51.344Z"
+  }
+},
+{
+  "model": "tenants.subscriptionplan",
+  "pk": 1,
+  "fields": {
+    "name": "MONTHLY BASIC SUBSCRIPTIONS",
+    "code": "BASIC",
+    "price_monthly": "999.00",
+    "price_yearly": "9999.00",
+    "max_users": 10,
+    "max_products": 1000,
+    "max_branches": 10,
+    "max_storage_gb": 10,
+    "features": {
+      "api": false,
+      "domain": false,
+      "reports": false,
+      "support": false,
+      "currencies": false,
+      "advanced_reports": false
+    },
+    "icon": "fa-building",
+    "color": "primary",
+    "is_active": true,
+    "order": 0,
+    "description": "",
+    "created_at": "2026-06-21T19:50:57.755Z",
+    "updated_at": "2026-06-21T19:50:57.755Z"
+  }
+}

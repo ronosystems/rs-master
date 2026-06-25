@@ -1,0 +1,610 @@
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Receipt Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preview-container {
+        position: sticky;
+        top: 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    .receipt-preview {
+        background: white;
+        padding: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 80%;
+        margin: 0 auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+    }
+    .receipt-preview .text-center {
+        text-align: center;
+    }
+    .receipt-preview .border-bottom {
+        border-bottom: 1px solid #dee2e6;
+    }
+    .receipt-preview .border-top {
+        border-top: 1px solid #dee2e6;
+    }
+    .receipt-preview .fw-bold {
+        font-weight: 600;
+    }
+    .receipt-preview .small {
+        font-size: 0.8rem;
+    }
+    .receipt-preview .text-muted {
+        color: #6c757d;
+    }
+    .receipt-preview .text-success {
+        color: #28a745;
+    }
+    .receipt-preview .table {
+        width: 80%;
+        font-size: 0.75rem;
+        border-collapse: collapse;
+    }
+    .receipt-preview .table th,
+    .receipt-preview .table td {
+        padding: 6px;
+        border: 1px solid #dee2e6;
+    }
+    .receipt-preview .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    .receipt-preview .text-end {
+        text-align: right;
+    }
+    .receipt-preview .text-center {
+        text-align: center;
+    }
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .form-section h6 {
+        color: #0f67b3;
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    .setting-checkbox {
+        margin-bottom: 8px;
+    }
+    .setting-checkbox input {
+        margin-right: 8px;
+    }
+    .setting-checkbox label {
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+    .live-badge {
+        background: #28a745;
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+    hr {
+        margin: 10px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- LEFT COLUMN - Settings Form (60%) -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt me-2"></i>Receipt Settings
+                    </h5>
+                    <p class="mb-0 small text-white-50">Customize what appears on printed sales receipts</p>
+                </div>
+                <div class="card-body p-4" style="max-height: calc(100vh - 200px); overflow-y: auto;">
+                    <form method="post" id="receiptSettingsForm">
+                        {% csrf_token %}
+                        
+                        <!-- Business Details Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-building text-primary me-2"></i>Business Details</h6>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Business Name</label>
+                                    <input type="text" name="business_name" id="business_name" class="form-control" value="{{ settings.business_name }}" onkeyup="updatePreview()">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Address</label>
+                                    <textarea name="business_address" id="business_address" class="form-control" rows="2" onkeyup="updatePreview()">{{ settings.business_address }}</textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Phone</label>
+                                    <input type="text" name="business_phone" id="business_phone" class="form-control" value="{{ settings.business_phone }}" onkeyup="updatePreview()">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Email</label>
+                                    <input type="email" name="business_email" id="business_email" class="form-control" value="{{ settings.business_email }}" onkeyup="updatePreview()">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Tax PIN</label>
+                                    <input type="text" name="business_tax_pin" id="business_tax_pin" class="form-control" value="{{ settings.business_tax_pin }}" onkeyup="updatePreview()">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Business Header Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-heading text-primary me-2"></i>Business Header</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_business_name" id="show_business_name" class="form-check-input" {% if settings.show_business_name %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_business_name">Show Business Name</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_address" id="show_address" class="form-check-input" {% if settings.show_address %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_address">Show Address</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_phone" id="show_phone" class="form-check-input" {% if settings.show_phone %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_phone">Show Phone</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_email" id="show_email" class="form-check-input" {% if settings.show_email %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_email">Show Email</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_tax_pin" id="show_tax_pin" class="form-check-input" {% if settings.show_tax_pin %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_tax_pin">Show Tax PIN</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Receipt Details Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-receipt text-primary me-2"></i>Receipt Details</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_receipt_number" id="show_receipt_number" class="form-check-input" {% if settings.show_receipt_number %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_receipt_number">Show Receipt Number</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_sale_date" id="show_sale_date" class="form-check-input" {% if settings.show_sale_date %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_sale_date">Show Sale Date</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_sale_time" id="show_sale_time" class="form-check-input" {% if settings.show_sale_time %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_sale_time">Show Sale Time</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_agent_user" id="show_agent_user" class="form-check-input" {% if settings.show_agent_user %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_agent_user">Show Agent/User</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Buyer Information Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-user text-primary me-2"></i>Buyer Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_buyer_name" id="show_buyer_name" class="form-check-input" {% if settings.show_buyer_name %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_buyer_name">Show Buyer Name</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_buyer_phone" id="show_buyer_phone" class="form-check-input" {% if settings.show_buyer_phone %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_buyer_phone">Show Buyer Phone</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_buyer_id" id="show_buyer_id" class="form-check-input" {% if settings.show_buyer_id %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_buyer_id">Show Buyer ID</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_next_of_kin_name" id="show_next_of_kin_name" class="form-check-input" {% if settings.show_next_of_kin_name %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_next_of_kin_name">Show Next of Kin Name</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_next_of_kin_phone" id="show_next_of_kin_phone" class="form-check-input" {% if settings.show_next_of_kin_phone %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_next_of_kin_phone">Show Next of Kin Phone</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Line Items Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-table text-primary me-2"></i>Line Items</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_items_table" id="show_items_table" class="form-check-input" {% if settings.show_items_table %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_items_table">Show Items Table</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_imei" id="show_imei" class="form-check-input" {% if settings.show_imei %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_imei">Show IMEI/Serial</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_quantity" id="show_quantity" class="form-check-input" {% if settings.show_quantity %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_quantity">Show Quantity</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_unit_price" id="show_unit_price" class="form-check-input" {% if settings.show_unit_price %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_unit_price">Show Unit Price</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_line_total" id="show_line_total" class="form-check-input" {% if settings.show_line_total %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_line_total">Show Line Total</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_gross_total" id="show_gross_total" class="form-check-input" {% if settings.show_gross_total %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_gross_total">Show Gross Total</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-pen text-primary me-2"></i>Footer</h6>
+                            <div class="mb-3">
+                                <div class="setting-checkbox">
+                                    <input type="checkbox" name="show_footer_message" id="show_footer_message" class="form-check-input" {% if settings.show_footer_message %}checked{% endif %} onchange="updatePreview()">
+                                    <label for="show_footer_message">Show Footer Message</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Footer Text</label>
+                                <textarea name="footer_text" id="footer_text" class="form-control" rows="2" onkeyup="updatePreview()">{{ settings.footer_text }}</textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i>Save Settings
+                            </button>
+                            <button type="button" class="btn btn-secondary px-4" onclick="resetPreview()">
+                                <i class="fas fa-refresh me-2"></i>Reset Preview
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RIGHT COLUMN - Receipt Preview (40%) -->
+        <div class="col-lg-5">
+            <div class="preview-container">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-header bg-success text-white py-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-eye me-2"></i>Receipt Preview
+                        </h5>
+                        <p class="mb-0 small text-white-50">Live preview of your receipt</p>
+                    </div>
+                    <div class="card-body p-3" style="background: #f5f5f5; max-height: calc(100vh - 200px); overflow-y: auto;">
+                        <div id="receiptPreview" class="receipt-preview">
+                            <!-- Preview will be dynamically updated -->
+                            <div class="text-center py-5">
+                                <i class="fas fa-receipt fa-3x text-muted mb-2"></i>
+                                <p>Loading preview...</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                This is a live preview - settings update in real-time
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Sample sale data for preview matching your receipt template
+    const sampleSale = {
+        invoice_no: 'INV-2024-001',
+        cashier: 'John Doe',
+        created_at: new Date(),
+        customer_name: 'Jane Wanjiku',
+        customer_phone: '0712345678',
+        customer_id_number: '12345678',
+        next_of_kin_name: 'Peter Wanjiku',
+        next_of_kin_phone: '0723456789',
+        next_of_kin_relationship: 'Spouse',
+        total: 19000,
+        items: [
+            { 
+                product: { 
+                    name: 'Samsung Galaxy A07', 
+                    model: 'A07', 
+                    specs: '4GB/64GB', 
+                    sku: '356123456789001' 
+                }, 
+                quantity: 1, 
+                price: 18000, 
+                subtotal: 18000 
+            },
+            { 
+                product: { 
+                    name: 'USB-C Cable', 
+                    model: '', 
+                    specs: '1m Length', 
+                    sku: 'USB-C-001' 
+                }, 
+                quantity: 2, 
+                price: 500, 
+                subtotal: 1000 
+            }
+        ]
+    };
+    
+    function updatePreview() {
+        const settings = {
+            show_business_name: document.getElementById('show_business_name')?.checked || false,
+            show_address: document.getElementById('show_address')?.checked || false,
+            show_phone: document.getElementById('show_phone')?.checked || false,
+            show_email: document.getElementById('show_email')?.checked || false,
+            show_tax_pin: document.getElementById('show_tax_pin')?.checked || false,
+            show_receipt_number: document.getElementById('show_receipt_number')?.checked || false,
+            show_sale_date: document.getElementById('show_sale_date')?.checked || false,
+            show_sale_time: document.getElementById('show_sale_time')?.checked || false,
+            show_agent_user: document.getElementById('show_agent_user')?.checked || false,
+            show_buyer_name: document.getElementById('show_buyer_name')?.checked || false,
+            show_buyer_phone: document.getElementById('show_buyer_phone')?.checked || false,
+            show_buyer_id: document.getElementById('show_buyer_id')?.checked || false,
+            show_next_of_kin_name: document.getElementById('show_next_of_kin_name')?.checked || false,
+            show_next_of_kin_phone: document.getElementById('show_next_of_kin_phone')?.checked || false,
+            show_items_table: document.getElementById('show_items_table')?.checked || false,
+            show_imei: document.getElementById('show_imei')?.checked || false,
+            show_quantity: document.getElementById('show_quantity')?.checked || false,
+            show_unit_price: document.getElementById('show_unit_price')?.checked || false,
+            show_line_total: document.getElementById('show_line_total')?.checked || false,
+            show_gross_total: document.getElementById('show_gross_total')?.checked || false,
+            show_footer_message: document.getElementById('show_footer_message')?.checked || false,
+        };
+        
+        const business = {
+            name: document.getElementById('business_name')?.value || 'POS System',
+            address: document.getElementById('business_address')?.value || '—',
+            phone: document.getElementById('business_phone')?.value || '—',
+            email: document.getElementById('business_email')?.value || '—',
+            tax_pin: document.getElementById('business_tax_pin')?.value || '—',
+        };
+        
+        const footer_text = document.getElementById('footer_text')?.value || 'Thank you for your business!';
+        
+        const date = new Date(sampleSale.created_at);
+        const formattedDate = date.toLocaleDateString('en-KE');
+        const formattedTime = date.toLocaleTimeString('en-KE');
+        
+        let html = '';
+        
+        // Company Header - Centered
+        html += '<div class="text-center border-bottom pb-3 mb-3">';
+        if (settings.show_business_name && business.name) {
+            html += `<h4 class="mb-1">${escapeHtml(business.name)}</h4>`;
+        }
+        if (settings.show_address && business.address && business.address !== '—') {
+            html += `<p class="mb-0 small">${escapeHtml(business.address)}</p>`;
+        }
+        if (settings.show_phone && business.phone && business.phone !== '—') {
+            html += `<p class="mb-0 small">Tel: ${escapeHtml(business.phone)}</p>`;
+        }
+        if (settings.show_email && business.email && business.email !== '—') {
+            html += `<p class="mb-0 small">Email: ${escapeHtml(business.email)}</p>`;
+        }
+        if (settings.show_tax_pin && business.tax_pin && business.tax_pin !== '—') {
+            html += `<p class="mb-0 small">PIN: ${escapeHtml(business.tax_pin)}</p>`;
+        }
+        html += '</div>';
+        
+        // Receipt Info Row
+        if (settings.show_receipt_number || settings.show_agent_user || settings.show_sale_date || settings.show_sale_time) {
+            html += '<div class="row mb-3">';
+            if (settings.show_receipt_number) {
+                html += `<div class="col-6">
+                            <small class="text-muted">ETR No.</small>
+                            <div class="fw-bold">${escapeHtml(sampleSale.invoice_no)}</div>
+                        </div>`;
+            }
+            if (settings.show_agent_user) {
+                html += `<div class="col-6 text-end">
+                            <small class="text-muted">Cashier</small>
+                            <div class="fw-bold">${escapeHtml(sampleSale.cashier)}</div>
+                        </div>`;
+            }
+            html += '</div>';
+            
+            html += '<div class="row mb-3">';
+            if (settings.show_sale_date) {
+                html += `<div class="col-6">
+                            <small class="text-muted">Date</small>
+                            <div class="fw-bold">${formattedDate}</div>
+                        </div>`;
+            }
+            if (settings.show_sale_time) {
+                html += `<div class="col-6 text-end">
+                            <small class="text-muted">Time</small>
+                            <div class="fw-bold">${formattedTime}</div>
+                        </div>`;
+            }
+            html += '</div>';
+            html += '<hr class="my-2">';
+        }
+        
+        // Customer Details
+        if (settings.show_buyer_name || settings.show_buyer_phone || settings.show_buyer_id) {
+            html += '<div class="mb-3">';
+            html += '<h6 class="fw-bold mb-2">Customer Details</h6>';
+            if (settings.show_buyer_name && sampleSale.customer_name) {
+                html += `<div class="row small">
+                            <div class="col-4 text-muted">Full Names:</div>
+                            <div class="col-8">${escapeHtml(sampleSale.customer_name)}</div>
+                        </div>`;
+            }
+            if (settings.show_buyer_phone && sampleSale.customer_phone) {
+                html += `<div class="row small">
+                            <div class="col-4 text-muted">Phone Number:</div>
+                            <div class="col-8">${escapeHtml(sampleSale.customer_phone)}</div>
+                        </div>`;
+            }
+            if (settings.show_buyer_id && sampleSale.customer_id_number) {
+                html += `<div class="row small">
+                            <div class="col-4 text-muted">ID Number:</div>
+                            <div class="col-8">${escapeHtml(sampleSale.customer_id_number)}</div>
+                        </div>`;
+            }
+            html += '</div>';
+        }
+        
+        // Next of Kin Details
+        if (settings.show_next_of_kin_name || settings.show_next_of_kin_phone) {
+            html += '<div class="mb-3">';
+            html += '<h6 class="fw-bold mb-2">Next of Kin</h6>';
+            if (settings.show_next_of_kin_name && sampleSale.next_of_kin_name) {
+                html += `<div class="row small">
+                            <div class="col-4 text-muted">Full Names:</div>
+                            <div class="col-8">${escapeHtml(sampleSale.next_of_kin_name)}</div>
+                        </div>`;
+            }
+            if (settings.show_next_of_kin_phone && sampleSale.next_of_kin_phone) {
+                html += `<div class="row small">
+                            <div class="col-4 text-muted">Phone Number:</div>
+                            <div class="col-8">${escapeHtml(sampleSale.next_of_kin_phone)}</div>
+                        </div>`;
+            }
+            if (sampleSale.next_of_kin_relationship) {
+                html += `<div class="row small">
+                            <div class="col-4 text-muted">Relationship:</div>
+                            <div class="col-8">${escapeHtml(sampleSale.next_of_kin_relationship)}</div>
+                        </div>`;
+            }
+            html += '</div>';
+        }
+        
+        if ((settings.show_buyer_name || settings.show_buyer_phone || settings.show_buyer_id || 
+             settings.show_next_of_kin_name || settings.show_next_of_kin_phone) && 
+            (settings.show_items_table || settings.show_gross_total)) {
+            html += '<hr class="my-2">';
+        }
+        
+        // Product Details Table
+        if (settings.show_items_table) {
+            html += '<div class="mb-3">';
+            html += '<h6 class="fw-bold mb-2">Product Details</h6>';
+            html += '<table class="table table-sm table-bordered mb-0">';
+            html += '<thead class="table-light"><tr>';
+            if (settings.show_quantity) html += '<th class="text-center" style="width: 15%">Qty</th>';
+            html += '<th>Description</th>';
+            if (settings.show_unit_price) html += '<th class="text-end" style="width: 25%">Unit Price</th>';
+            if (settings.show_line_total) html += '<th class="text-end" style="width: 25%">Total</th>';
+            html += '</tr></thead><tbody>';
+            
+            sampleSale.items.forEach(item => {
+                html += '<tr>';
+                if (settings.show_quantity) html += `<td class="text-center">${item.quantity}</td>`;
+                html += `<td>
+                            ${escapeHtml(item.product.name)}<br>
+                            <small class="text-muted">${escapeHtml(item.product.model)} ${escapeHtml(item.product.specs)}</small><br>`;
+                if (settings.show_imei && item.product.sku) {
+                    html += `<small class="text-muted">IMEI: ${escapeHtml(item.product.sku)}</small>`;
+                }
+                html += `</td>`;
+                if (settings.show_unit_price) html += `<td class="text-end">KES ${formatMoney(item.price)}</td>`;
+                if (settings.show_line_total) html += `<td class="text-end">KES ${formatMoney(item.subtotal)}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody>';
+            if (settings.show_gross_total) {
+                html += `<tfoot>
+                            <tr class="table-light">
+                                <td colspan="3" class="text-end fw-bold">GRAND TOTAL:${!settings.show_quantity ? '<td colspan="1">' : ''}</td>
+                                <td class="text-end fw-bold text-success">KES ${formatMoney(sampleSale.total)}</td>
+                            </tr>
+                        </tfoot>`;
+            }
+            html += '</table>';
+            html += '</div>';
+            
+            if (settings.show_gross_total && !settings.show_items_table) {
+                html += `<div class="text-end mb-3 fw-bold">GRAND TOTAL: KES ${formatMoney(sampleSale.total)}</div>`;
+            }
+            
+            html += '<hr class="my-3">';
+        }
+        
+        // Footer
+        if (settings.show_footer_message && footer_text) {
+            html += '<div class="text-center small text-muted">';
+            html += `<p class="mb-0">${escapeHtml(footer_text)}</p>`;
+            html += '<p class="mb-0">This is a computer generated receipt</p>';
+            html += '</div>';
+        } else if (settings.show_footer_message) {
+            html += '<div class="text-center small text-muted">';
+            html += '<p class="mb-0">Thank you for your business!</p>';
+            html += '<p class="mb-0">This is a computer generated receipt</p>';
+            html += '</div>';
+        }
+        
+        document.getElementById('receiptPreview').innerHTML = html;
+    }
+    
+    function formatMoney(amount) {
+        return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    function resetPreview() {
+        location.reload();
+    }
+    
+    // Attach event listeners to all inputs for real-time preview
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            input.addEventListener('change', updatePreview);
+            input.addEventListener('keyup', updatePreview);
+        });
+        updatePreview();
+    });
+</script>
+{% endblock %}

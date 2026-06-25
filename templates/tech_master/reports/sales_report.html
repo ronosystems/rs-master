@@ -1,0 +1,351 @@
+{% extends "tech_master/base_tech.html" %}
+
+{% block title %}Sales Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5><i class="fas fa-chart-line"></i> Sales Report - {{ period_label }}</h5>
+        </div>
+        <div class="card-body">
+            <!-- Date Range Filter -->
+            <form method="get" class="mb-4">
+                <div class="row g-2">
+                    <div class="col-md-2">
+                        <select name="period" class="form-select" onchange="this.form.submit()">
+                            <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+                            <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                            <option value="week" {% if period == 'week' %}selected{% endif %}>This Week</option>
+                            <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+                            <option value="year" {% if period == 'year' %}selected{% endif %}>This Year</option>
+                            <option value="all" {% if period == 'all' %}selected{% endif %}>All Time</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date }}" placeholder="Start Date">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date }}" placeholder="End Date">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Apply</button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="?export=csv{% if period %}&period={{ period }}{% endif %}" class="btn btn-success w-100">
+                            <i class="fas fa-file-csv"></i> Export CSV
+                        </a>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="?export=json{% if period %}&period={{ period }}{% endif %}" class="btn btn-info w-100">
+                            <i class="fas fa-file-code"></i> Export JSON
+                        </a>
+                    </div>
+                </div>
+            </form>
+            
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <h6>Total Revenue</h6>
+                        <h3 class="text-success">KES {{ total_revenue|floatformat:2 }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <h6>Transactions</h6>
+                        <h3 class="text-primary">{{ total_transactions }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <h6>Items Sold</h6>
+                        <h3 class="text-info">{{ total_items }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <h6>Average Order</h6>
+                        <h3 class="text-warning">KES {{ average_order|floatformat:2 }}</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- Payment Breakdown -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6>Payment Method Breakdown</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="paymentChart" height="200"></canvas>
+                            <table class="table table-sm mt-3">
+                                <thead>
+                                    <tr>
+                                        <th>Method</th>
+                                        <th>Amount</th>
+                                        <th>Transactions</th>
+                                        <th>%</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in payment_breakdown %}
+                                    <tr>
+                                        <td>{{ payment.name }}</td>
+                                        <td>KES {{ payment.amount|floatformat:2 }}</td>
+                                        <td>{{ payment.count }}</td>
+                                        <td>{{ payment.percentage|floatformat:1 }}%</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status Breakdown -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6>Order Status Breakdown</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="statusChart" height="200"></canvas>
+                            <table class="table table-sm mt-3">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Count</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for status in status_breakdown %}
+                                    <tr>
+                                        <td>{{ status.name }}</td>
+                                        <td>{{ status.count }}</td>
+                                        <td>KES {{ status.amount|floatformat:2 }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Daily Sales Chart -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6>Daily Sales (Last 30 Days)</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="dailySalesChart" height="100"></canvas>
+                </div>
+            </div>
+            
+            <!-- Top Products -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6>Top Selling Products</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>SKU</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_products %}
+                                <tr>
+                                    <td>{{ product.product__name }}</td>
+                                    <td>{{ product.product__sku }}</td>
+                                    <td>{{ product.total_quantity }}</td>
+                                    <td>KES {{ product.total_revenue|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-center">No data available</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Top Customers -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6>Top Customers</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Customer Name</th>
+                                    <th>Phone</th>
+                                    <th>Total Spent</th>
+                                    <th>Visits</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for customer in top_customers %}
+                                <tr>
+                                    <td>{{ customer.customer_name }}</td>
+                                    <td>{{ customer.customer_phone|default:"-" }}</td>
+                                    <td>KES {{ customer.total_spent|floatformat:2 }}</td>
+                                    <td>{{ customer.total_visits }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-center">No data available</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cashier Performance -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6>Cashier Performance</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Cashier</th>
+                                    <th>Sales Count</th>
+                                    <th>Total Revenue</th>
+                                    <th>Average Order</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cashier in cashier_performance %}
+                                <tr>
+                                    <td>{{ cashier.name }}</td>
+                                    <td>{{ cashier.sales_count }}</td>
+                                    <td>KES {{ cashier.total_revenue|floatformat:2 }}</td>
+                                    <td>KES {{ cashier.average_order|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-center">No data available</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Sales Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h6>Recent Transactions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Invoice</th>
+                                    <th>Date</th>
+                                    <th>Customer</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                    <th>Payment</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in sales %}
+                                <tr>
+                                    <td>{{ sale.invoice_no }}</td>
+                                    <td>{{ sale.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+                                    <td>{{ sale.items.count }}</td>
+                                    <td>KES {{ sale.total|floatformat:2 }}</td>
+                                    <td>{{ sale.get_payment_method_display }}</td>
+                                    <td>{{ sale.get_status_display }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="7" class="text-center">No sales found</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Payment Chart
+    const paymentCtx = document.getElementById('paymentChart').getContext('2d');
+    const paymentData = {{ payment_breakdown|safe }};
+    new Chart(paymentCtx, {
+        type: 'pie',
+        data: {
+            labels: paymentData.map(p => p.name),
+            datasets: [{
+                data: paymentData.map(p => p.amount),
+                backgroundColor: ['#28a745', '#17a2b8', '#ffc107', '#dc3545']
+            }]
+        }
+    });
+    
+    // Status Chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const statusData = {{ status_breakdown|safe }};
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: statusData.map(s => s.name),
+            datasets: [{
+                data: statusData.map(s => s.count),
+                backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#6c757d']
+            }]
+        }
+    });
+    
+    // Daily Sales Chart
+    const dailyCtx = document.getElementById('dailySalesChart').getContext('2d');
+    const dailyData = {{ daily_sales|safe }};
+    new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: dailyData.map(d => d.date),
+            datasets: [{
+                label: 'Daily Sales (KES)',
+                data: dailyData.map(d => d.total),
+                borderColor: '#0f67b3',
+                backgroundColor: 'rgba(15, 103, 179, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true
+        }
+    });
+</script>
+
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'tech_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Add Product - Select Type{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="mb-0">Select Product Type</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <a href="{% url 'tech_master:add_single_product' %}" class="text-decoration-none">
+                                <div class="card bg-light text-center p-4 hover-card">
+                                    <i class="fas fa-mobile-alt fa-4x text-primary mb-3"></i>
+                                    <h4>Single Product</h4>
+                                    <p class="text-muted">For products with unique identifiers like:<br>
+                                    <strong>Phones, Electronics, Devices</strong><br>
+                                    Each unit has its own IMEI/Serial number</p>
+                                    <span class="badge bg-primary">IMEI/Serial Tracking</span>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <a href="{% url 'tech_master:add_bulk_product' %}" class="text-decoration-none">
+                                <div class="card bg-light text-center p-4 hover-card">
+                                    <i class="fas fa-boxes fa-4x text-success mb-3"></i>
+                                    <h4>Bulk Product</h4>
+                                    <p class="text-muted">For products without unique identifiers:<br>
+                                    <strong>Accessories, Cables, General Items</strong><br>
+                                    Tracked by quantity only</p>
+                                    <span class="badge bg-success">Quantity Tracking</span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'tech_master:product_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Products
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-card {
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+    }
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .receipt { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .company { font-size: 24px; font-weight: bold; color: #0f67b3; }
+        .items { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .items th, .items td { padding: 8px; border-bottom: 1px solid #ddd; text-align: left; }
+        .total { font-size: 18px; font-weight: bold; text-align: right; }
+        .footer { text-align: center; margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="header">
+            <div class="company">{{ tenant.name|upper }}</div>
+            <div>{{ tenant.address|default:"Your Address" }}</div>
+            <div>Tel: {{ tenant.phone|default:"N/A" }}</div>
+        </div>
+        
+        <h3>Receipt</h3>
+        <p><strong>Invoice:</strong> {{ sale.invoice_no }}</p>
+        <p><strong>Date:</strong> {{ sale.created_at|date:"Y-m-d H:i:s" }}</p>
+        <p><strong>Cashier:</strong> {{ sale.cashier.username }}</p>
+        <p><strong>Customer:</strong> {{ sale.customer_name|default:"Walk-in" }}</p>
+        
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in sale_items %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>KES {{ item.price|floatformat:2 }}</td>
+                    <td>KES {{ item.subtotal|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="total">TOTAL:</td>
+                    <td class="total">KES {{ sale.total|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td colspan="3">Payment Method:</td>
+                    <td>{{ sale.get_payment_method_display }}</td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>*** Goods sold cannot be returned ***</p>
+        </div>
+    </div>
+</body>
+</html>

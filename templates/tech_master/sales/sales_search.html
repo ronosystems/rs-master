@@ -1,0 +1,359 @@
+<!-- templates/tech_master/sales/sales_search.html -->
+{% extends 'tech_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Search Sale - Sales Agent{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-search text-primary me-2"></i>
+            Search Sale
+            <small class="text-muted fs-6">(Sales Agent)</small>
+        </h2>
+        <div>
+            <a href="{% url 'tech_master:my_stock' %}" class="btn btn-secondary">
+                <i class="fas fa-box me-2"></i>My Stock
+            </a>
+            <a href="{% url 'tech_master:agent_sale' %}" class="btn btn-success">
+                <i class="fas fa-plus-circle me-2"></i>New Sale
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{% url 'tech_master:sales_search' %}" id="searchForm">
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">
+                                <i class="fas fa-search text-primary"></i>
+                            </span>
+                            <input type="text" 
+                                   name="q" 
+                                   id="searchInput" 
+                                   class="form-control form-control-lg" 
+                                   placeholder="Search by Invoice Number, IMEI, or Serial Number..." 
+                                   value="{{ search_query }}"
+                                   autocomplete="off">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-arrow-right me-2"></i>Search
+                            </button>
+                        </div>
+                        <small class="text-muted mt-1 d-block">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Enter Invoice Number (e.g., INV-20250619-0001) or IMEI/Serial Number
+                        </small>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="d-flex gap-2">
+                            <div class="flex-grow-1">
+                                <select name="type" class="form-select">
+                                    <option value="all" {% if search_type == 'all' %}selected{% endif %}>All</option>
+                                    <option value="invoice" {% if search_type == 'invoice' %}selected{% endif %}>Invoice Number</option>
+                                    <option value="imei" {% if search_type == 'imei' %}selected{% endif %}>IMEI / Serial</option>
+                                </select>
+                            </div>
+                            <a href="{% url 'tech_master:sales_search' %}" class="btn btn-secondary">
+                                <i class="fas fa-sync"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    {% if error_message %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        {{ error_message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Search Results -->
+    {% if search_results %}
+    <div class="card">
+        <div class="card-header bg-light">
+            <h6 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Search Results ({{ search_results|length }} found)
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Invoice No</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in search_results %}
+                        <tr>
+                            <td><code>{{ sale.invoice_no }}</code></td>
+                            <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+                            <td><strong>KES {{ sale.total|floatformat:2 }}</strong></td>
+                            <td>{{ sale.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{% url 'tech_master:sale_detail' sale.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye me-1"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="fas fa-search fa-2x mb-2 d-block"></i>
+                                No sales found matching "{{ search_query }}"
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Search Examples -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="mb-3"><i class="fas fa-lightbulb text-warning me-2"></i>Quick Search Tips</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <small class="text-muted">Search by Invoice</small>
+                                <p class="mb-0"><code>INV-20250619-0001</code></p>
+                                <small class="text-muted">Full invoice number</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <small class="text-muted">Search by IMEI</small>
+                                <p class="mb-0"><code>356123456789001</code></p>
+                                <small class="text-muted">15-digit IMEI number</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <small class="text-muted">Search by Serial</small>
+                                <p class="mb-0"><code>SN-001</code></p>
+                                <small class="text-muted">Serial number</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Autocomplete Suggestions -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        let debounceTimer;
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                const query = this.value.trim();
+                
+                if (query.length < 2) {
+                    // Remove any existing suggestions
+                    const existing = document.querySelector('.autocomplete-suggestions');
+                    if (existing) existing.remove();
+                    return;
+                }
+                
+                debounceTimer = setTimeout(() => {
+                    fetchSuggestions(query);
+                }, 300);
+            });
+            
+            // Handle keyboard navigation
+            searchInput.addEventListener('keydown', function(e) {
+                const suggestions = document.querySelector('.autocomplete-suggestions');
+                if (!suggestions) return;
+                
+                const items = suggestions.querySelectorAll('.suggestion-item');
+                if (items.length === 0) return;
+                
+                let currentIndex = Array.from(items).findIndex(item => item.classList.contains('active'));
+                
+                switch(e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        if (currentIndex < items.length - 1) {
+                            if (currentIndex >= 0) items[currentIndex].classList.remove('active');
+                            items[currentIndex + 1].classList.add('active');
+                            items[currentIndex + 1].scrollIntoView({ block: 'nearest' });
+                        }
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        if (currentIndex > 0) {
+                            items[currentIndex].classList.remove('active');
+                            items[currentIndex - 1].classList.add('active');
+                            items[currentIndex - 1].scrollIntoView({ block: 'nearest' });
+                        }
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        const activeItem = suggestions.querySelector('.suggestion-item.active');
+                        if (activeItem) {
+                            const url = activeItem.dataset.url;
+                            if (url) window.location.href = url;
+                        }
+                        break;
+                    case 'Escape':
+                        suggestions.remove();
+                        break;
+                }
+            });
+            
+            // Close suggestions on outside click
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.input-group')) {
+                    const suggestions = document.querySelector('.autocomplete-suggestions');
+                    if (suggestions) suggestions.remove();
+                }
+            });
+        }
+    });
+    
+    function fetchSuggestions(query) {
+        // Remove existing suggestions
+        const existing = document.querySelector('.autocomplete-suggestions');
+        if (existing) existing.remove();
+        
+        fetch(`/tech/api/sales-search/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.results && data.results.length > 0) {
+                    showSuggestions(data.results);
+                }
+            })
+            .catch(error => console.error('Search error:', error));
+    }
+    
+    function showSuggestions(results) {
+        const container = document.querySelector('.input-group');
+        const searchInput = document.getElementById('searchInput');
+        
+        const suggestionsDiv = document.createElement('div');
+        suggestionsDiv.className = 'autocomplete-suggestions';
+        suggestionsDiv.style.cssText = `
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-top: 4px;
+        `;
+        
+        results.forEach(result => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            item.dataset.url = result.url;
+            item.style.cssText = `
+                padding: 12px 15px;
+                cursor: pointer;
+                border-bottom: 1px solid #eee;
+                transition: background 0.2s;
+            `;
+            
+            let icon = '📄';
+            let label = 'Invoice';
+            if (result.type === 'imei') {
+                icon = '📱';
+                label = 'IMEI';
+            }
+            
+            item.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-secondary me-2">${label}</span>
+                        <strong>${result.type === 'imei' ? result.identifier : result.invoice_no}</strong>
+                        <br>
+                        <small class="text-muted">${result.customer_name}</small>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-success fw-bold">KES ${result.total.toFixed(2)}</small>
+                    </div>
+                </div>
+                ${result.type === 'imei' ? `<small class="text-muted">${result.product_name}</small>` : ''}
+            `;
+            
+            item.addEventListener('mouseenter', function() {
+                this.classList.add('active');
+                this.style.backgroundColor = '#e3f2fd';
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                this.classList.remove('active');
+                this.style.backgroundColor = '';
+            });
+            
+            item.addEventListener('click', function() {
+                const url = this.dataset.url;
+                if (url) window.location.href = url;
+            });
+            
+            suggestionsDiv.appendChild(item);
+        });
+        
+        container.style.position = 'relative';
+        container.appendChild(suggestionsDiv);
+    }
+</script>
+
+<style>
+    .autocomplete-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin-top: 4px;
+    }
+    .suggestion-item {
+        padding: 12px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+        transition: background 0.2s;
+    }
+    .suggestion-item:hover,
+    .suggestion-item.active {
+        background-color: #e3f2fd;
+    }
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}

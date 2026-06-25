@@ -1,0 +1,117 @@
+{% extends 'tech_master/base_tech.html' %}
+
+{% block title %}Manage Users - {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-users me-2"></i>
+            Manage Users
+            <small class="text-muted fs-6">({{ tenant.company_name }})</small>
+        </h2>
+        <a href="{% url 'users:add_user' %}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-2"></i>Add User
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6>Total Users</h6>
+                    <h3>{{ users|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6>Active Users</h6>
+                    <h3>{{ users|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6>Managers</h6>
+                    <h3>{{ users|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h6>Cashiers</h6>
+                    <h3>{{ users|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td><strong>{{ user.username }}</strong></td>
+                            <td>{{ user.get_full_name|default:"-" }}</td>
+                            <td>{{ user.email|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ user.get_role_display }}</span>
+                            </td>
+                            <td>{{ user.phone_number|default:"-" }}</td>
+                            <td>
+                                {% if user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'users:edit_user' user.id %}" class="btn btn-info">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'users:toggle_user_status' user.id %}" class="btn btn-warning" onclick="return confirm('Toggle user status?')">
+                                        <i class="fas fa-power-off"></i>
+                                    </a>
+                                    {% if user != request.user %}
+                                    <a href="{% url 'users:delete_user' user.id %}" class="btn btn-danger" onclick="return confirm('Delete this user?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-users fa-2x mb-2 d-block"></i>
+                                No users found in this tenant
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

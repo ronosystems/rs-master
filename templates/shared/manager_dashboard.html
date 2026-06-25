@@ -1,0 +1,185 @@
+{% extends "shared/base_main.html" %}
+
+{% block title %}Manager Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Welcome Banner -->
+    <div class="row mb-4">
+        <div class="col-md-12 mb-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Welcome, {{ user.get_full_name|default:user.username }}!</h4>
+                        <p class="mb-0">Manager | {{ tenant.company_name }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Team Members</h6>
+                            <h3 class="mb-0">{{ total_team_members }}</h3>
+                            <small class="text-muted">Excluding Owner</small>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-users fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Products</h6>
+                            <h3 class="mb-0">{{ total_products }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-box fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Today's Sales</h6>
+                            <h3 class="mb-0 text-success">KES {{ today_sales|floatformat:2 }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-chart-line fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Management Sections -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0"><i class="fas fa-users text-info me-2"></i>Team Management</h6>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'users:user_list' %}" class="btn btn-outline-info w-100 py-3">
+                        <i class="fas fa-user-friends fa-2x d-block mb-2"></i>
+                        Manage Team
+                    </a>
+                    <p class="text-muted small mt-2 mb-0">Manage cashiers and sales agents</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0"><i class="fas fa-box text-success me-2"></i>Product Management</h6>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'tech_master:product_list' %}" class="btn btn-outline-success w-100 py-3">
+                        <i class="fas fa-boxes fa-2x d-block mb-2"></i>
+                        Manage Products
+                    </a>
+                    <p class="text-muted small mt-2 mb-0">Add, edit products and check stock</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0"><i class="fas fa-chart-line text-warning me-2"></i>Sales & Reports</h6>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'tech_master:sales_history' %}" class="btn btn-outline-warning w-100 py-3">
+                        <i class="fas fa-chart-bar fa-2x d-block mb-2"></i>
+                        Sales & Reports
+                    </a>
+                    <p class="text-muted small mt-2 mb-0">View sales and generate reports</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Alert -->
+    {% if low_stock_count > 0 %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0">
+            <h6 class="mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Low Stock Alert</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Current Stock</th>
+                            <th>Min Level</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in low_stock_products %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td class="text-danger">{{ product.stock_quantity }}</td>
+                            <td>{{ product.min_stock_level }}</td>
+                            <td><a href="{% url 'edit_product' product.id %}" class="btn btn-sm btn-primary">Edit</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Sales -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0">
+            <h6 class="mb-0"><i class="fas fa-history text-primary me-2"></i>Recent Sales</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Cashier</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in recent_sales %}
+                        <tr>
+                            <td><code>{{ sale.invoice_no }}</code></td>
+                            <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+                            <td class="text-success">KES {{ sale.total|floatformat:2 }}</td>
+                            <td>{{ sale.cashier.username }}</td>
+                            <td>{{ sale.created_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center py-3">No sales yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

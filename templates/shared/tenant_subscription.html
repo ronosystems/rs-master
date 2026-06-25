@@ -1,0 +1,875 @@
+{% extends "shared/base_super_admin.html" %}
+{% load static %}
+
+{% block title %}Subscription Management - {{ tenant.company_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ============================================
+       GRADIENT STYLES
+       ============================================ */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+    
+    /* ============================================
+       HEADER SECTION - FIXED
+       ============================================ */
+    .header-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+    
+    .header-card .card-body {
+        padding: 20px 25px !important;
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Decorative circles - subtle */
+    .header-card .card-body::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+        z-index: -1;
+    }
+    
+    .header-card .card-body::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -5%;
+        width: 150px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 50%;
+        z-index: -1;
+    }
+    
+    /* Logo - Properly Sized */
+    .tenant-logo-wrapper {
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        max-width: 48px;
+        min-height: 48px;
+        max-height: 48px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        flex-shrink: 0;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .tenant-logo-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 4px;
+    }
+    
+    .tenant-logo-wrapper i {
+        font-size: 1.5rem;
+        color: #fff;
+    }
+    
+    .tenant-info-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    /* Header Text */
+    .header-company-name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #ffffff !important;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        margin-bottom: 2px;
+    }
+    
+    .header-subtitle {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.92) !important;
+        margin-bottom: 0;
+    }
+    
+    /* Status Badge */
+    .subscription-status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 20px;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+    }
+    
+    .subscription-status-badge i {
+        font-size: 1rem;
+        margin-right: 8px;
+    }
+    
+    .subscription-status-badge.bg-success {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+        color: #fff !important;
+    }
+    
+    .subscription-status-badge.bg-danger {
+        background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%) !important;
+        color: #fff !important;
+    }
+    
+    /* ============================================
+       PLAN CARDS
+       ============================================ */
+    .plan-card {
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 2px solid #e9ecef;
+        position: relative;
+        overflow: hidden;
+        background: #fff;
+    }
+    
+    .plan-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+        border-color: #667eea;
+    }
+    
+    .plan-card.recommended {
+        border-color: #ffc107;
+        background: #fff9e6;
+    }
+    
+    .plan-card .plan-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        font-size: 0.7rem;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .plan-card .plan-price {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    
+    .plan-card .plan-price small {
+        font-size: 1rem;
+        color: #6c757d;
+    }
+    
+    /* ============================================
+       STAT CARDS
+       ============================================ */
+    .stat-card {
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s;
+        height: 100%;
+        background: #fff;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    }
+    
+    .stat-card .stat-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        font-size: 1.3rem;
+    }
+    
+    .stat-card .stat-number {
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+    
+    /* ============================================
+       PROGRESS BARS
+       ============================================ */
+    .progress-thin {
+        height: 6px;
+        border-radius: 10px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .progress-thin .progress-bar {
+        border-radius: 10px;
+        transition: width 0.8s ease;
+    }
+    
+    /* ============================================
+       FEATURES
+       ============================================ */
+    .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    
+    .feature-item {
+        padding: 4px 0;
+        font-size: 0.85rem;
+    }
+    
+    /* ============================================
+       BUTTONS
+       ============================================ */
+    .btn-upgrade {
+        border-radius: 30px;
+        padding: 10px 20px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .btn-upgrade:hover {
+        transform: scale(1.02);
+    }
+    
+    /* ============================================
+       INVOICE TABLE
+       ============================================ */
+    .invoice-table th {
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    @media (max-width: 768px) {
+        .tenant-logo-wrapper {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            max-width: 38px;
+            min-height: 38px;
+            max-height: 38px;
+        }
+        
+        .tenant-logo-wrapper i {
+            font-size: 1.2rem;
+        }
+        
+        .header-company-name {
+            font-size: 1.1rem;
+        }
+        
+        .header-subtitle {
+            font-size: 0.75rem;
+        }
+        
+        .subscription-status-badge {
+            padding: 6px 14px;
+            font-size: 0.75rem;
+        }
+        
+        .feature-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .plan-card .plan-price {
+            font-size: 2rem;
+        }
+        
+        .stat-card .stat-number {
+            font-size: 1.3rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .tenant-logo-wrapper {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            max-width: 32px;
+            min-height: 32px;
+            max-height: 32px;
+        }
+        
+        .tenant-logo-wrapper i {
+            font-size: 1rem;
+        }
+        
+        .header-card .card-body {
+            padding: 12px 15px !important;
+        }
+        
+        .tenant-info-wrapper {
+            gap: 10px;
+        }
+        
+        .stat-card {
+            padding: 10px;
+        }
+        
+        .stat-card .stat-icon {
+            width: 35px;
+            height: 35px;
+            font-size: 1rem;
+        }
+    }
+    
+    /* ============================================
+       DARK THEME SUPPORT
+       ============================================ */
+    [data-bs-theme="dark"] .header-card {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+    }
+    
+    [data-bs-theme="dark"] .header-company-name {
+        color: #ffffff !important;
+    }
+    
+    [data-bs-theme="dark"] .subscription-status-badge.bg-success {
+        background: linear-gradient(135deg, #0d7a6e 0%, #2dbf7a 100%) !important;
+    }
+    
+    [data-bs-theme="dark"] .subscription-status-badge.bg-danger {
+        background: linear-gradient(135deg, #c0392b 0%, #d68910 100%) !important;
+    }
+    
+    [data-bs-theme="dark"] .plan-card {
+        background: #1a1a2e !important;
+        border-color: #2d2d44 !important;
+    }
+    
+    [data-bs-theme="dark"] .plan-card:hover {
+        border-color: #667eea !important;
+    }
+    
+    [data-bs-theme="dark"] .plan-card .plan-price {
+        color: #e0e0e0 !important;
+    }
+    
+    [data-bs-theme="dark"] .plan-card .bg-light {
+        background: #2d2d44 !important;
+    }
+    
+    [data-bs-theme="dark"] .plan-card .text-muted {
+        color: #9ca3af !important;
+    }
+    
+    [data-bs-theme="dark"] .plan-card .plan-badge.bg-warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+        color: #fff !important;
+    }
+    
+    [data-bs-theme="dark"] .plan-card.recommended {
+        border-color: #f5576c !important;
+        background: rgba(245, 87, 108, 0.1) !important;
+    }
+    
+    [data-bs-theme="dark"] .stat-card {
+        background: #1a1a2e !important;
+    }
+    
+    [data-bs-theme="dark"] .stat-card .stat-label {
+        color: #9ca3af !important;
+    }
+    
+    [data-bs-theme="dark"] .stat-card.bg-primary.bg-opacity-10 {
+        background: rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    [data-bs-theme="dark"] .stat-card.bg-success.bg-opacity-10 {
+        background: rgba(56, 239, 125, 0.15) !important;
+    }
+    
+    [data-bs-theme="dark"] .stat-card.bg-warning.bg-opacity-10 {
+        background: rgba(247, 183, 51, 0.15) !important;
+    }
+    
+    [data-bs-theme="dark"] .stat-card .text-primary {
+        color: #818cf8 !important;
+    }
+    
+    [data-bs-theme="dark"] .stat-card .text-success {
+        color: #34d399 !important;
+    }
+    
+    [data-bs-theme="dark"] .stat-card .text-warning {
+        color: #fbbf24 !important;
+    }
+    
+    [data-bs-theme="dark"] .invoice-table {
+        color: #e0e0e0 !important;
+    }
+    
+    [data-bs-theme="dark"] .invoice-table .bg-light {
+        background: #1a1a2e !important;
+    }
+    
+    [data-bs-theme="dark"] .invoice-table code {
+        background: #2d2d44 !important;
+        color: #e0e0e0 !important;
+    }
+    
+    [data-bs-theme="dark"] .invoice-table td,
+    [data-bs-theme="dark"] .invoice-table th {
+        border-color: #2d2d44 !important;
+    }
+    
+    [data-bs-theme="dark"] .invoice-table .text-muted {
+        color: #9ca3af !important;
+    }
+    
+    [data-bs-theme="dark"] .progress-thin {
+        background: #2d2d44 !important;
+    }
+    
+    [data-bs-theme="dark"] .bg-light.border-0 {
+        background: #1a1a2e !important;
+    }
+    
+    [data-bs-theme="dark"] .bg-light.border-0 .text-muted {
+        color: #9ca3af !important;
+    }
+    
+    [data-bs-theme="dark"] .bg-light.border-0 .text-dark {
+        color: #e0e0e0 !important;
+    }
+    
+    [data-bs-theme="dark"] .text-dark {
+        color: #e0e0e0 !important;
+    }
+    
+    [data-bs-theme="dark"] .text-muted {
+        color: #9ca3af !important;
+    }
+    
+    [data-bs-theme="dark"] .card.border-0.shadow-lg {
+        background: #1a1a2e !important;
+    }
+    
+    [data-bs-theme="dark"] .card-header.bg-white {
+        background: #1a1a2e !important;
+        border-color: #2d2d44 !important;
+    }
+    
+    [data-bs-theme="dark"] .card-header.bg-white .text-primary {
+        color: #818cf8 !important;
+    }
+    
+    [data-bs-theme="dark"] .card-header.bg-white .text-info {
+        color: #67e8f9 !important;
+    }
+    
+    [data-bs-theme="dark"] .card-header.bg-white .text-secondary {
+        color: #9ca3af !important;
+    }
+    
+    [data-bs-theme="dark"] .badge.bg-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    }
+    
+    [data-bs-theme="dark"] .badge.bg-success {
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%) !important;
+    }
+    
+    [data-bs-theme="dark"] .badge.bg-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) !important;
+        color: #1a1a2e !important;
+    }
+    
+    [data-bs-theme="dark"] .feature-item .text-success {
+        color: #34d399 !important;
+    }
+    
+    [data-bs-theme="dark"] .feature-item .text-danger {
+        color: #f87171 !important;
+    }
+    
+    [data-bs-theme="dark"] .feature-item .text-muted {
+        color: #6b7280 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <!-- ============================================ -->
+    <!-- HEADER - FIXED -->
+    <!-- ============================================ -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg header-card">
+                <div class="card-body py-3 px-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="tenant-info-wrapper">
+
+                            
+                            <div>
+                                <h4 class="mb-0 fw-bold header-company-name">
+                                    <i class="fas fa-crown me-2 d-none d-sm-inline"></i>{{ tenant.company_name }}
+                                </h4>
+                                <p class="mb-0 header-subtitle">
+                                    <i class="fas fa-credit-card me-1"></i> Manage your subscription plan and billing
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-2 mt-sm-0">
+                            <span class="subscription-status-badge {% if tenant.is_subscription_active %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                                <i class="fas {% if tenant.is_subscription_active %}fa-check-circle{% else %}fa-times-circle{% endif %} me-2"></i>
+                                {{ tenant.is_subscription_active|yesno:"Active,Expired" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- TWO COLUMN LAYOUT -->
+    <!-- ============================================ -->
+    <div class="row">
+        
+        <!-- LEFT COLUMN: Current Plan -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-lg h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold text-primary">
+                        <i class="fas fa-check-circle me-2"></i>Your Current Plan
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Plan Name & Badges -->
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-dark mb-2">{{ tenant.get_subscription_plan_display }}</h2>
+                        <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                            <span class="badge bg-primary fs-6 px-4 py-2">
+                                <i class="fas fa-users me-1"></i> {{ tenant.max_users }} Users
+                            </span>
+                            <span class="badge bg-success fs-6 px-4 py-2">
+                                <i class="fas fa-boxes me-1"></i> {{ tenant.max_products }} Products
+                            </span>
+                            <span class="badge bg-warning text-dark fs-6 px-4 py-2">
+                                <i class="fas fa-store me-1"></i> {{ tenant.max_branches }} Branches
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Subscription Timeline -->
+                    <div class="card bg-light border-0 p-3 mb-4">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted d-block">Started</small>
+                                <strong>{{ tenant.subscription_start|date:"M d, Y" }}</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Status</small>
+                                <span class="badge {% if tenant.is_subscription_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ tenant.is_subscription_active|yesno:"Active,Expired" }}
+                                </span>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Expires</small>
+                                <strong class="{% if tenant.days_remaining <= 7 %}text-danger{% else %}text-dark{% endif %}">
+                                    {{ tenant.subscription_end|date:"M d, Y" }}
+                                </strong>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>Usage Progress</span>
+                                <span class="fw-bold">{{ tenant.subscription_progress }}%</span>
+                            </div>
+                            <div class="progress-thin">
+                                <div class="progress-bar bg-info" style="width: {{ tenant.subscription_progress }}%"></div>
+                            </div>
+                            <small class="text-muted d-block mt-1">
+                                {% if tenant.days_remaining > 0 %}
+                                    <i class="fas fa-clock me-1"></i> {{ tenant.days_remaining }} days remaining
+                                {% else %}
+                                    <i class="fas fa-exclamation-triangle text-danger me-1"></i> Subscription expired
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- Resource Usage -->
+                    <h6 class="fw-bold mb-3"><i class="fas fa-chart-line me-2"></i>Resource Usage</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-4">
+                            <div class="stat-card bg-primary bg-opacity-10">
+                                <div class="stat-icon bg-primary text-white">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="stat-number text-primary">{{ current_users }}  of {{ tenant.max_users }} Users </div>
+                                <div class="stat-label"></div>
+                                <div class="progress-thin mt-2">
+                                    <div class="progress-bar bg-primary" style="width: {{ usage_percentage.users }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card bg-success bg-opacity-10">
+                                <div class="stat-icon bg-success text-white">
+                                    <i class="fas fa-boxes"></i>
+                                </div>
+                                <div class="stat-number text-success">{{ current_products }} of {{ tenant.max_products }} Products </div>
+                                <div class="stat-label"></div>
+                                <div class="progress-thin mt-2">
+                                    <div class="progress-bar bg-success" style="width: {{ usage_percentage.products }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card bg-warning bg-opacity-10">
+                                <div class="stat-icon bg-warning text-dark">
+                                    <i class="fas fa-store"></i>
+                                </div>
+                                <div class="stat-number text-warning">{{ current_branches }}  of {{ tenant.max_branches }} Branches</div>
+                                <div class="stat-label"></div>
+                                <div class="progress-thin mt-2">
+                                    <div class="progress-bar bg-warning" style="width: {{ usage_percentage.branches }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Plan Features -->
+                    <h6 class="fw-bold mb-3"><i class="fas fa-crown me-2"></i>Included Features</h6>
+                    <div class="feature-grid">
+                        {% if tenant.features %}
+                            {% for feature, enabled in tenant.features.items %}
+                            <div class="feature-item">
+                                <i class="fas {% if enabled %}fa-check-circle text-success{% else %}fa-times-circle text-danger{% endif %} me-2"></i>
+                                <span class="{% if not enabled %}text-muted{% endif %}">
+                                    {{ feature|capfirst|cut:"_" }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="col-12 text-muted">No features configured</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Renew Button -->
+                    <div class="mt-4">
+                        {% if tenant.days_remaining < 15 or tenant.days_remaining <= 0 %}
+                            <a href="{% url 'tenants:renew_subscription' %}" class="btn btn-warning btn-upgrade w-100">
+                                <i class="fas fa-sync-alt me-2"></i>Renew Subscription
+                            </a>
+                        {% else %}
+                            <button class="btn btn-success btn-upgrade w-100" disabled>
+                                <i class="fas fa-check-circle me-2"></i>Subscription Active
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RIGHT COLUMN: Upgrade Options -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-lg h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold text-info">
+                        <i class="fas fa-arrow-up me-2"></i>Upgrade Options
+                    </h5>
+                    <small class="text-muted">Choose a plan that fits your business needs</small>
+                </div>
+                <div class="card-body" style="max-height: 650px; overflow-y: auto;">
+                    {% if available_plans %}
+                        <div class="row g-3">
+                            {% for plan in available_plans %}
+                            <div class="col-12">
+                                <div class="plan-card p-3 {% if forloop.first %}recommended{% endif %}">
+                                    {% if forloop.first %}
+                                    <span class="plan-badge bg-warning text-dark">⭐ Recommended</span>
+                                    {% endif %}
+                                    
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="mb-0 fw-bold">{{ plan.name }}</h5>
+                                            <p class="text-muted small mb-2">{{ plan.description|default:"Perfect for growing businesses" }}</p>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="plan-price">
+                                                ${{ plan.price_monthly|floatformat:0 }}
+                                                <small>/mo</small>
+                                            </div>
+                                            <small class="text-muted">${{ plan.price_yearly|floatformat:0 }}/year</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row g-2 mt-2">
+                                        <div class="col-4">
+                                            <div class="bg-light rounded p-2 text-center">
+                                                <i class="fas fa-users text-primary"></i>
+                                                <div class="fw-bold small">{{ plan.max_users }}</div>
+                                                <small class="text-muted">Users</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="bg-light rounded p-2 text-center">
+                                                <i class="fas fa-boxes text-success"></i>
+                                                <div class="fw-bold small">{{ plan.max_products }}</div>
+                                                <small class="text-muted">Products</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="bg-light rounded p-2 text-center">
+                                                <i class="fas fa-store text-warning"></i>
+                                                <div class="fw-bold small">{{ plan.max_branches }}</div>
+                                                <small class="text-muted">Branches</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if plan.features %}
+                                    <div class="mt-2">
+                                        <div class="row g-1">
+                                            {% for feature, enabled in plan.features.items %}
+                                            <div class="col-6 feature-item">
+                                                <i class="fas {% if enabled %}fa-check-circle text-success{% else %}fa-times-circle text-danger{% endif %} me-1"></i>
+                                                <span class="small">{{ feature|capfirst|cut:"_" }}</span>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="mt-3">
+                                        <a href="{% url 'tenants:upgrade_subscription' plan.code %}" class="btn btn-primary btn-upgrade w-100">
+                                            <i class="fas fa-arrow-up me-2"></i>Upgrade to {{ plan.name }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-check-circle fa-4x text-success mb-3 d-block"></i>
+                            <h5>You're on the best plan!</h5>
+                            <p class="text-muted">No other plans available for upgrade.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- INVOICE HISTORY -->
+    <!-- ============================================ -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold text-secondary">
+                        <i class="fas fa-history me-2"></i>Invoice History
+                    </h5>
+                    <small class="text-muted">View your billing history</small>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover invoice-table">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Plan</th>
+                                    <th>Amount</th>
+                                    <th>Period</th>
+                                    <th>Payment Method</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in invoices %}
+                                <tr>
+                                    <td><code class="bg-light px-2 py-1 rounded">{{ invoice.invoice_number }}</code></td>
+                                    <td>{{ invoice.plan }}</td>
+                                    <td class="fw-bold">${{ invoice.amount|floatformat:2 }}</td>
+                                    <td>
+                                        <small>{{ invoice.period_start|date:"M d, Y" }}<br>
+                                        <i class="fas fa-arrow-right text-muted"></i> {{ invoice.period_end|date:"M d, Y" }}</small>
+                                    </td>
+                                    <td>{{ invoice.get_payment_method_display|default:"—" }}</td>
+                                    <td>
+                                        {% if invoice.status == 'paid' %}
+                                            <span class="badge bg-success px-3 py-2">Paid</span>
+                                        {% elif invoice.status == 'pending' %}
+                                            <span class="badge bg-warning px-3 py-2">Pending</span>
+                                        {% elif invoice.status == 'failed' %}
+                                            <span class="badge bg-danger px-3 py-2">Failed</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary px-3 py-2">{{ invoice.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ invoice.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <i class="fas fa-receipt fa-3x text-muted mb-3 d-block"></i>
+                                        <p class="text-muted">No invoices found</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- JAVASCRIPT -->
+<!-- ============================================ -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate progress bars on load
+        const progressBars = document.querySelectorAll('.progress-bar');
+        progressBars.forEach(function(bar) {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(function() {
+                bar.style.width = width;
+            }, 200);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "shared/base_super_admin.html" %}
+
+{% block title %}Edit Owner | {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-info text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-cog me-2"></i>Edit Owner Details
+                    </h5>
+                    <p class="mb-0 small text-white-50">{{ tenant.company_name }}</p>
+                </div>
+                <div class="card-body p-4">
+                    {% if tenant.owner %}
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="card border mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-user me-2"></i>Owner Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Username</label>
+                                        <input type="text" class="form-control" value="{{ tenant.owner.username }}" disabled>
+                                        <small class="text-muted">Username cannot be changed</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Role</label>
+                                        <input type="text" class="form-control" value="Tenant Admin" disabled>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">First Name</label>
+                                        <input type="text" name="first_name" class="form-control" value="{{ tenant.owner.first_name }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Last Name</label>
+                                        <input type="text" name="last_name" class="form-control" value="{{ tenant.owner.last_name }}">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Email Address</label>
+                                    <input type="email" name="email" class="form-control" value="{{ tenant.owner.email }}">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Phone Number</label>
+                                    <input type="text" name="phone_number" class="form-control" value="{{ tenant.owner.phone_number }}">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">PIN Code</label>
+                                    <input type="text" name="pin_code" class="form-control" value="{{ tenant.owner.pin_code }}" maxlength="6" pattern="[0-9]{4,6}">
+                                    <small class="text-muted">4-6 digit PIN for POS access</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card border mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-key me-2"></i>Change Password</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">New Password</label>
+                                    <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current password">
+                                    <small class="text-muted">Minimum 6 characters</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Confirm Password</label>
+                                    <input type="password" name="confirm_password" class="form-control" placeholder="Confirm new password">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update Owner
+                            </button>
+                            <a href="{% url 'tenants:tenant_detail' tenant.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-user fa-4x text-muted mb-3"></i>
+                        <h5>No Owner Assigned</h5>
+                        <p class="text-muted">This tenant does not have an owner assigned yet.</p>
+                        <a href="{% url 'tenants:assign_owner' tenant.id %}" class="btn btn-success">
+                            <i class="fas fa-user-plus me-2"></i>Assign Owner
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Password validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const password = document.querySelector('input[name="password"]').value;
+        const confirm = document.querySelector('input[name="confirm_password"]').value;
+        
+        if (password || confirm) {
+            if (password !== confirm) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+                return false;
+            }
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('Password must be at least 6 characters!');
+                return false;
+            }
+        }
+    });
+</script>
+
+<style>
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .card-header {
+        border-bottom: none;
+    }
+    .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    input:disabled {
+        background-color: #e9ecef;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}

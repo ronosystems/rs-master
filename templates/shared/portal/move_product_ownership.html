@@ -1,0 +1,441 @@
+{% extends "shared/base_main.html" %}
+
+{% block title %}Move Product Ownership{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exchange-alt text-primary me-2"></i>Move Product Units
+                    </h5>
+                    <p class="text-muted small mb-0">Transfer individual product units (IMEI/Serial) from one sales agent to another</p>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="moveForm">
+                        {% csrf_token %}
+                        
+                        <!-- 3 Columns Layout -->
+                        <div class="row g-3">
+                            <!-- Column A: Select New Owner -->
+                            <div class="col-md-3 col-lg-2">
+                                <div class="card border h-100">
+                                    <div class="card-header bg-light py-2">
+                                        <label class="form-label fw-semibold mb-0">
+                                            <i class="fas fa-user-plus text-success me-1"></i> New Owner
+                                        </label>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <select name="to_agent_id" id="toAgentSelect" class="form-select form-select-sm" required>
+                                            <option value="">-- Select Agent --</option>
+                                            {% for agent in sales_agents %}
+                                            <option value="{{ agent.id }}" data-agent-name="{{ agent.username }}">
+                                                {{ agent.username }} ({{ agent.get_full_name|default:agent.username }})
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="mt-2 text-muted small">
+                                            <i class="fas fa-info-circle"></i> Units will be transferred to this agent
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Column B: Products/Units List -->
+                            <div class="col-md-5 col-lg-5">
+                                <div class="card border h-100">
+                                    <div class="card-header bg-light py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="form-label fw-semibold mb-0">
+                                                <i class="fas fa-mobile-alt me-1"></i> Product Units (IMEI/Serial)
+                                            </label>
+                                            <div>
+                                                <button type="button" id="selectAllBtn" class="btn btn-sm btn-outline-primary">Select All</button>
+                                                <button type="button" id="deselectAllBtn" class="btn btn-sm btn-outline-secondary ms-1">Clear</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-2" style="height: 500px; overflow-y: auto;">
+                                        <!-- Search Box -->
+                                        <div class="mb-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white">
+                                                    <i class="fas fa-search fa-sm"></i>
+                                                </span>
+                                                <input type="text" id="productSearchInput" class="form-control form-control-sm" placeholder="Search by SKU, Name, IMEI, or Brand...">
+                                                <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Products/Units List -->
+                                        <div id="productList">
+                                            {% for product in products %}
+                                            <div class="product-item mb-2 p-2 border rounded" 
+                                                 data-product-id="{{ product.id }}" 
+                                                 data-product-sku="{{ product.sku|lower }}" 
+                                                 data-product-name="{{ product.name|lower }}" 
+                                                 data-product-brand="{{ product.brand|lower|default:'' }}"
+                                                 data-product-imei="{{ product.imei|lower }}"
+                                                 data-current-owner-id="{{ product.current_owner_id|default:'' }}"
+                                                 data-current-owner-name="{{ product.current_owner_name|default:'Unassigned' }}">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="form-check flex-grow-1">
+                                                        <input class="form-check-input" type="checkbox" name="product_ids" value="{{ product.id }}" id="product_{{ product.id }}">
+                                                        <label class="form-check-label" for="product_{{ product.id }}">
+                                                            <strong>{{ product.name }}</strong>
+                                                            <br>
+                                                            <small class="text-muted">
+                                                                <span class="badge bg-secondary">IMEI: {{ product.imei }}</span>
+                                                                <br>
+                                                                SKU: {{ product.sku }} | Price: KES {{ product.selling_price|floatformat:2 }}
+                                                            </small>
+                                                        </label>
+                                                    </div>
+                                                    <!-- Current Owner Badge -->
+                                                    <div class="ms-2 text-end" style="min-width: 100px;">
+                                                        <span class="badge {% if product.current_owner_name and product.current_owner_name != 'Unassigned' %}bg-info{% else %}bg-secondary{% endif %}">
+                                                            <i class="fas fa-user me-1"></i>
+                                                            {{ product.current_owner_name }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% empty %}
+                                            <p class="text-muted text-center py-3">No product units available</p>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <!-- No Results Message -->
+                                        <div id="noResultsMsg" class="text-center text-muted py-3" style="display: none;">
+                                            <i class="fas fa-search fa-2x mb-2 d-block"></i>
+                                            <p>No products found</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Column C: Selected Products Preview -->
+                            <div class="col-md-4 col-lg-5">
+                                <div class="card border h-100">
+                                    <div class="card-header bg-light py-2">
+                                        <label class="form-label fw-semibold mb-0">
+                                            <i class="fas fa-check-circle text-success me-1"></i> Units to Move 
+                                            (<span id="selectedCount">0</span>)
+                                        </label>
+                                    </div>
+                                    <div class="card-body p-2" style="height: 500px; overflow-y: auto;">
+                                        <div id="selectedPreview">
+                                            <div class="text-muted text-center py-5">
+                                                <i class="fas fa-arrow-left fa-2x mb-2 d-block"></i>
+                                                <p>Select units to move</p>
+                                                <small>Units will be transferred to the selected agent</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Movement Summary -->
+                        <div class="alert alert-info mt-3" id="movementSummary" style="display: none;">
+                            <i class="fas fa-exchange-alt me-2"></i>
+                            <strong>Movement Summary:</strong>
+                            <span id="summaryText">Select units and a destination agent</span>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="mt-4 text-end">
+                            <button type="submit" class="btn btn-primary px-4" id="moveBtn" disabled>
+                                <i class="fas fa-exchange-alt me-2"></i> Move Selected Units
+                            </button>
+                            <a href="{% url 'tech_master:manager_dashboard' %}" class="btn btn-secondary px-4">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .product-item {
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+    .product-item:hover {
+        background-color: #f8f9fa;
+    }
+    .product-item.selected {
+        background-color: #e8f5e9;
+        border-left: 3px solid #28a745;
+    }
+    .product-item.highlight {
+        background-color: #e3f2fd;
+        border-left: 3px solid #0d6efd;
+    }
+    .selected-item {
+        background-color: #f8f9fa;
+        border-left: 3px solid #28a745;
+        transition: all 0.2s;
+        margin-bottom: 8px;
+        padding: 8px;
+        border-radius: 6px;
+    }
+    .selected-item:hover {
+        background-color: #e8f5e9;
+    }
+    .remove-selected {
+        opacity: 0.6;
+        transition: opacity 0.2s;
+    }
+    .remove-selected:hover {
+        opacity: 1;
+    }
+    .badge {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+    }
+</style>
+
+<script>
+    // Store all products for filtering
+    const allProducts = Array.from(document.querySelectorAll('.product-item'));
+    const noResultsMsg = document.getElementById('noResultsMsg');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const selectedPreview = document.getElementById('selectedPreview');
+    const movementSummary = document.getElementById('movementSummary');
+    const summaryText = document.getElementById('summaryText');
+    const moveBtn = document.getElementById('moveBtn');
+    const toAgentSelect = document.getElementById('toAgentSelect');
+    
+    // Update selected products preview
+    function updateSelectedPreview() {
+        const checkedBoxes = document.querySelectorAll('input[name="product_ids"]:checked');
+        const count = checkedBoxes.length;
+        selectedCountSpan.textContent = count;
+        
+        const toAgentName = toAgentSelect.options[toAgentSelect.selectedIndex]?.text.split(' (')[0] || 'selected agent';
+        
+        if (count === 0) {
+            selectedPreview.innerHTML = `
+                <div class="text-muted text-center py-5">
+                    <i class="fas fa-arrow-left fa-2x mb-2 d-block"></i>
+                    <p>Select units to move</p>
+                    <small>Units will be transferred to ${toAgentName}</small>
+                </div>
+            `;
+            movementSummary.style.display = 'none';
+            moveBtn.disabled = true;
+            return;
+        }
+        
+        let html = '<div class="list-group list-group-flush">';
+        let transferCount = 0;
+        
+        checkedBoxes.forEach(checkbox => {
+            const productDiv = checkbox.closest('.product-item');
+            const productName = productDiv.querySelector('strong')?.innerText || '';
+            const productSku = productDiv.getAttribute('data-product-sku') || '';
+            const productImei = productDiv.getAttribute('data-product-imei') || '';
+            const currentOwner = productDiv.getAttribute('data-current-owner-name') || 'Unassigned';
+            const productId = checkbox.value;
+            
+            html += `
+                <div class="selected-item d-flex justify-content-between align-items-center" data-product-id="${productId}">
+                    <div class="flex-grow-1">
+                        <strong class="small">${escapeHtml(productName)}</strong>
+                        <br>
+                        <small class="text-muted">IMEI: ${escapeHtml(productImei)} | SKU: ${escapeHtml(productSku)}</small>
+                        <br>
+                        <small class="text-warning">Current Owner: ${escapeHtml(currentOwner)}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-selected" data-product-id="${productId}" title="Remove">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            transferCount++;
+        });
+        html += '</div>';
+        selectedPreview.innerHTML = html;
+        
+        // Update movement summary
+        movementSummary.style.display = 'block';
+        const toAgent = toAgentSelect.options[toAgentSelect.selectedIndex]?.text.split(' (')[0] || 'selected agent';
+        summaryText.innerHTML = `${transferCount} unit(s) will be transferred to <strong>${toAgent}</strong>`;
+        
+        // Enable move button if destination agent is selected
+        moveBtn.disabled = !toAgentSelect.value;
+        
+        // Add remove event listeners
+        document.querySelectorAll('.remove-selected').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const productId = this.getAttribute('data-product-id');
+                const checkbox = document.querySelector(`input[name="product_ids"][value="${productId}"]`);
+                if (checkbox) {
+                    checkbox.checked = false;
+                    updateSelectedPreview();
+                    updateCheckboxStyle(checkbox);
+                }
+            });
+        });
+    }
+    
+    // Update checkbox styling
+    function updateCheckboxStyle(checkbox) {
+        const productDiv = checkbox.closest('.product-item');
+        if (checkbox.checked) {
+            productDiv.classList.add('selected');
+        } else {
+            productDiv.classList.remove('selected');
+        }
+    }
+    
+    // Search/filter functionality
+    function filterProducts() {
+        const searchTerm = document.getElementById('productSearchInput').value.toLowerCase().trim();
+        let visibleCount = 0;
+        
+        allProducts.forEach(product => {
+            const sku = product.getAttribute('data-product-sku') || '';
+            const name = product.getAttribute('data-product-name') || '';
+            const brand = product.getAttribute('data-product-brand') || '';
+            const imei = product.getAttribute('data-product-imei') || '';
+            
+            const matches = searchTerm === '' || 
+                           sku.includes(searchTerm) || 
+                           name.includes(searchTerm) || 
+                           brand.includes(searchTerm) ||
+                           imei.includes(searchTerm);
+            
+            if (matches) {
+                product.style.display = '';
+                visibleCount++;
+                if (searchTerm !== '') {
+                    product.classList.add('highlight');
+                } else {
+                    product.classList.remove('highlight');
+                }
+            } else {
+                product.style.display = 'none';
+                product.classList.remove('highlight');
+            }
+        });
+        
+        noResultsMsg.style.display = (visibleCount === 0 && searchTerm !== '') ? 'block' : 'none';
+    }
+    
+    // Live search
+    const searchInput = document.getElementById('productSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', filterProducts);
+        searchInput.addEventListener('input', filterProducts);
+    }
+    
+    // Clear search button
+    document.getElementById('clearSearchBtn')?.addEventListener('click', function() {
+        if (searchInput) {
+            searchInput.value = '';
+            filterProducts();
+            searchInput.focus();
+        }
+    });
+    
+    // Select All button
+    document.getElementById('selectAllBtn')?.addEventListener('click', function() {
+        const visibleProducts = document.querySelectorAll('.product-item:not([style*="display: none"])');
+        visibleProducts.forEach(product => {
+            const checkbox = product.querySelector('input[type="checkbox"]');
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+                updateCheckboxStyle(checkbox);
+            }
+        });
+        updateSelectedPreview();
+    });
+    
+    // Deselect All button
+    document.getElementById('deselectAllBtn')?.addEventListener('click', function() {
+        document.querySelectorAll('input[name="product_ids"]').forEach(checkbox => {
+            checkbox.checked = false;
+            updateCheckboxStyle(checkbox);
+        });
+        updateSelectedPreview();
+    });
+    
+    // Update when checkboxes change
+    document.querySelectorAll('input[name="product_ids"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectedPreview();
+            updateCheckboxStyle(this);
+        });
+        updateCheckboxStyle(checkbox);
+    });
+    
+    // Update when destination agent changes
+    toAgentSelect.addEventListener('change', function() {
+        const checkedBoxes = document.querySelectorAll('input[name="product_ids"]:checked');
+        if (checkedBoxes.length > 0) {
+            updateSelectedPreview();
+        }
+        
+        if (this.value && checkedBoxes.length > 0) {
+            moveBtn.disabled = false;
+        } else {
+            moveBtn.disabled = true;
+        }
+    });
+    
+    // Prevent moving to same owner
+    moveBtn.addEventListener('click', function(e) {
+        const toAgentId = toAgentSelect.value;
+        const checkedBoxes = document.querySelectorAll('input[name="product_ids"]:checked');
+        
+        let hasConflict = false;
+        checkedBoxes.forEach(checkbox => {
+            const productDiv = checkbox.closest('.product-item');
+            const currentOwnerId = productDiv.getAttribute('data-current-owner-id');
+            if (currentOwnerId && currentOwnerId === toAgentId) {
+                hasConflict = true;
+            }
+        });
+        
+        if (hasConflict) {
+            e.preventDefault();
+            alert('Cannot move unit(s) to the same owner! Please select a different agent.');
+            return false;
+        }
+    });
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // Initialize
+    updateSelectedPreview();
+    
+    // Keyboard shortcut - Ctrl+F to focus search
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+    });
+</script>
+{% endblock %}

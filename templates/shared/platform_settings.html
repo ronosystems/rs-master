@@ -1,0 +1,576 @@
+<!-- templates/shared/platform_settings.html -->
+{% extends "shared/base_super_admin.html" %}
+
+{% block title %}Platform Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4">
+        <h1 class="h2">
+            <i class="fas fa-cog text-primary me-2"></i>Platform Settings
+        </h1>
+        <div>
+            <span class="badge bg-success fs-6 me-2">
+                <i class="fas fa-check-circle me-1"></i> System Running
+            </span>
+            <span class="badge bg-info fs-6">
+                <i class="fas fa-code-branch me-1"></i> v2.0.0
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Settings Form -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white py-3">
+                    <h6 class="mb-0">
+                        <i class="fas fa-sliders-h me-2"></i>General Settings
+                    </h6>
+                    <small class="text-white-50">Configure platform-wide settings</small>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="settingsForm">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <!-- Platform Name -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-globe me-1"></i>Platform Name
+                                </label>
+                                <input type="text" name="platform_name" class="form-control form-control-lg" 
+                                       value="{{ platform_name|default:'RS Master Platform' }}">
+                            </div>
+                            
+                            <!-- Platform Email -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-envelope me-1"></i>Platform Email
+                                </label>
+                                <input type="email" name="platform_email" class="form-control form-control-lg" 
+                                       value="{{ platform_email|default:'admin@rsmaster.com' }}">
+                            </div>
+                            
+                            <!-- Timezone -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-clock me-1"></i>Timezone
+                                </label>
+                                <select name="timezone" class="form-select form-select-lg">
+                                    <option value="Africa/Nairobi" {% if timezone == 'Africa/Nairobi' %}selected{% endif %}>Africa/Nairobi</option>
+                                    <option value="UTC" {% if timezone == 'UTC' %}selected{% endif %}>UTC</option>
+                                    <option value="America/New_York" {% if timezone == 'America/New_York' %}selected{% endif %}>America/New_York</option>
+                                    <option value="Europe/London" {% if timezone == 'Europe/London' %}selected{% endif %}>Europe/London</option>
+                                    <option value="Asia/Dubai" {% if timezone == 'Asia/Dubai' %}selected{% endif %}>Asia/Dubai</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Default Currency -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-money-bill-wave me-1"></i>Default Currency
+                                </label>
+                                <select name="currency" class="form-select form-select-lg">
+                                    <option value="KES" {% if currency == 'KES' %}selected{% endif %}>KES - Kenyan Shilling</option>
+                                    <option value="USD" {% if currency == 'USD' %}selected{% endif %}>USD - US Dollar</option>
+                                    <option value="EUR" {% if currency == 'EUR' %}selected{% endif %}>EUR - Euro</option>
+                                    <option value="GBP" {% if currency == 'GBP' %}selected{% endif %}>GBP - British Pound</option>
+                                    <option value="UGX" {% if currency == 'UGX' %}selected{% endif %}>UGX - Ugandan Shilling</option>
+                                    <option value="TZS" {% if currency == 'TZS' %}selected{% endif %}>TZS - Tanzanian Shilling</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12">
+                                <hr>
+                                <h6 class="fw-bold text-primary">
+                                    <i class="fas fa-toggle-on me-2"></i>System Settings
+                                </h6>
+                            </div>
+                            
+                            <!-- Maintenance Mode Toggle - FIXED VERSION -->
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="form-check form-switch">
+                                                    <input type="checkbox" class="form-check-input" id="maintenanceMode" 
+                                                           name="maintenance_mode" {% if maintenance_mode %}checked{% endif %}
+                                                           onchange="toggleMaintenance(event)">
+                                                    <label class="form-check-label fw-semibold" for="maintenanceMode">
+                                                        <i class="fas fa-tools me-1"></i>Maintenance Mode
+                                                    </label>
+                                                </div>
+                                                <small class="text-muted">Enable maintenance mode for platform</small>
+                                            </div>
+                                            <span class="badge {% if maintenance_mode %}bg-danger{% else %}bg-success{% endif %}" id="maintenanceStatus">
+                                                {% if maintenance_mode %}Active{% else %}Inactive{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Allow Registration -->
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="form-check form-switch">
+                                                    <input type="checkbox" class="form-check-input" id="allowRegistration" 
+                                                           name="allow_registration" {% if allow_registration %}checked{% endif %}
+                                                           onchange="updateStatus('registrationStatus', this.checked, 'Enabled', 'Disabled')">
+                                                    <label class="form-check-label fw-semibold" for="allowRegistration">
+                                                        <i class="fas fa-user-plus me-1"></i>Allow Registration
+                                                    </label>
+                                                </div>
+                                                <small class="text-muted">Allow new tenant registrations</small>
+                                            </div>
+                                            <span class="badge {% if allow_registration %}bg-success{% else %}bg-danger{% endif %}" id="registrationStatus">
+                                                {% if allow_registration %}Enabled{% else %}Disabled{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Debug Mode -->
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="form-check form-switch">
+                                                    <input type="checkbox" class="form-check-input" id="debugMode" 
+                                                           name="debug_mode" {% if debug_mode %}checked{% endif %}
+                                                           onchange="updateStatus('debugStatus', this.checked, 'On', 'Off')">
+                                                    <label class="form-check-label fw-semibold" for="debugMode">
+                                                        <i class="fas fa-bug me-1"></i>Debug Mode
+                                                    </label>
+                                                </div>
+                                                <small class="text-muted">Enable detailed error reporting</small>
+                                            </div>
+                                            <span class="badge {% if debug_mode %}bg-warning{% else %}bg-secondary{% endif %}" id="debugStatus">
+                                                {% if debug_mode %}On{% else %}Off{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Email Notifications -->
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="form-check form-switch">
+                                                    <input type="checkbox" class="form-check-input" id="emailNotifications" 
+                                                           name="email_notifications" {% if email_notifications %}checked{% endif %}
+                                                           onchange="updateStatus('emailStatus', this.checked, 'Enabled', 'Disabled')">
+                                                    <label class="form-check-label fw-semibold" for="emailNotifications">
+                                                        <i class="fas fa-envelope-open-text me-1"></i>Email Notifications
+                                                    </label>
+                                                </div>
+                                                <small class="text-muted">Send system notifications via email</small>
+                                            </div>
+                                            <span class="badge {% if email_notifications %}bg-success{% else %}bg-secondary{% endif %}" id="emailStatus">
+                                                {% if email_notifications %}Enabled{% else %}Disabled{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                <i class="fas fa-save me-2"></i>Save Settings
+                            </button>
+                            <button type="reset" class="btn btn-secondary btn-lg px-5">
+                                <i class="fas fa-undo me-2"></i>Reset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column - Info & Stats -->
+        <div class="col-lg-4">
+            <!-- Platform Info Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-info text-white py-3">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Platform Info
+                    </h6>
+                    <small class="text-white-50">System information and status</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fas fa-tag me-2"></i>Version</td>
+                                    <td><span class="badge bg-primary">2.0.0</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fab fa-python me-2"></i>Python</td>
+                                    <td><span class="badge bg-secondary">3.12</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fab fa-django me-2"></i>Django</td>
+                                    <td><span class="badge bg-secondary">4.2.11</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fas fa-database me-2"></i>Database</td>
+                                    <td><span class="badge bg-secondary">SQLite</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fas fa-heartbeat me-2"></i>Status</td>
+                                    <td><span class="badge bg-success">🟢 Running</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Stats Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white py-3">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>System Stats
+                    </h6>
+                    <small class="text-white-50">Quick overview of platform data</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="statsTable">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fas fa-building me-2"></i>Total Tenants</td>
+                                    <td><span class="badge bg-primary fs-6">{{ total_tenants|default:0 }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fas fa-users me-2"></i>Total Users</td>
+                                    <td><span class="badge bg-info fs-6">{{ total_users|default:0 }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fas fa-tags me-2"></i>Project Types</td>
+                                    <td><span class="badge bg-warning text-dark fs-6">{{ total_project_types|default:0 }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fas fa-crown me-2"></i>Subscription Plans</td>
+                                    <td><span class="badge bg-success fs-6">{{ total_subscription_plans|default:0 }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fas fa-boxes me-2"></i>Total Products</td>
+                                    <td><span class="badge bg-secondary fs-6">{{ total_products|default:0 }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold"><i class="fas fa-store me-2"></i>Total Branches</td>
+                                    <td><span class="badge bg-dark fs-6">{{ total_branches|default:0 }}</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-warning text-dark py-3">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'tenants:tenant_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-building me-2"></i>Manage Tenants
+                        </a>
+                        <a href="{% url 'users:user_list' %}" class="btn btn-outline-info">
+                            <i class="fas fa-users me-2"></i>Manage Users
+                        </a>
+                        <a href="{% url 'tenants:subscription_plans_list' %}" class="btn btn-outline-success">
+                            <i class="fas fa-crown me-2"></i>Subscription Plans
+                        </a>
+                        <a href="{% url 'tenants:project_type_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-project-diagram me-2"></i>Project Types
+                        </a>
+                        <button onclick="location.reload()" class="btn btn-outline-dark">
+                            <i class="fas fa-sync me-2"></i>Refresh Stats
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// ============================================
+// MAINTENANCE MODE TOGGLE - FIXED VERSION
+// ============================================
+function toggleMaintenance(event) {
+    const checkbox = event.target;
+    const statusBadge = document.getElementById('maintenanceStatus');
+    
+    // The checkbox.checked is the state we WANT to set
+    const desiredState = checkbox.checked;
+    const previousState = !desiredState;
+    
+    // Show loading state
+    statusBadge.textContent = '⏳';
+    statusBadge.className = 'badge bg-warning text-dark';
+    checkbox.disabled = true;
+    
+    // Get CSRF token
+    const csrfToken = getCsrfToken();
+    
+    // Send AJAX request with the desired state
+    fetch('{% url "portal:toggle_maintenance" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ enabled: desiredState })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        checkbox.disabled = false;
+        
+        if (data.success) {
+            // CRITICAL: Always set the checkbox based on server response
+            const isActive = data.maintenance_mode;
+            
+            // Update checkbox to match server state
+            checkbox.checked = isActive;
+            
+            // Update status badge
+            if (isActive) {
+                statusBadge.textContent = 'Active';
+                statusBadge.className = 'badge bg-danger';
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Maintenance Mode Enabled',
+                    text: 'The platform is now in maintenance mode.',
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'OK'
+                });
+            } else {
+                statusBadge.textContent = 'Inactive';
+                statusBadge.className = 'badge bg-success';
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Maintenance Mode Disabled',
+                    text: 'The platform is now back online.',
+                    confirmButtonColor: '#28a745',
+                    confirmButtonText: 'OK'
+                });
+            }
+        } else {
+            // Revert on error
+            checkbox.checked = previousState;
+            statusBadge.textContent = previousState ? 'Active' : 'Inactive';
+            statusBadge.className = `badge ${previousState ? 'bg-danger' : 'bg-success'}`;
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.error || 'Failed to toggle maintenance mode',
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'OK'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Maintenance toggle error:', error);
+        // Revert on error
+        checkbox.checked = previousState;
+        checkbox.disabled = false;
+        statusBadge.textContent = previousState ? 'Active' : 'Inactive';
+        statusBadge.className = `badge ${previousState ? 'bg-danger' : 'bg-success'}`;
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to toggle maintenance mode. Please try again.',
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'OK'
+        });
+    });
+}
+
+
+// ============================================
+// GET CSRF TOKEN
+// ============================================
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+           document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1];
+}
+
+
+// ============================================
+// UPDATE STATUS BADGE (Helper function)
+// ============================================
+function updateStatus(elementId, isChecked, activeText, inactiveText) {
+    const badge = document.getElementById(elementId);
+    if (badge) {
+        badge.textContent = isChecked ? activeText : inactiveText;
+        badge.className = `badge ${isChecked ? 'bg-success' : 'bg-secondary'}`;
+    }
+}
+
+
+
+// ============================================
+// FORM SUBMISSION HANDLER
+// ============================================
+document.getElementById('settingsForm')?.addEventListener('submit', function(e) {
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Saving...';
+});
+
+
+// ============================================
+// AUTO-REFRESH STATS
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Update stats every 60 seconds
+    setInterval(function() {
+        fetch('/platform-settings/stats/')
+            .then(response => response.json())
+            .then(data => {
+                const table = document.getElementById('statsTable');
+                if (table) {
+                    const rows = table.querySelectorAll('tbody tr');
+                    if (rows.length >= 6) {
+                        rows[0].querySelector('td:last-child .badge').textContent = data.total_tenants || 0;
+                        rows[1].querySelector('td:last-child .badge').textContent = data.total_users || 0;
+                        rows[2].querySelector('td:last-child .badge').textContent = data.total_project_types || 0;
+                        rows[3].querySelector('td:last-child .badge').textContent = data.total_subscription_plans || 0;
+                        rows[4].querySelector('td:last-child .badge').textContent = data.total_products || 0;
+                        rows[5].querySelector('td:last-child .badge').textContent = data.total_branches || 0;
+                    }
+                }
+            })
+            .catch(error => console.log('Stats refresh failed:', error));
+    }, 60000);
+});
+
+// ============================================
+// CONFIRMATION FOR DANGEROUS ACTIONS
+// ============================================
+document.getElementById('debugMode')?.addEventListener('change', function() {
+    if (this.checked) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Enable Debug Mode?',
+            text: 'Debug mode will expose detailed error information. This should only be used for development.',
+            showCancelButton: true,
+            confirmButtonColor: '#ffc107',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Enable',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                this.checked = false;
+                document.getElementById('debugStatus').textContent = 'Off';
+                document.getElementById('debugStatus').className = 'badge bg-secondary';
+            } else {
+                document.getElementById('debugStatus').textContent = 'On';
+                document.getElementById('debugStatus').className = 'badge bg-warning';
+            }
+        });
+    } else {
+        document.getElementById('debugStatus').textContent = 'Off';
+        document.getElementById('debugStatus').className = 'badge bg-secondary';
+    }
+});
+</script>
+
+<style>
+    .table td {
+        padding: 12px 16px;
+        vertical-align: middle;
+    }
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+    .form-control-lg, .form-select-lg {
+        padding: 10px 16px;
+        font-size: 1rem;
+    }
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .card-header {
+        border-bottom: none;
+    }
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    .badge.fs-6 {
+        font-size: 1.1rem !important;
+        padding: 6px 12px;
+    }
+    .form-check {
+        padding-left: 2.5em;
+    }
+    .form-check-input {
+        width: 2.5em;
+        height: 1.25em;
+        margin-left: -2.5em;
+        cursor: pointer;
+    }
+    .form-check-label {
+        cursor: pointer;
+    }
+    .form-check .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    .form-check .form-check-input:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .btn-lg {
+        padding: 10px 16px;
+        font-size: 1rem;
+    }
+    .card-body .card {
+        transition: all 0.2s;
+    }
+    .card-body .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    @media (max-width: 768px) {
+        .btn-lg {
+            width: 100%;
+        }
+        .d-flex.gap-2 {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}

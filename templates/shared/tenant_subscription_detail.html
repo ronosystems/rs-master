@@ -1,0 +1,115 @@
+{% extends "shared/base_super_admin.html" %}
+
+{% block title %}Tenant Subscription - {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-crown me-2"></i>Subscription Details</h5>
+                    <div>
+                        <a href="{% url 'tenants:edit_tenant' tenant.id %}" class="btn btn-light btn-sm">
+                            <i class="fas fa-edit me-1"></i>Edit Subscriber
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <h5>{{ tenant.company_name }}</h5>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Plan:</strong><br> {{ tenant.subscription_plan|default:"No Plan"|title }}</p>
+                            <p><strong>Status:</strong><br>
+                                {% if tenant.is_subscription_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Expired</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Start Date:</strong><br> {{ tenant.subscription_start|date:"Y-m-d"|default:"-" }}</p>
+                            <p><strong>End Date:</strong><br> {{ tenant.subscription_end|date:"Y-m-d"|default:"-" }}</p>
+                            <p><strong>Days Remaining:</strong><br> {{ tenant.days_remaining|default:0 }} days</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Company Info -->
+                    <hr>
+                    <h6 class="text-muted">Company Information</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Email:</strong><br> {{ tenant.company_email|default:"-" }}</p>
+                            <p><strong>Phone:</strong><br> {{ tenant.company_phone|default:"-" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Address:</strong><br> {{ tenant.company_address|default:"-" }}</p>
+                            <p><strong>PIN:</strong><br> {{ tenant.company_pin|default:"-" }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Project Type -->
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Project Type:</strong><br> 
+                                {% if tenant.project_type %}
+                                <span class="badge bg-info">{{ tenant.project_type.name }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Not Assigned</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong><br>
+                                {% if tenant.status == 'active' %}
+                                <span class="badge bg-success">Active</span>
+                                {% elif tenant.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% elif tenant.status == 'suspended' %}
+                                <span class="badge bg-danger">Suspended</span>
+                                {% elif tenant.status == 'expired' %}
+                                <span class="badge bg-secondary">Expired</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ tenant.status|title }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if not tenant.is_subscription_active %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        This subscription has expired. Please renew to continue.
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{% url 'tenants:renew_subscription' tenant.id %}" class="btn btn-warning">
+                            <i class="fas fa-sync me-2"></i>Renew Subscription
+                        </a>
+                        <a href="{% url 'tenants:edit_tenant' tenant.id %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Edit Subscriber
+                        </a>
+                        <!-- ✅ Fixed: Only show Edit Plan if there is a plan -->
+                        {% if tenant.get_subscription_plan %}
+                        <a href="{% url 'tenants:subscription_plan_edit' tenant.get_subscription_plan.id %}" class="btn btn-info">
+                            <i class="fas fa-edit me-2"></i>Edit Plan
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'tenants:edit_tenant_owner' tenant.id %}" class="btn btn-primary">
+                            <i class="fas fa-user-edit me-2"></i>Edit Owner
+                        </a>
+                        <a href="{% url 'tenants:subscription_users' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

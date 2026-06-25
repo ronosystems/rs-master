@@ -1,0 +1,247 @@
+{% extends 'tech_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Edit Bulk Product - {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">Edit Bulk Product: {{ product.name }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- TWO COLUMN LAYOUT -->
+                        <div class="row">
+                            
+                            <!-- LEFT SECTION: Product Information -->
+                            <div class="col-md-6">
+                                <div class="card border-primary mb-3">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Product Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i>
+                                            <strong>SKU Code:</strong> {{ product.sku_code }} (Auto-generated, cannot be changed)
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-12 mb-3">
+                                                <label for="name" class="form-label">Product Name *</label>
+                                                <input type="text" class="form-control" id="name" name="name" required 
+                                                       value="{{ product.name }}">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="brand" class="form-label">Brand</label>
+                                                <input type="text" class="form-control" id="brand" name="brand" 
+                                                       value="{{ product.brand|default:'' }}">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="model" class="form-label">Model</label>
+                                                <input type="text" class="form-control" id="model" name="model" 
+                                                       value="{{ product.model|default:'' }}">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="color" class="form-label">Color</label>
+                                                <input type="text" class="form-control" id="color" name="color" 
+                                                       value="{% if product.specifications.color %}{{ product.specifications.color }}{% endif %}">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="category_id" class="form-label">Category</label>
+                                                <select class="form-control" id="category_id" name="category_id" required>
+                                                    <option value="">Select Category</option>
+                                                    {% for cat in categories %}
+                                                    <option value="{{ cat.id }}" {% if product.category.id == cat.id %}selected{% endif %}>
+                                                        {{ cat.name }} ({{ cat.get_item_type_display }})
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="branch_id" class="form-label">Branch *</label>
+                                                <select class="form-control" id="branch_id" name="branch_id" required>
+                                                    <option value="">Select Branch</option>
+                                                    {% for branch in branches %}
+                                                    <option value="{{ branch.id }}" {% if product.branch.id == branch.id %}selected{% endif %}>
+                                                        {{ branch.name }} ({{ branch.code }})
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="supplier_id" class="form-label">Supplier</label>
+                                                <select class="form-control" id="supplier_id" name="supplier_id">
+                                                    <option value="">Select Supplier</option>
+                                                    {% for supplier in suppliers %}
+                                                    <option value="{{ supplier.id }}" {% if product.supplier.id == supplier.id %}selected{% endif %}>
+                                                        {{ supplier.name }}
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="barcode" class="form-label">Barcode</label>
+                                                <input type="text" class="form-control" id="barcode" name="barcode" 
+                                                       value="{{ product.barcode|default:'' }}">
+                                                <small class="text-muted">Product barcode for scanning</small>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Current Stock</label>
+                                                <input type="text" class="form-control" value="{{ product.bulk_quantity }} units" readonly disabled>
+                                                <small class="text-muted">Use "Restock" to add more stock</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="specifications" class="form-label">Specifications</label>
+                                            <textarea class="form-control" id="specifications" name="specifications" rows="3" 
+                                                      placeholder="e.g., 1 meter length, Type-C connector">{% if product.specifications.description %}{{ product.specifications.description }}{% endif %}</textarea>
+                                        </div>
+
+                                        <div class="form-check mb-3">
+                                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {% if product.is_active %}checked{% endif %}>
+                                            <label class="form-check-label" for="is_active">Active</label>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input type="checkbox" class="form-check-input" id="is_discontinued" name="is_discontinued" {% if product.is_discontinued %}checked{% endif %}>
+                                            <label class="form-check-label" for="is_discontinued">Discontinued</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- RIGHT SECTION: Pricing Information -->
+                            <div class="col-md-6">
+                                <div class="card border-success mb-3">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Pricing Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label for="buying_price" class="form-label">Buying Price (KES)</label>
+                                                <input type="number" step="0.01" class="form-control" id="buying_price" name="buying_price" 
+                                                       value="{{ product.buying_price }}">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label for="selling_price" class="form-label">Selling Price (KES) *</label>
+                                                <input type="number" step="0.01" class="form-control" id="selling_price" name="selling_price" 
+                                                       required value="{{ product.selling_price }}">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label for="best_price" class="form-label">Best/Retail Price (KES)</label>
+                                                <input type="number" step="0.01" class="form-control" id="best_price" name="best_price" 
+                                                       value="{{ product.best_price|default:'' }}">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="reorder_level" class="form-label">Reorder Level</label>
+                                                <input type="number" class="form-control" id="reorder_level" name="reorder_level" 
+                                                       value="{{ product.reorder_level }}">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="warranty_months" class="form-label">Warranty (Months)</label>
+                                                <input type="number" class="form-control" id="warranty_months" name="warranty_months" 
+                                                       value="{{ product.warranty_months }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Stock Summary Card -->
+                                <div class="card border-info mb-3">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Stock Summary</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-md-4">
+                                                <h6>SKU:</h6>
+                                                <h5 class="text-primary">{{ product.sku_code }}</h5>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <h6>Current Stock:</h6>
+                                                <h2 class="text-success">{{ product.bulk_quantity }}</h2>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <h6>Total Value:</h6>
+                                                <h2 class="text-primary">KES {{ product.stock_value|floatformat:2 }}</h2>
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <small><strong>Buying:</strong> KES {{ product.buying_price|floatformat:2 }}</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small><strong>Selling:</strong> KES {{ product.selling_price|floatformat:2 }}</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small><strong>Profit/Unit:</strong> <span class="text-success">KES {{ product.profit_margin|floatformat:2 }}</span></small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-warning mt-3">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>Note:</strong> 
+                                    <ul class="mb-0 mt-2">
+                                        <li><strong>SKU</strong> is auto-generated and cannot be changed</li>
+                                        <li><strong>Barcode</strong> can be updated for scanning at POS</li>
+                                        <li>Use the <strong>"Restock"</strong> button on product detail page to add more stock</li>
+                                        <li>Stock quantity cannot be edited here - use Restock or Stock Adjustment</li>
+                                    </ul>
+                                </div>
+
+                                <div class="text-center mt-4">
+                                    <button type="submit" class="btn btn-warning btn-lg px-5">
+                                        <i class="fas fa-save"></i> Update Product
+                                    </button>
+                                    <a href="{% url 'product_detail' product.id %}" class="btn btn-secondary btn-lg px-5">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-calculate best price when selling price changes
+    document.getElementById('selling_price').addEventListener('change', function() {
+        var bestPriceField = document.getElementById('best_price');
+        if (!bestPriceField.value) {
+            var sellingPrice = parseFloat(this.value);
+            if (!isNaN(sellingPrice)) {
+                var bestPrice = sellingPrice * 1.1;
+                bestPriceField.value = bestPrice.toFixed(2);
+            }
+        }
+    });
+</script>
+{% endblock %}

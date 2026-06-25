@@ -1,0 +1,67 @@
+{% extends "shared/base_main.html" %}
+
+{% block title %}Returns{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h5><i class="fas fa-list"></i> Returns & Refunds</h5>
+        </div>
+        <div class="card-body">
+            <!-- Filter -->
+            <div class="mb-3">
+                <select class="form-select w-25" onchange="location.href='?status='+this.value">
+                    <option value="">All Status</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Return ID</th>
+                            <th>Invoice</th>
+                            <th>Date</th>
+                            <th>Quantity</th>
+                            <th>Refund Amount</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </table>
+                    </thead>
+                    <tbody>
+                        {% for return_obj in returns %}
+                        <tr class="{% if return_obj.status == 'pending' %}table-warning{% elif return_obj.status == 'approved' %}table-success{% elif return_obj.status == 'rejected' %}table-danger{% endif %}">
+                            <td>#{{ return_obj.id }}</td>
+                            <td>{{ return_obj.original_sale.invoice_no }}</td>
+                            <td>{{ return_obj.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ return_obj.quantity }}</td>
+                            <td>KES {{ return_obj.refund_amount|floatformat:2 }}</td>
+                            <td>{{ return_obj.get_reason_display }}</td>
+                            <td>
+                                <span class="badge bg-{% if return_obj.status == 'pending' %}warning{% elif return_obj.status == 'approved' %}success{% elif return_obj.status == 'rejected' %}danger{% else %}secondary{% endif %}">
+                                    {{ return_obj.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'return_detail' return_obj.id %}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">No returns found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "shared/base_main.html" %}
+
+{% block title %}Close Cash Drawer{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5><i class="fas fa-cash-register"></i> Close Cash Drawer</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Shift Summary:</strong><br>
+                        <div class="row mt-2">
+                            <div class="col-6">Opening Amount:</div>
+                            <div class="col-6 text-end">KES {{ drawer.opening_amount|floatformat:2 }}</div>
+                            <div class="col-6">Total Sales:</div>
+                            <div class="col-6 text-end">KES {{ total_sales|floatformat:2 }}</div>
+                            <div class="col-6"><strong>Expected Amount:</strong></div>
+                            <div class="col-6 text-end"><strong>KES {{ expected_amount|floatformat:2 }}</strong></div>
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Closing Amount (KES)</label>
+                            <input type="number" name="closing_amount" class="form-control" step="0.01" required autofocus>
+                            <small class="text-muted">Actual cash amount in drawer</small>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="fas fa-lock"></i> Close Drawer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

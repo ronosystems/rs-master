@@ -1,0 +1,438 @@
+{% extends "shared/base_super_admin.html" %}
+{% load static %}
+
+{% block title %}Manage Tenants{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card border-0 shadow-lg">
+        <div class="card-header bg-gradient-primary text-white py-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-building me-2"></i>Tenant Management
+                    </h5>
+                    <p class="mb-0 small opacity-75 mt-1">Manage all registered companies and their subscriptions</p>
+                </div>
+                <div class="mt-2 mt-sm-0">
+                    <a href="{% url 'tenants:register_tenant' %}" class="btn btn-light btn-sm px-3 py-2 fw-semibold">
+                        <i class="fas fa-plus-circle me-2 text-primary"></i>Add New Tenant
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body p-0">
+            <!-- Search and Filter Bar -->
+            <div class="p-3 bg-light border-bottom">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" id="searchTenant" class="form-control border-start-0" 
+                                   placeholder="Search by company name, code, or email...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="statusFilter" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="suspended">Suspended</option>
+                            <option value="pending">Pending</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="planFilter" class="form-select">
+                            <option value="">All Plans</option>
+                            <option value="basic">Basic</option>
+                            <option value="standard">Standard</option>
+                            <option value="premium">Premium</option>
+                            <option value="enterprise">Enterprise</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                            <i class="fas fa-undo-alt me-1"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tenantTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th style="width: 5%">#</th>
+                            <th style="width: 18%">Company Details</th>
+                            <th style="width: 12%">Project Type</th>  <!-- NEW COLUMN -->
+                            <th style="width: 10%">Contact</th>
+                            <th style="width: 10%">Subscription</th>
+                            <th style="width: 10%">Status</th>
+                            <th style="width: 12%">Admin Owner</th>
+                            <th style="width: 10%">Registered</th>
+                            <th style="width: 13%">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tenant in tenants %}
+                        <tr data-status="{{ tenant.status }}" data-plan="{{ tenant.subscription_plan }}">
+                            <td class="text-muted">{{ forloop.counter }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        {% if tenant.logo %}
+                                            <img src="{{ tenant.logo.url }}" alt="{{ tenant.company_name }}" 
+                                                 class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="fas fa-building text-primary"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <strong class="d-block">{{ tenant.company_name }}</strong>
+                                        <small class="text-muted">Code: <code>{{ tenant.code }}</code></small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if tenant.project_type %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fas {{ tenant.project_type.icon }} text-{{ tenant.project_type.color }}"></i>
+                                        <span class="badge bg-{{ tenant.project_type.color }}">
+                                            {{ tenant.project_type.name }}
+                                        </span>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">
+                                        <code>{{ tenant.project_type.code }}</code>
+                                    </small>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if tenant.company_phone %}
+                                <div><i class="fas fa-phone-alt fa-fw text-muted me-1"></i> {{ tenant.company_phone }}</div>
+                                {% endif %}
+                                {% if tenant.company_email %}
+                                <div><i class="fas fa-envelope fa-fw text-muted me-1"></i> {{ tenant.company_email|truncatechars:20 }}</div>
+                                {% endif %}
+                                {% if not tenant.company_phone and not tenant.company_email %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="mb-1">
+                                    <span class="badge {% if tenant.subscription_plan == 'premium' %}bg-warning{% elif tenant.subscription_plan == 'standard' %}bg-info{% elif tenant.subscription_plan == 'enterprise' %}bg-dark{% else %}bg-secondary{% endif %}">
+                                        {{ tenant.get_subscription_plan_display }}
+                                    </span>
+                                </div>
+                                <div class="small text-muted">
+                                    {% if tenant.subscription_end %}
+                                        <i class="fas fa-calendar-alt me-1"></i>
+                                        Expires: {{ tenant.subscription_end|date:"M d, Y" }}
+                                        {% if tenant.days_remaining <= 7 and tenant.days_remaining > 0 %}
+                                            <span class="badge bg-warning text-dark ms-1">⚠️ {{ tenant.days_remaining }}d left</span>
+                                        {% elif tenant.days_remaining <= 0 %}
+                                            <span class="badge bg-danger ms-1">Expired</span>
+                                        {% endif %}
+                                    {% else %}
+                                        No subscription
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if tenant.status == 'active' %}
+                                    <span class="badge bg-success px-3 py-2">Active</span>
+                                {% elif tenant.status == 'inactive' %}
+                                    <span class="badge bg-secondary px-3 py-2">Inactive</span>
+                                {% elif tenant.status == 'suspended' %}
+                                    <span class="badge bg-warning text-dark px-3 py-2">Suspended</span>
+                                {% elif tenant.status == 'pending' %}
+                                    <span class="badge bg-info px-3 py-2">Pending Approval</span>
+                                {% elif tenant.status == 'rejected' %}
+                                    <span class="badge bg-danger px-3 py-2">Rejected</span>
+                                {% else %}
+                                    <span class="badge bg-secondary px-3 py-2">{{ tenant.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if tenant.owner %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2"
+                                             style="width: 32px; height: 32px;">
+                                            <i class="fas fa-user-circle text-success"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">{{ tenant.owner.username }}</div>
+                                            <small class="text-muted">{{ tenant.owner.first_name }} {{ tenant.owner.last_name }}</small>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Not assigned</span>
+                                    <a href="{% url 'tenants:assign_owner' tenant.id %}" class="btn btn-link btn-sm p-0 ms-2">
+                                        <i class="fas fa-plus-circle text-success"></i>
+                                    </a>
+                                {% endif %}
+                            </td>
+                            <td>{{ tenant.created_at|date:"Y-m-d" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'tenants:tenant_detail' tenant.id %}" 
+                                       class="btn btn-outline-primary" 
+                                       title="View Details" 
+                                       data-bs-toggle="tooltip">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    <!-- Approve/Reject buttons for pending tenants -->
+                                    {% if tenant.status == 'pending' %}
+                                        <a href="{% url 'tenants:approve_tenant' tenant.id %}" 
+                                           class="btn btn-outline-success" 
+                                           title="Approve Tenant"
+                                           onclick="return confirm('Approve {{ tenant.company_name }}? This will activate the tenant and send login credentials.')">
+                                            <i class="fas fa-check-circle"></i>
+                                        </a>
+                                        <a href="{% url 'tenants:reject_tenant' tenant.id %}" 
+                                           class="btn btn-outline-danger" 
+                                           title="Reject Tenant"
+                                           onclick="return confirm('Reject {{ tenant.company_name }}? This will deny access.')">
+                                            <i class="fas fa-times-circle"></i>
+                                        </a>
+                                    {% endif %}
+                                    
+                                    <a href="{% url 'tenants:edit_tenant' tenant.id %}" 
+                                       class="btn btn-outline-secondary" 
+                                       title="Edit Tenant" 
+                                       data-bs-toggle="tooltip">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'tenants:edit_tenant_owner' tenant.id %}" 
+                                       class="btn btn-outline-info" 
+                                       title="Edit Owner" 
+                                       data-bs-toggle="tooltip">
+                                        <i class="fas fa-user-cog"></i>
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-outline-danger" 
+                                            title="Delete Tenant" 
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteModal{{ tenant.id }}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Delete Confirmation Modal -->
+                        <div class="modal fade" id="deleteModal{{ tenant.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Are you sure you want to delete <strong>{{ tenant.company_name }}</strong>?</p>
+                                        <p class="text-muted small mb-0">This action cannot be undone. All data associated with this tenant will be permanently deleted.</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <a href="{% url 'tenants:delete_tenant' tenant.id %}" class="btn btn-danger">Delete Permanently</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <div class="py-4">
+                                    <i class="fas fa-building fa-4x text-muted mb-3 d-block"></i>
+                                    <h5 class="text-muted">No tenants found</h5>
+                                    <p class="text-muted small">Get started by adding your first tenant</p>
+                                    <a href="{% url 'tenants:register_tenant' %}" class="btn btn-primary mt-2">
+                                        <i class="fas fa-plus-circle me-2"></i>Add First Tenant
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Table Footer with Stats -->
+            {% if tenants %}
+            <div class="card-footer bg-white border-0 py-3">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex gap-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 p-2 rounded-circle me-2">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Active Tenants</small>
+                                    <strong id="activeCount">0</strong>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-warning bg-opacity-10 p-2 rounded-circle me-2">
+                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Pending Approval</small>
+                                    <strong id="pendingCount">0</strong>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-danger bg-opacity-10 p-2 rounded-circle me-2">
+                                    <i class="fas fa-times-circle text-danger"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Expired/Rejected</small>
+                                    <strong id="expiredCount">0</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                        <small class="text-muted">
+                            <i class="fas fa-database me-1"></i> Total Tenants: <strong>{{ tenants|length }}</strong>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Search and filter functionality
+    function filterTable() {
+        const searchTerm = document.getElementById('searchTenant').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const planFilter = document.getElementById('planFilter').value;
+        const rows = document.querySelectorAll('#tenantTable tbody tr:not([id="noResultsRow"])');
+        let visibleCount = 0;
+        let activeCount = 0;
+        let pendingCount = 0;
+        let expiredCount = 0;
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const status = row.getAttribute('data-status');
+            const plan = row.getAttribute('data-plan');
+            
+            const matchesSearch = text.includes(searchTerm);
+            const matchesStatus = !statusFilter || status === statusFilter;
+            const matchesPlan = !planFilter || plan === planFilter;
+            
+            if (matchesSearch && matchesStatus && matchesPlan) {
+                row.style.display = '';
+                visibleCount++;
+                
+                // Count statistics
+                if (status === 'active') activeCount++;
+                if (status === 'pending') pendingCount++;
+                if (status === 'expired' || status === 'rejected' || status === 'suspended') expiredCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Update stats
+        const activeCountEl = document.getElementById('activeCount');
+        const pendingCountEl = document.getElementById('pendingCount');
+        const expiredCountEl = document.getElementById('expiredCount');
+        if (activeCountEl) activeCountEl.innerText = activeCount;
+        if (pendingCountEl) pendingCountEl.innerText = pendingCount;
+        if (expiredCountEl) expiredCountEl.innerText = expiredCount;
+        
+        // Show/hide no results message
+        let noResultsRow = document.getElementById('noResultsRow');
+        if (visibleCount === 0 && rows.length > 0) {
+            if (!noResultsRow) {
+                const tbody = document.querySelector('#tenantTable tbody');
+                noResultsRow = document.createElement('tr');
+                noResultsRow.id = 'noResultsRow';
+                noResultsRow.innerHTML = '<td colspan="9" class="text-center py-5"><i class="fas fa-search fa-3x text-muted mb-3 d-block"></i><p class="text-muted">No tenants match your filters</p><button class="btn btn-link" onclick="resetFilters()">Clear filters</button></td>';
+                tbody.appendChild(noResultsRow);
+            }
+            noResultsRow.style.display = '';
+        } else if (noResultsRow) {
+            noResultsRow.style.display = 'none';
+        }
+    }
+    
+    function resetFilters() {
+        document.getElementById('searchTenant').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('planFilter').value = '';
+        filterTable();
+    }
+    
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        filterTable();
+        
+        // Add event listeners
+        const searchInput = document.getElementById('searchTenant');
+        const statusSelect = document.getElementById('statusFilter');
+        const planSelect = document.getElementById('planFilter');
+        
+        if (searchInput) searchInput.addEventListener('keyup', filterTable);
+        if (statusSelect) statusSelect.addEventListener('change', filterTable);
+        if (planSelect) planSelect.addEventListener('change', filterTable);
+        
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .table th {
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    .table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+    .btn-group .btn {
+        margin: 0 2px;
+        border-radius: 6px;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    }
+    .badge {
+        font-weight: 500;
+        border-radius: 8px;
+    }
+    code {
+        background: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "tech_master/base_tech.html" %}
+
+{% block title %}Inventory Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5><i class="fas fa-boxes"></i> Inventory Report</h5>
+        </div>
+        <div class="card-body">
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <h6>Total Products</h6>
+                        <h3 class="text-primary">{{ total_products }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <h6>Inventory Value</h6>
+                        <h3 class="text-success">KES {{ total_value|floatformat:2 }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <h6>Low Stock Items</h6>
+                        <h3 class="text-warning">{{ low_stock_count }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card text-center">
+                        <h6>Out of Stock</h6>
+                        <h3 class="text-danger">{{ out_of_stock_count }}</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Category Summary -->
+            {% if category_data %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6>Products by Category</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for cat in category_data %}
+                        <div class="col-md-3 mb-3">
+                            <div class="category-card">
+                                <h5>{{ cat.name }}</h5>
+                                <p class="mb-1">Products: {{ cat.count }}</p>
+                                <p class="mb-0">Value: KES {{ cat.value|floatformat:2 }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- All Products Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h6>All Products</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>SKU</th>
+                                    <th>Category</th>
+                                    <th>Brand</th>
+                                    <th>Price</th>
+                                    <th>Stock</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr class="{% if product.stock_quantity == 0 %}table-danger{% elif product.stock_quantity <= product.min_stock_level %}table-warning{% endif %}">
+                                    <td>{{ product.name }}</td
+                                    <td>{{ product.sku }}</td
+                                    <td>{{ product.category.name|default:"-" }}</td
+                                    <td>{{ product.brand|default:"-" }}</td
+                                    <td>KES {{ product.selling_price|floatformat:2 }}</td
+                                    <td>{{ product.stock_quantity }}</td
+                                    <td>
+                                        {% if product.stock_quantity == 0 %}
+                                            <span class="badge bg-danger">Out of Stock</span>
+                                        {% elif product.stock_quantity <= product.min_stock_level %}
+                                            <span class="badge bg-warning">Low Stock</span>
+                                        {% else %}
+                                            <span class="badge bg-success">In Stock</span>
+                                        {% endif %}
+                                     </td
+                                 </tr
+                                {% empty %}
+                                <tr><td colspan="7" class="text-center">No products found</td</tr
+                                {% endfor %}
+                            </tbody>
+                         </table
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .category-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        border: 1px solid #e0e0e0;
+    }
+    .badge {
+        font-size: 12px;
+        padding: 5px 10px;
+    }
+</style>
+{% endblock %}

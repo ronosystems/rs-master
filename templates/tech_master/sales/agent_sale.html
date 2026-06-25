@@ -1,0 +1,445 @@
+<!-- templates/tech_master/sales/agent_sale.html -->
+{% extends 'tech_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}New Sale | Sales Agent{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0 shadow-sm">
+                <!-- ✅ Added a header -->
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>New Sale
+                    </h5>
+                    <small class="text-white-50">Register a new sale for customer</small>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'tech_master:agent_sale' %}">
+                        {% csrf_token %}
+                        
+                        <!-- Customer Details Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-user-circle me-2"></i>Customer Details</h6>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label class="form-label fw-semibold">Full Name *</label>
+                                    <input type="text" name="customer_name" id="customerName" class="form-control" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Phone Number *</label>
+                                    <input type="tel" name="customer_phone" id="customerPhone" class="form-control" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">ID Number</label>
+                                    <input type="text" name="customer_id_number" id="customerIdNumber" class="form-control" placeholder="ID / Passport">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Next of Kin Details Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-users me-2"></i>Next of Kin Details</h6>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label class="form-label fw-semibold">Full Name</label>
+                                    <input type="text" name="next_of_kin_name" id="nextOfKinName" class="form-control" placeholder="Next of kin full name">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Phone Number</label>
+                                    <input type="tel" name="next_of_kin_phone" id="nextOfKinPhone" class="form-control" placeholder="Next of kin phone">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Relationship</label>
+                                    <input type="text" name="next_of_kin_relationship" id="nextOfKinRelationship" class="form-control" placeholder="e.g., Spouse, Parent">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Product & Price Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-microchip me-2"></i>Product Details</h6>
+                            
+                            <div class="row g-3">
+                                <!-- IMEI Input -->
+                                <div class="col-md-8">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-barcode me-1"></i>IMEI / Serial Number *
+                                    </label>
+                                    <div class="autocomplete-container">
+                                        <input type="text" id="imeiInput" name="imei" class="form-control form-control-lg" 
+                                               placeholder="IMEI/Serial number..." 
+                                               autocomplete="off" required>
+                                        <div id="imeiSuggestions" class="autocomplete-suggestions"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Price Field (Editable) -->
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-tag me-1"></i>Selling Price (KES) *
+                                    </label>
+                                    <input type="number" name="selling_price" id="sellingPrice" class="form-control form-control-lg" 
+                                           step="0.01" min="0" placeholder="0.00" required>
+                                    <small class="text-muted">Enter selling price</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Selected Product Preview -->
+                            <div id="selectedProductInfo" class="mt-3" style="display: none;">
+                                <div class="alert alert-success">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                        <div>
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            <strong id="selectedProductName"></strong>
+                                            <div class="small text-muted mt-1">
+                                                <i class="fas fa-microchip me-1"></i>
+                                                Identifier: <code id="selectedProductImei"></code>
+                                            </div>
+                                        </div>
+                                        <div class="text-end mt-2 mt-sm-0">
+                                            <span class="fw-bold text-success fs-4" id="selectedProductPriceDisplay"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sale Type Section and Actions -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-credit-card me-2"></i>Sale Type</h6>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Payment Method *</label>
+                                    <select name="payment_method" id="paymentMethod" class="form-select form-select-lg" required>
+                                        <option value="credit" selected>Credit</option>
+                                        <option value="cash">Cash</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">&nbsp;</label>
+                                    <button type="submit" class="btn btn-success btn-lg w-100" id="submitBtn">
+                                        <i class="fas fa-check-circle me-2"></i>Complete Sale
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">&nbsp;</label>
+                                    <a href="{% url 'tech_master:my_stock' %}" class="btn btn-secondary btn-lg w-100">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-section {
+        background: var(--card-bg, #ffffff);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(15, 0, 0, 0.986);
+        border: 1px solid var(--sidebar-border, #e9ecef);
+    }
+    .form-section h6 {
+        color: #0f67b3;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--sidebar-border, #e9ecef);
+    }
+    
+    .autocomplete-container {
+        position: relative;
+    }
+    .autocomplete-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--card-bg, #ffffff);
+        border: 1px solid var(--sidebar-border, #ddd);
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 12px rgb(12, 0, 0);
+    }
+    .autocomplete-suggestion {
+        padding: 12px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--sidebar-border, #eee);
+        transition: all 0.2s;
+        font-family: monospace;
+        color: var(--sidebar-text, #333);
+    }
+    .autocomplete-suggestion:hover {
+        background-color: #e3f2fd;
+    }
+    .autocomplete-suggestion.selected {
+        background-color: #0d6efd;
+        color: white;
+    }
+    .autocomplete-suggestion .suggestion-imei {
+        font-weight: bold;
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+    }
+    .autocomplete-suggestion .suggestion-details {
+        font-size: 0.7rem;
+        font-family: Arial, sans-serif;
+        margin-top: 4px;
+    }
+    .autocomplete-suggestion.selected .suggestion-details {
+        color: rgba(255,255,255,0.8);
+    }
+    
+    .highlight-match {
+        background-color: #ffeb3b;
+        font-weight: bold;
+    }
+    .autocomplete-suggestion.selected .highlight-match {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    /* Dark mode support */
+    [data-bs-theme="dark"] .form-section {
+        background: #1a1a2e;
+        border-color: #2d2d44;
+    }
+    [data-bs-theme="dark"] .form-section h6 {
+        color: #e0e0e0;
+        border-color: #2d2d44;
+    }
+    [data-bs-theme="dark"] .autocomplete-suggestions {
+        background: #1a1a2e;
+        border-color: #2d2d44;
+    }
+    [data-bs-theme="dark"] .autocomplete-suggestion {
+        color: #e0e0e0;
+        border-color: #2d2d44;
+    }
+    [data-bs-theme="dark"] .autocomplete-suggestion:hover {
+        background-color: #2d2d44;
+    }
+    
+    .btn-lg {
+        padding: 10px 16px;
+        font-size: 1rem;
+    }
+</style>
+
+<script>
+    // Available products from assigned stock
+    const availableProducts = [
+        {% for product in products %}
+        {
+            id: {{ product.id }},
+            name: "{{ product.name|escapejs }}",
+            model: "{{ product.model|escapejs }}",
+            imei: "{{ product.imei|escapejs }}",
+            serial: "{{ product.serial|escapejs }}",
+            price: {{ product.selling_price }}
+        },
+        {% endfor %}
+    ];
+    
+    let currentSuggestions = [];
+    let selectedIndex = -1;
+    let selectedProduct = null;
+    
+    const imeiInput = document.getElementById('imeiInput');
+    const suggestionsDiv = document.getElementById('imeiSuggestions');
+    const selectedProductInfo = document.getElementById('selectedProductInfo');
+    const selectedProductName = document.getElementById('selectedProductName');
+    const selectedProductImei = document.getElementById('selectedProductImei');
+    const selectedProductPriceDisplay = document.getElementById('selectedProductPriceDisplay');
+    const sellingPriceInput = document.getElementById('sellingPrice');
+    
+    function filterProducts(searchTerm) {
+        if (!searchTerm || searchTerm.length < 2) {
+            return [];
+        }
+        const term = searchTerm.toLowerCase();
+        return availableProducts.filter(product => {
+            return (product.imei && product.imei.toLowerCase().includes(term)) ||
+                   (product.serial && product.serial.toLowerCase().includes(term));
+        });
+    }
+    
+    function highlightMatch(text, searchTerm) {
+        if (!searchTerm || searchTerm.length === 0) return text;
+        const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<span class="highlight-match">$1</span>');
+    }
+    
+    function showSuggestions(suggestions, searchTerm) {
+        if (suggestions.length === 0) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        suggestionsDiv.innerHTML = '';
+        suggestions.forEach((product, index) => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-suggestion';
+            if (index === selectedIndex) {
+                div.classList.add('selected');
+            }
+            
+            const identifier = product.imei || product.serial;
+            const highlightedIdentifier = highlightMatch(identifier, searchTerm);
+            
+            div.innerHTML = `
+                <div class="suggestion-imei">${highlightedIdentifier}</div>
+                <div class="suggestion-details">
+                    ${escapeHtml(product.name)} | KES ${product.price.toFixed(2)}
+                </div>
+            `;
+            div.addEventListener('click', () => selectProduct(product));
+            div.addEventListener('mouseenter', () => {
+                selectedIndex = index;
+                highlightSuggestion();
+            });
+            suggestionsDiv.appendChild(div);
+        });
+        
+        suggestionsDiv.style.display = 'block';
+    }
+    
+    function highlightSuggestion() {
+        const suggestions = document.querySelectorAll('.autocomplete-suggestion');
+        suggestions.forEach((sugg, idx) => {
+            if (idx === selectedIndex) {
+                sugg.classList.add('selected');
+                sugg.scrollIntoView({ block: 'nearest' });
+            } else {
+                sugg.classList.remove('selected');
+            }
+        });
+    }
+    
+    function selectProduct(product) {
+        selectedProduct = product;
+        const identifier = product.imei || product.serial;
+        imeiInput.value = identifier;
+        
+        // Set the selling price
+        sellingPriceInput.value = product.price;
+        
+        selectedProductName.textContent = product.name;
+        selectedProductImei.textContent = identifier;
+        selectedProductPriceDisplay.textContent = `KES ${product.price.toFixed(2)}`;
+        selectedProductInfo.style.display = 'block';
+        
+        suggestionsDiv.style.display = 'none';
+        selectedIndex = -1;
+    }
+    
+    // Auto-fill price when typing in selling price
+    sellingPriceInput.addEventListener('input', function() {
+        if (selectedProduct) {
+            const price = parseFloat(this.value);
+            if (!isNaN(price) && price >= 0) {
+                selectedProductPriceDisplay.textContent = `KES ${price.toFixed(2)}`;
+            }
+        }
+    });
+    
+    imeiInput.addEventListener('input', function() {
+        const searchTerm = this.value;
+        if (searchTerm.length >= 2) {
+            const suggestions = filterProducts(searchTerm);
+            currentSuggestions = suggestions;
+            selectedIndex = -1;
+            showSuggestions(suggestions, searchTerm);
+        } else {
+            suggestionsDiv.style.display = 'none';
+        }
+        
+        if (!searchTerm) {
+            selectedProductInfo.style.display = 'none';
+            selectedProduct = null;
+            sellingPriceInput.value = '';
+        }
+    });
+    
+    imeiInput.addEventListener('keydown', function(e) {
+        if (currentSuggestions.length === 0) return;
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, currentSuggestions.length - 1);
+                highlightSuggestion();
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                highlightSuggestion();
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedIndex >= 0 && currentSuggestions[selectedIndex]) {
+                    selectProduct(currentSuggestions[selectedIndex]);
+                } else if (currentSuggestions[0]) {
+                    selectProduct(currentSuggestions[0]);
+                }
+                break;
+            case 'Escape':
+                suggestionsDiv.style.display = 'none';
+                selectedIndex = -1;
+                break;
+        }
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!imeiInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        imeiInput.focus();
+    });
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // ✅ Added form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const imei = imeiInput.value.trim();
+        const price = sellingPriceInput.value.trim();
+        
+        if (!imei) {
+            e.preventDefault();
+            alert('Please select a product by IMEI/Serial number');
+            imeiInput.focus();
+            return false;
+        }
+        
+        if (!price || parseFloat(price) <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid selling price');
+            sellingPriceInput.focus();
+            return false;
+        }
+    });
+</script>
+{% endblock %}

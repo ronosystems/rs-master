@@ -1,0 +1,99 @@
+{% extends 'tech_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Edit Branch - {{ branch.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">Edit Branch: {{ branch.name }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Branch Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ branch.name }}" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="code" class="form-label">Branch Code *</label>
+                                <input type="text" class="form-control" id="code" name="code" 
+                                       value="{{ branch.code }}" required>
+                                <small class="text-muted">Unique code for this branch</small>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="branch_type" class="form-label">Branch Type</label>
+                                <select class="form-control" id="branch_type" name="branch_type">
+                                    <option value="main" {% if branch.branch_type == 'main' %}selected{% endif %}>Main Store</option>
+                                    <option value="sub_branch" {% if branch.branch_type == 'sub_branch' %}selected{% endif %}>Sub-Branch</option>
+                                    <option value="warehouse" {% if branch.branch_type == 'warehouse' %}selected{% endif %}>Warehouse</option>
+                                    <option value="outlet" {% if branch.branch_type == 'outlet' %}selected{% endif %}>Outlet</option>
+                                    <option value="kiosk" {% if branch.branch_type == 'kiosk' %}selected{% endif %}>Kiosk</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="city" class="form-label">City</label>
+                                <input type="text" class="form-control" id="city" name="city" 
+                                       value="{{ branch.city }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="2">{{ branch.address }}</textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" 
+                                       value="{{ branch.phone }}">
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check mt-4">
+                                    <input type="checkbox" class="form-check-input" id="is_main_branch" name="is_main_branch" 
+                                           {% if branch.is_main_branch %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_main_branch">
+                                        Set as Main Branch
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check mt-4">
+                                    <input type="checkbox" class="form-check-input" id="is_active" name="is_active" 
+                                           {% if branch.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_active">
+                                        Active
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save"></i> Update Branch
+                            </button>
+                            <a href="{% url 'tech_master:branch_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

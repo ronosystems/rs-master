@@ -1,0 +1,283 @@
+{% extends "shared/base_main.html" %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-users text-primary me-2"></i>User Management
+                </h5>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <i class="fas fa-plus-circle me-1"></i> Add User
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            {% if is_super_admin %}
+                            <th>Tenant</th>
+                            {% endif %}
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>PIN Code</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            {% if is_super_admin %}
+                            <td>
+                                {{ user.tenant.company_name|default:"No Tenant" }}
+                                <br>
+                                <small class="text-muted">{{ user.tenant.code|default:"" }}</small>
+                            </td>
+                            {% endif %}
+                            <td>
+                                {{ user.username }}
+                                {% if user.id == request.user.id %}
+                                    <span class="badge bg-info ms-1">You</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for role_value, role_label in role_choices %}
+                                    {% if user.role == role_value %}
+                                        {% if role_value == 'super_admin' %}
+                                            <span class="badge bg-danger">{{ role_label }}</span>
+                                        {% elif role_value == 'admin' %}
+                                            <span class="badge bg-warning">{{ role_label }}</span>
+                                        {% elif role_value == 'manager' %}
+                                            <span class="badge bg-info">{{ role_label }}</span>
+                                        {% elif role_value == 'cashier' %}
+                                            <span class="badge bg-success">{{ role_label }}</span>
+                                        {% elif role_value == 'sales_agent' %}
+                                            <span class="badge bg-secondary">{{ role_label }}</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% if user.pin_code %}
+                                    <code>••••••</code>
+                                    <small class="text-muted">({{ user.pin_code|length }} digits)</small>
+                                {% else %}
+                                    <span class="text-muted">No PIN</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                                {% if user.is_pin_locked %}
+                                    <span class="badge bg-warning ms-1">PIN Locked</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.created_at|date:"Y-m-d" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if user.role != 'super_admin' or is_super_admin %}
+                                    <button class="btn btn-outline-primary" onclick="editUser({{ user.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    {% endif %}
+                                    
+                                    {% if user.role != 'super_admin' and user.id != request.user.id %}
+                                    <button class="btn btn-outline-danger" onclick="deleteUser({{ user.id }}, '{{ user.username }}')">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                             </td>
+                         </tr>
+                        {% empty %}
+                         <tr>
+                            <td colspan="{% if is_super_admin %}7{% else %}6{% endif %}" class="text-center py-5">No users found</td>
+                         </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-user-plus"></i> Add User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'users:add_user' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {% if is_super_admin %}
+                    <div class="mb-3">
+                        <label class="form-label">Tenant *</label>
+                        <select name="tenant_id" class="form-select" required>
+                            <option value="">-- Select Tenant --</option>
+                            {% for t in all_tenants %}
+                            <option value="{{ t.id }}">{{ t.company_name }} ({{ t.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label">Username *</label>
+                        <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">First Name</label>
+                        <input type="text" name="first_name" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" name="last_name" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="text" name="phone_number" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password *</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm Password *</label>
+                        <input type="password" name="confirm_password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role *</label>
+                        <select name="role" class="form-select" required>
+                            {% for role_value, role_label in role_choices %}
+                                {% if role_value != 'super_admin' or is_super_admin %}
+                                    <option value="{{ role_value }}">{{ role_label }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">PIN Code (4-6 digits)</label>
+                        <input type="text" name="pin_code" class="form-control" maxlength="6" pattern="[0-9]{4,6}">
+                        <small class="text-muted">Optional numeric PIN for POS access</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="editUserForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="editUsername" class="form-control" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">First Name</label>
+                        <input type="text" name="first_name" id="editFirstName" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" name="last_name" id="editLastName" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" id="editEmail" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="text" name="phone_number" id="editPhone" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role *</label>
+                        <select name="role" id="editRole" class="form-select" required>
+                            {% for role_value, role_label in role_choices %}
+                                {% if role_value != 'super_admin' or is_super_admin %}
+                                    <option value="{{ role_value }}">{{ role_label }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">PIN Code (4-6 digits)</label>
+                        <input type="text" name="pin_code" id="editPinCode" class="form-control" maxlength="6" pattern="[0-9]{4,6}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="is_active" id="editStatus" class="form-select">
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Password (leave blank to keep current)</label>
+                        <input type="password" name="password" class="form-control">
+                        <small class="text-muted">Enter only if you want to change password</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function editUser(userId) {
+    fetch(`/portal/api/user/${userId}/`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('editUsername').value = data.username;
+            document.getElementById('editFirstName').value = data.first_name || '';
+            document.getElementById('editLastName').value = data.last_name || '';
+            document.getElementById('editEmail').value = data.email || '';
+            document.getElementById('editPhone').value = data.phone_number || '';
+            document.getElementById('editRole').value = data.role;
+            document.getElementById('editPinCode').value = data.pin_code || '';
+            document.getElementById('editStatus').value = data.is_active ? 'true' : 'false';
+            document.getElementById('editUserForm').action = `/portal/users/edit/${userId}/`;
+            new bootstrap.Modal(document.getElementById('editUserModal')).show();
+        })
+        .catch(error => {
+            window.location.href = `/portal/users/edit/${userId}/`;
+        });
+}
+
+function deleteUser(userId, username) {
+    if (confirm(`Delete user "${username}"? This action cannot be undone.`)) {
+        window.location.href = `/portal/users/delete/${userId}/`;
+    }
+}
+</script>
+{% endblock %}

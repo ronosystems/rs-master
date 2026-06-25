@@ -1,0 +1,152 @@
+<!-- templates/shared/renew_subscription.html -->
+{% extends 'tech_master/base_tech.html' %}
+
+{% block title %}Renew Subscription - {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-warning text-dark py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-sync me-2"></i>Renew / Upgrade Subscription</h5>
+                    <a href="{% url 'tenants:tenant_subscription' tenant.id %}" class="btn btn-dark btn-sm">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </a>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>{{ tenant.company_name }}</h5>
+                            <p class="text-muted">
+                                Current plan: <strong>{{ tenant.subscription_plan|default:"None"|title }}</strong>
+                            </p>
+                            <p class="text-muted">
+                                Status: 
+                                {% if tenant.is_subscription_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Expired</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            {% if tenant.is_subscription_active %}
+                            <div class="alert alert-success mb-0">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Subscription is active. Expires in {{ tenant.days_remaining }} days.
+                            </div>
+                            {% else %}
+                            <div class="alert alert-danger mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Subscription has expired. Please renew to continue.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <h6 class="mb-3">Choose a Plan</h6>
+                        <div class="row g-3">
+                            {% for plan in all_plans %}
+                            <div class="col-md-3">
+                                <div class="card h-80 {% if tenant.subscription_plan == plan.code %}border-primary border-3{% endif %}">
+                                    <div class="card-header text-center {% if tenant.subscription_plan == plan.code %}bg-primary text-white{% else %}bg-light{% endif %}">
+                                        <h6 class="mb-0">
+                                            <i class="fas {{ plan.icon|default:'fa-building' }} me-2"></i>
+                                            {{ plan.name }}
+                                            {% if tenant.subscription_plan == plan.code %}
+                                            <span class="badge bg-warning text-dark ms-2">Current</span>
+                                            {% endif %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="plan_code" 
+                                                   id="plan_{{ plan.code }}" value="{{ plan.code }}"
+                                                   {% if tenant.subscription_plan == plan.code %}checked{% endif %}>
+                                            <label class="form-check-label" for="plan_{{ plan.code }}">
+                                                <h4 class="text-primary">KES {{ plan.price_monthly|floatformat:0 }}</h4>
+                                                <p class="text-muted small">per month</p>
+                                            </label>
+                                        </div>
+                                        <hr>
+                                        <ul class="list-unstyled text-start small">
+                                            <li><i class="fas fa-check text-success me-2"></i>{{ plan.max_users }} Users</li>
+                                            <li><i class="fas fa-check text-success me-2"></i>{{ plan.max_products }} Products</li>
+                                            <li><i class="fas fa-check text-success me-2"></i>{{ plan.max_branches }} Branches</li>
+                                            <li><i class="fas fa-check text-success me-2"></i>{{ plan.max_storage_gb }} GB Storage</li>
+                                            {% if plan.features.reports %}
+                                            <li><i class="fas fa-check text-success me-2"></i>📊 Reports</li>
+                                            {% endif %}
+                                            {% if plan.features.api %}
+                                            <li><i class="fas fa-check text-success me-2"></i>🔌 API Access</li>
+                                            {% endif %}
+                                            {% if plan.features.support %}
+                                            <li><i class="fas fa-check text-success me-2"></i>🛡️ Priority Support</li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="col-12">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    No subscription plans available. Please contact the system administrator.
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Duration</label>
+                                    <select name="duration" class="form-select">
+                                        <option value="monthly">Monthly</option>
+                                        <option value="yearly">Yearly (Save 20%)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            The subscription will be renewed immediately and the tenant will be activated.
+                        </div>
+                        
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check-circle me-2"></i>Confirm Renewal
+                            </button>
+                            <a href="{% url 'tenants:tenant_subscription' tenant.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: all 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .form-check-input {
+        cursor: pointer;
+    }
+    .form-check-label {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}

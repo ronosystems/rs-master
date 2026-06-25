@@ -1,0 +1,519 @@
+{% extends "shared/base_super_admin.html" %}
+
+{% load static %}
+
+{% block title %}Edit Tenant - {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Tenant</h4>
+                    <p class="mb-0 small">{{ tenant.company_name }}</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- Project Type Selection -->
+                        <div class="card border-2 mb-4" style="border-color: #0f67b3;">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-project-diagram me-2"></i>
+                                    Business Type
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Project Type</label>
+                                        <select name="project_type" class="form-select form-select-lg" id="projectTypeSelect">
+                                            <option value="">-- Select Business Type --</option>
+                                            {% for project in project_types %}
+                                            <option value="{{ project.id }}" 
+                                                    data-icon="{{ project.icon }}"
+                                                    data-color="{{ project.color }}"
+                                                    data-description="{{ project.description }}"
+                                                    {% if tenant.project_type.id == project.id %}selected{% endif %}>
+                                                {{ project.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Select the type of business this tenant runs
+                                        </small>
+                                    </div>
+                                    
+                                    <!-- Project Preview Card -->
+                                    <div class="col-12 mt-2">
+                                        <div id="projectPreview" class="border rounded p-3 bg-light" style="display: {% if tenant.project_type %}block{% else %}none{% endif %};">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="project-icon-display" id="projectIconDisplay">
+                                                    {% if tenant.project_type %}
+                                                    <i class="fas {{ tenant.project_type.icon }} fa-2x text-{{ tenant.project_type.color }}"></i>
+                                                    {% else %}
+                                                    <i class="fas fa-building fa-2x text-primary"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0" id="projectNameDisplay">
+                                                        {% if tenant.project_type %}{{ tenant.project_type.name }}{% else %}No Project Selected{% endif %}
+                                                    </h6>
+                                                    <small class="text-muted" id="projectDescriptionDisplay">
+                                                        {% if tenant.project_type %}{{ tenant.project_type.description }}{% else %}Select a project type above{% endif %}
+                                                    </small>
+                                                    <br>
+                                                    <span class="badge bg-primary" id="projectBadgeDisplay">
+                                                        {% if tenant.project_type %}{{ tenant.project_type.name }}{% else %}Not Set{% endif %}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Company Details Section -->
+                        <div class="card border mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-building text-primary me-2"></i>Company Details</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company Name *</label>
+                                        <input type="text" name="company_name" class="form-control" value="{{ tenant.company_name }}" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company Address</label>
+                                        <textarea name="company_address" class="form-control" rows="2">{{ tenant.company_address }}</textarea>
+                                    </div>
+                                    
+                                    
+                                    <!-- Logo Upload Field -->
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Company Logo</label>
+                                        {% if tenant.logo %}
+                                        <div class="mb-2">
+                                            <img src="{{ tenant.logo.url }}" alt="Current Logo" style="max-width: 100px; max-height: 100px; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
+                                            <br>
+                                            <div class="form-check mt-1">
+                                                <input type="checkbox" name="remove_logo" id="removeLogo" class="form-check-input" value="on">
+                                                <label class="form-check-label" for="removeLogo">Remove current logo</label>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        <input type="file" name="logo" class="form-control" accept="image/*" id="logoInput">
+                                        <small class="text-muted">Upload a new logo to replace the current one (PNG, JPG, JPEG - Max 5MB)</small>
+                                        
+                                        <!-- Logo Preview -->
+                                        <div id="logoPreview" class="mt-2" style="display: none;">
+                                            <div class="border rounded p-2 d-inline-block">
+                                                <img id="previewImage" src="#" alt="Logo Preview" style="max-width: 100px; max-height: 100px; object-fit: contain;">
+                                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearLogo()">
+                                                    <i class="fas fa-trash"></i> Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company Phone</label>
+                                        <input type="text" name="company_phone" class="form-control" value="{{ tenant.company_phone }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company Email</label>
+                                        <input type="email" name="company_email" class="form-control" value="{{ tenant.company_email }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Company PIN / Tax ID</label>
+                                        <input type="text" name="company_pin" class="form-control" value="{{ tenant.company_pin }}">
+                                        <small class="text-muted">Registration number or tax identification number</small>
+                                    </div>
+                                    
+                                    <!-- Status -->
+                                    <div class="col-6">
+                                        <label class="form-label fw-semibold">Status</label>
+                                        <select name="status" class="form-select">
+                                            <option value="pending" {% if tenant.status == 'pending' %}selected{% endif %}>Pending</option>
+                                            <option value="active" {% if tenant.status == 'active' %}selected{% endif %}>Active</option>
+                                            <option value="suspended" {% if tenant.status == 'suspended' %}selected{% endif %}>Suspended</option>
+                                            <option value="inactive" {% if tenant.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                                            <option value="expired" {% if tenant.status == 'expired' %}selected{% endif %}>Expired</option>
+                                        </select>
+                                        <small class="text-muted">Current status: <strong>{{ tenant.get_status_display }}</strong></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ============================================ -->
+                        <!-- SUBSCRIPTION SECTION WITH DYNAMIC PLANS       -->
+                        <!-- ============================================ -->
+                        <div class="card border-2 mb-4" style="border-color: #fd7e14;">
+                            <div class="card-header bg-warning text-dark py-2">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-crown me-2"></i>
+                                    Subscription Management
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subscription Plan *</label>
+                                        <select name="subscription_plan" class="form-select" required>
+                                            <option value="">-- Select Plan --</option>
+                                            {% for plan in subscription_plans %}
+                                            <option value="{{ plan.code }}" {% if tenant.subscription_plan == plan.code %}selected{% endif %}>
+                                                {{ plan.name }} - KES {{ plan.price_monthly|floatformat:0 }}/month
+                                                ({{ plan.max_users }} users, {{ plan.max_products }} products)
+                                            </option>
+                                            {% empty %}
+                                            <option value="">No subscription plans available</option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Select a subscription plan for this tenant
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subscription Start Date</label>
+                                        <input type="date" name="subscription_start" class="form-control" 
+                                               value="{{ tenant.subscription_start|date:'Y-m-d' }}">
+                                        <small class="text-muted">When the subscription started</small>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subscription Expiry Date</label>
+                                        <input type="date" name="subscription_end" class="form-control" 
+                                               value="{{ tenant.subscription_end|date:'Y-m-d' }}">
+                                        <small class="text-muted">When the subscription expires</small>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Auto Renew</label>
+                                        <select name="auto_renew" class="form-select">
+                                            <option value="true" {% if tenant.auto_renew %}selected{% endif %}>Yes - Auto Renew</option>
+                                            <option value="false" {% if not tenant.auto_renew %}selected{% endif %}>No - Manual Renew</option>
+                                        </select>
+                                        <small class="text-muted">Automatically renew subscription</small>
+                                    </div>
+                                    
+                                    <!-- Plan Details Preview -->
+                                    <div class="col-12 mt-2">
+                                        <div id="planPreview" class="border rounded p-3 bg-light" style="display: {% if tenant.subscription_plan %}block{% else %}none{% endif %};">
+                                            <div class="row g-2">
+                                                <div class="col-12">
+                                                    <h6 class="mb-1" id="planNameDisplay">
+                                                        {% if tenant.subscription_plan %}
+                                                            {% for plan in subscription_plans %}
+                                                                {% if tenant.subscription_plan == plan.code %}
+                                                                    {{ plan.name }}
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            No Plan Selected
+                                                        {% endif %}
+                                                    </h6>
+                                                    <small class="text-muted" id="planDetailsDisplay">
+                                                        {% if tenant.subscription_plan %}
+                                                            {% for plan in subscription_plans %}
+                                                                {% if tenant.subscription_plan == plan.code %}
+                                                                    KES {{ plan.price_monthly|floatformat:2 }}/month | KES {{ plan.price_yearly|floatformat:2 }}/year
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            Select a plan to see details
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <span class="badge bg-primary" id="planUsersDisplay">
+                                                        {% if tenant.subscription_plan %}
+                                                            {% for plan in subscription_plans %}
+                                                                {% if tenant.subscription_plan == plan.code %}
+                                                                    {{ plan.max_users }} Users
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            0 Users
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <span class="badge bg-success" id="planProductsDisplay">
+                                                        {% if tenant.subscription_plan %}
+                                                            {% for plan in subscription_plans %}
+                                                                {% if tenant.subscription_plan == plan.code %}
+                                                                    {{ plan.max_products|floatformat:0 }} Products
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            0 Products
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <span class="badge bg-info text-white" id="planStorageDisplay">
+                                                        {% if tenant.subscription_plan %}
+                                                            {% for plan in subscription_plans %}
+                                                                {% if tenant.subscription_plan == plan.code %}
+                                                                    {{ plan.max_storage_gb }} GB Storage
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            0 GB Storage
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Subscription Status Display -->
+                                    <div class="col-12">
+                                        <div class="border rounded p-2 bg-light">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <small class="text-muted">Current Status:</small>
+                                                    {% if tenant.is_subscription_active %}
+                                                        <span class="badge bg-success ms-2">Active</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger ms-2">Expired</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div>
+                                                    <small class="text-muted">Days Remaining:</small>
+                                                    <strong class="{% if tenant.days_remaining <= 7 and tenant.days_remaining > 0 %}text-warning{% elif tenant.days_remaining <= 0 %}text-danger{% else %}text-success{% endif %} ms-2">
+                                                        {% if tenant.days_remaining > 0 %}
+                                                            {{ tenant.days_remaining }} days
+                                                        {% else %}
+                                                            Expired
+                                                        {% endif %}
+                                                    </strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Owner Details Section -->
+                        <div class="card border mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-user-tie text-primary me-2"></i>Owner Details</h6>
+                            </div>
+                            <div class="card-body">
+                                {% if tenant.owner %}
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Username</label>
+                                        <input type="text" class="form-control" value="{{ tenant.owner.username }}" disabled>
+                                        <small class="text-muted">Username cannot be changed here</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Full Name</label>
+                                        <input type="text" class="form-control" value="{{ tenant.owner.get_full_name }}" disabled>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Email</label>
+                                        <input type="email" class="form-control" value="{{ tenant.owner.email }}" disabled>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Phone Number</label>
+                                        <input type="text" class="form-control" value="{{ tenant.owner.phone_number }}" disabled>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            To change owner details, go to 
+                                            <a href="{% url 'tenants:edit_tenant_owner' tenant.id %}">Edit Owner Details</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    No owner assigned to this tenant. 
+                                    <a href="{% url 'tenants:assign_owner' tenant.id %}">Assign an owner now</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+                                <i class="fas fa-save me-2"></i>Update Tenant
+                            </button>
+                            <a href="{% url 'tenants:tenant_detail' tenant.id %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Logo preview functionality
+    const logoInput = document.getElementById('logoInput');
+    const logoPreview = document.getElementById('logoPreview');
+    const previewImage = document.getElementById('previewImage');
+    
+    logoInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                previewImage.src = event.target.result;
+                logoPreview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        } else {
+            logoPreview.style.display = 'none';
+            previewImage.src = '#';
+        }
+    });
+    
+    function clearLogo() {
+        logoInput.value = '';
+        logoPreview.style.display = 'none';
+        previewImage.src = '#';
+    }
+    
+    // ============================================
+    // PROJECT TYPE PREVIEW FUNCTIONALITY
+    // ============================================
+    const projectTypeSelect = document.getElementById('projectTypeSelect');
+    const projectPreview = document.getElementById('projectPreview');
+    const projectIconDisplay = document.getElementById('projectIconDisplay');
+    const projectNameDisplay = document.getElementById('projectNameDisplay');
+    const projectDescriptionDisplay = document.getElementById('projectDescriptionDisplay');
+    const projectBadgeDisplay = document.getElementById('projectBadgeDisplay');
+    
+    projectTypeSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (this.value) {
+            const icon = selectedOption.getAttribute('data-icon') || 'fa-building';
+            const color = selectedOption.getAttribute('data-color') || 'primary';
+            const name = selectedOption.text.trim();
+            const description = selectedOption.getAttribute('data-description') || 'No description available';
+            
+            projectIconDisplay.innerHTML = `<i class="fas ${icon} fa-2x text-${color}"></i>`;
+            projectNameDisplay.textContent = name;
+            projectDescriptionDisplay.textContent = description;
+            projectBadgeDisplay.className = `badge bg-${color}`;
+            projectBadgeDisplay.textContent = name + ' Sub-Project';
+            
+            projectPreview.style.display = 'block';
+        } else {
+            projectPreview.style.display = 'none';
+        }
+    });
+    
+    // ============================================
+    // SUBSCRIPTION PLAN PREVIEW
+    // ============================================
+    const planSelect = document.querySelector('select[name="subscription_plan"]');
+    const planPreview = document.getElementById('planPreview');
+    const planNameDisplay = document.getElementById('planNameDisplay');
+    const planDetailsDisplay = document.getElementById('planDetailsDisplay');
+    const planUsersDisplay = document.getElementById('planUsersDisplay');
+    const planProductsDisplay = document.getElementById('planProductsDisplay');
+    const planStorageDisplay = document.getElementById('planStorageDisplay');
+    
+    // Store plan data from Django
+    const planData = {
+        {% for plan in subscription_plans %}
+        "{{ plan.code }}": {
+            name: "{{ plan.name|escapejs }}",
+            users: {{ plan.max_users }},
+            products: {{ plan.max_products }},
+            storage: {{ plan.max_storage_gb }},
+            branches: {{ plan.max_branches }},
+            price_monthly: {{ plan.price_monthly }},
+            price_yearly: {{ plan.price_yearly }},
+            description: "{{ plan.description|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+    
+    planSelect.addEventListener('change', function() {
+        const planCode = this.value;
+        
+        if (planCode && planData[planCode]) {
+            const plan = planData[planCode];
+            
+            planNameDisplay.textContent = plan.name;
+            planDetailsDisplay.textContent = `KES ${plan.price_monthly.toFixed(2)}/month | KES ${plan.price_yearly.toFixed(2)}/year`;
+            planUsersDisplay.textContent = `${plan.users} Users`;
+            planProductsDisplay.textContent = `${plan.products.toLocaleString()} Products`;
+            planStorageDisplay.textContent = `${plan.storage} GB Storage`;
+            
+            // Add branch info if available
+            if (plan.branches) {
+                planDetailsDisplay.textContent += ` | ${plan.branches} Branches`;
+            }
+            
+            planPreview.style.display = 'block';
+        } else {
+            planPreview.style.display = 'none';
+        }
+    });
+    
+    // Trigger preview on page load
+    if (projectTypeSelect.value) {
+        projectTypeSelect.dispatchEvent(new Event('change'));
+    }
+    
+    // Trigger plan preview on page load
+    if (planSelect.value) {
+        planSelect.dispatchEvent(new Event('change'));
+    }
+</script>
+
+<style>
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .card-header {
+        border-bottom: none;
+    }
+    #projectPreview {
+        transition: all 0.3s ease;
+        background: var(--bs-body-bg);
+    }
+    .project-icon-display {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .form-select:focus, .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .border-2 {
+        border-width: 2px !important;
+    }
+    .btn-lg {
+        padding: 10px 16px;
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}

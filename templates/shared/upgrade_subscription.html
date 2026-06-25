@@ -1,0 +1,135 @@
+{% extends "shared/base_main.html" %}
+{% load static %}
+
+{% block title %}Upgrade Subscription - {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-arrow-up me-2"></i>Upgrade Subscription
+                    </h5>
+                    <p class="mb-0 small opacity-75">{{ tenant.company_name }} - Upgrade to {{ new_plan.name }} Plan</p>
+                </div>
+                <div class="card-body p-4">
+                    
+                    <!-- Current Plan Info -->
+                    <div class="alert alert-info mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Current Plan:</strong>
+                                <h4 class="mb-0">{{ tenant.get_subscription_plan_display }}</h4>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Expires:</strong>
+                                <h4 class="mb-0">{{ tenant.subscription_end|date:"F d, Y" }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- New Plan Details -->
+                    <div class="card border-success mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-crown me-2"></i>{{ new_plan.name }} Plan Features</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h3 class="text-success">${{ new_plan.price_monthly }}<small class="text-muted">/month</small></h3>
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <span class="badge bg-success fs-6">Recommended</span>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-users text-primary me-2"></i>
+                                    <strong>{{ new_plan.max_users }}</strong> Users
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-boxes text-primary me-2"></i>
+                                    <strong>{{ new_plan.max_products }}</strong> Products
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-store text-primary me-2"></i>
+                                    <strong>{{ new_plan.max_branches }}</strong> Branches
+                                </div>
+                            </div>
+                            
+                            {% if new_plan.features %}
+                            <hr>
+                            <h6>Features Included:</h6>
+                            <div class="row">
+                                {% for feature, enabled in new_plan.features.items %}
+                                <div class="col-md-6 mb-2">
+                                    <i class="fas {% if enabled %}fa-check-circle text-success{% else %}fa-times-circle text-danger{% endif %} me-2"></i>
+                                    {{ feature|capfirst|cut:"_" }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Upgrade Summary -->
+                    <div class="card border-warning mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Upgrade Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <p class="mb-1">Current Plan Cost:</p>
+                                    <p class="mb-1">New Plan Cost:</p>
+                                    <p class="mb-1">Difference:</p>
+                                    <hr>
+                                    <p class="mb-0 fw-bold">Amount to Pay:</p>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <p class="mb-1">$0 (Expired/Pro-rated)</p>
+                                    <p class="mb-1">${{ new_plan.price_monthly }}</p>
+                                    <p class="mb-1 text-success">+${{ new_plan.price_monthly }}</p>
+                                    <hr>
+                                    <p class="mb-0 fw-bold text-success">${{ new_plan.price_monthly }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Select Payment Method</label>
+                            <select name="payment_method" class="form-select" required>
+                                <option value="card">💳 Credit / Debit Card</option>
+                                <option value="mpesa">📱 M-Pesa</option>
+                                <option value="bank">🏦 Bank Transfer</option>
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Note:</strong> Upon upgrade, your subscription will be immediately updated. The amount will be charged pro-rated based on your remaining days.
+                        </div>
+                        
+                        <div class="d-flex gap-3 justify-content-end mt-4">
+                            <a href="{% url 'tenants:tenant_subscription' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check-circle me-2"></i>Confirm Upgrade & Pay
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

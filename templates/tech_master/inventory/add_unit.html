@@ -1,0 +1,358 @@
+{% extends 'tech_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Add Units to {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">Add Multiple Units to: {{ product.name }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="addUnitsForm">
+                        {% csrf_token %}
+                        
+                        <!-- Product Info Alert -->
+                        <div class="alert alert-secondary">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Product:</strong> {{ product.name }} ({{ product.sku_code }})
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Current Stock:</strong> {{ product.available_quantity }} units available
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Product Type:</strong> 
+                                    {% if product.category.is_single_item %}Single (IMEI/Serial Tracked){% else %}Bulk Product{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- THREE COLUMN LAYOUT -->
+                        <div class="row">
+                            
+                            <!-- LEFT SECTION: Prices -->
+                            <div class="col-md-3">
+                                <div class="card border-primary mb-3">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Price Settings</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="buying_price" class="form-label">Buying Price (KES)</label>
+                                            <input type="number" step="0.01" class="form-control" id="buying_price" name="buying_price" 
+                                                   value="{{ product.buying_price }}" placeholder="Cost price">
+                                            <small class="text-muted text-success">Your purchase cost</small>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="selling_price" class="form-label">Selling Price (KES)</label>
+                                            <input type="number" step="0.01" class="form-control" id="selling_price" name="selling_price" 
+                                                   value="{{ product.selling_price }}" placeholder="Sale price">
+                                            <small class="text-muted text-primary">Current selling price</small>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="best_price" class="form-label">Best/Retail Price (KES)</label>
+                                            <input type="number" step="0.01" class="form-control" id="best_price" name="best_price" 
+                                                   value="{{ product.best_price|default:'' }}" placeholder="Retail price">
+                                            <small class="text-muted text-info">Best market price</small>
+                                        </div>
+                                        
+                                        <hr>
+                                        
+                                        <div class="mb-3">
+                                            <label for="branch_id" class="form-label">Branch</label>
+                                            <select class="form-control" id="branch_id" name="branch_id" required>
+                                                <option value="">Select Branch</option>
+                                                {% for branch in branches %}
+                                                <option value="{{ branch.id }}" {% if product.branch.id == branch.id %}selected{% endif %}>
+                                                    {{ branch.name }} ({{ branch.code }})
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="status" class="form-label">Initial Status</label>
+                                            <select class="form-control" id="status" name="status">
+                                                <option value="available">Available</option>
+                                                <option value="reserved">Reserved</option>
+                                                <option value="damaged">Damaged</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="warehouse_location" class="form-label">Warehouse Location</label>
+                                            <input type="text" class="form-control" id="warehouse_location" name="warehouse_location" 
+                                                   placeholder="e.g., Aisle 1, Shelf B">
+                                            <small class="text-muted">Optional storage location</small>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="purchase_date" class="form-label">Purchase Date</label>
+                                            <input type="datetime-local" class="form-control" id="purchase_date" name="purchase_date" 
+                                                   value="{{ now|date:'Y-m-d\TH:i' }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- MIDDLE SECTION: IMEI Numbers Text Area -->
+                            <div class="col-md-4">
+                                <div class="card border-success mb-3">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0"><i class="fas fa-qrcode"></i> IMEI Numbers</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="imei_list" class="form-label">Enter IMEI Numbers (One per line)</label>
+                                            <textarea class="form-control font-monospace" id="imei_list" name="imei_list" rows="15" 
+                                                      placeholder="356123456789001
+356123456789002
+356123456789003
+356123456789004
+356123456789005"></textarea>
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle"></i> 
+                                                Enter one IMEI per line. IMEI must be 15 digits.
+                                                <span id="imei_count" class="badge bg-info">0 IMEIs</span>
+                                            </small>
+                                        </div>
+                                        <div class="d-grid gap-2">
+                                            <button type="button" class="btn btn-outline-success btn-sm" id="validate_imei_btn">
+                                                <i class="fas fa-check-circle"></i> Validate IMEIs
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" id="clear_imei_btn">
+                                                <i class="fas fa-trash"></i> Clear IMEIs
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- RIGHT SECTION: Serial Numbers Text Area -->
+                            <div class="col-md-5">
+                                <div class="card border-warning mb-3">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h5 class="mb-0"><i class="fas fa-barcode"></i> Serial Numbers</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="serial_list" class="form-label">Enter Serial Numbers (One per line)</label>
+                                            <textarea class="form-control font-monospace" id="serial_list" name="serial_list" rows="15" 
+                                                      placeholder="SN001
+SN002
+SN003
+SN004
+SN005"></textarea>
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle"></i> 
+                                                Enter one Serial Number per line.
+                                                <span id="serial_count" class="badge bg-warning">0 Serials</span>
+                                            </small>
+                                        </div>
+                                        <div class="d-grid gap-2">
+                                            <button type="button" class="btn btn-outline-warning btn-sm" id="validate_serial_btn">
+                                                <i class="fas fa-check-circle"></i> Validate Serials
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" id="clear_serial_btn">
+                                                <i class="fas fa-trash"></i> Clear Serials
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Summary Section -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Summary</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-md-4">
+                                                <h4>IMEIs to Add: <span id="total_imeis" class="text-success">0</span></h4>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <h4>Serials to Add: <span id="total_serials" class="text-warning">0</span></h4>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <h4>Total Units: <span id="total_units" class="text-primary">0</span></h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Notes Section -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="card border-secondary">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Additional Notes (Optional)</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                                  placeholder="Any special notes about these units (e.g., batch number, warranty info, etc.)"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
+                                <i class="fas fa-plus-circle"></i> Add Units
+                            </button>
+                            <a href="{% url 'product_detail' product.id %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Count IMEIs and update summary
+    function updateCounts() {
+        const imeiText = document.getElementById('imei_list').value;
+        const serialText = document.getElementById('serial_list').value;
+        
+        const imeiLines = imeiText.split('\n').filter(line => line.trim().length > 0);
+        const serialLines = serialText.split('\n').filter(line => line.trim().length > 0);
+        
+        document.getElementById('imei_count').innerText = imeiLines.length + ' IMEIs';
+        document.getElementById('serial_count').innerText = serialLines.length + ' Serials';
+        document.getElementById('total_imeis').innerText = imeiLines.length;
+        document.getElementById('total_serials').innerText = serialLines.length;
+        document.getElementById('total_units').innerText = imeiLines.length + serialLines.length;
+    }
+    
+    // Validate IMEI numbers (15 digits)
+    function validateIMEIs() {
+        const imeiText = document.getElementById('imei_list').value;
+        const lines = imeiText.split('\n');
+        let validCount = 0;
+        let invalidCount = 0;
+        let invalidList = [];
+        
+        lines.forEach(line => {
+            const imei = line.trim();
+            if (imei) {
+                if (/^\d{15}$/.test(imei)) {
+                    validCount++;
+                } else {
+                    invalidCount++;
+                    invalidList.push(imei);
+                }
+            }
+        });
+        
+        if (invalidCount > 0) {
+            alert(`⚠️ Found ${invalidCount} invalid IMEI(s):\n${invalidList.join('\n')}\n\nIMEI must be exactly 15 digits.`);
+        } else if (validCount > 0) {
+            alert(`✅ All ${validCount} IMEI(s) are valid!`);
+        } else {
+            alert('No IMEI numbers entered.');
+        }
+    }
+    
+    // Validate Serial Numbers
+    function validateSerials() {
+        const serialText = document.getElementById('serial_list').value;
+        const lines = serialText.split('\n');
+        let count = 0;
+        
+        lines.forEach(line => {
+            if (line.trim()) count++;
+        });
+        
+        alert(`📋 ${count} serial number(s) entered. Please review for accuracy.`);
+    }
+    
+    // Clear IMEI textarea
+    function clearIMEIs() {
+        if (confirm('Clear all IMEI numbers?')) {
+            document.getElementById('imei_list').value = '';
+            updateCounts();
+        }
+    }
+    
+    // Clear Serial textarea
+    function clearSerials() {
+        if (confirm('Clear all serial numbers?')) {
+            document.getElementById('serial_list').value = '';
+            updateCounts();
+        }
+    }
+    
+    // Auto-calculate best price if selling price changes
+    document.getElementById('selling_price').addEventListener('change', function() {
+        var bestPriceField = document.getElementById('best_price');
+        if (!bestPriceField.value) {
+            var sellingPrice = parseFloat(this.value);
+            if (!isNaN(sellingPrice)) {
+                var bestPrice = sellingPrice * 1.1;
+                bestPriceField.value = bestPrice.toFixed(2);
+            }
+        }
+    });
+    
+    // Add current date/time to purchase date if empty
+    window.addEventListener('DOMContentLoaded', function() {
+        var purchaseDateField = document.getElementById('purchase_date');
+        if (!purchaseDateField.value) {
+            var now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            purchaseDateField.value = now.toISOString().slice(0, 16);
+        }
+        updateCounts();
+        
+        // Add event listeners for textareas
+        document.getElementById('imei_list').addEventListener('input', updateCounts);
+        document.getElementById('serial_list').addEventListener('input', updateCounts);
+        document.getElementById('validate_imei_btn').addEventListener('click', validateIMEIs);
+        document.getElementById('validate_serial_btn').addEventListener('click', validateSerials);
+        document.getElementById('clear_imei_btn').addEventListener('click', clearIMEIs);
+        document.getElementById('clear_serial_btn').addEventListener('click', clearSerials);
+        
+        // Validate before submit
+        document.getElementById('addUnitsForm').addEventListener('submit', function(e) {
+            const imeiText = document.getElementById('imei_list').value;
+            const serialText = document.getElementById('serial_list').value;
+            
+            if (!imeiText.trim() && !serialText.trim()) {
+                e.preventDefault();
+                alert('Please enter at least one IMEI or Serial Number.');
+            }
+        });
+    });
+</script>
+
+<style>
+    .font-monospace {
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+    }
+    textarea {
+        resize: vertical;
+    }
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13,110,253,0.25);
+    }
+</style>
+{% endblock %}

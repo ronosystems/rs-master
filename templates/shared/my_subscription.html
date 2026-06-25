@@ -1,0 +1,254 @@
+<!-- templates/tenants/my_subscription.html -->
+{% extends 'tech_master/base_tech.html' %}
+
+{% block title %}My Subscription - {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-crown text-warning me-2"></i>
+                    My Subscription
+                    <small class="text-muted fs-6">({{ tenant.company_name }})</small>
+                </h2>
+                <div>
+                    <a href="{% url 'tenants:renew_subscription' tenant.id %}" class="btn btn-success">
+                        <i class="fas fa-sync me-2"></i>Renew / Upgrade
+                    </a>
+                    <a href="{% url 'portal:dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </a>
+                </div>
+            </div>
+
+            <!-- Current Subscription Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Current Subscription</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 40%;">Plan</th>
+                                    <td>
+                                        {% if current_subscription %}
+                                        <span class="badge bg-success fs-6">{{ current_subscription.name }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">No Active Plan</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Status</th>
+                                    <td>
+                                        {% if is_subscription_active %}
+                                        <span class="badge bg-success fs-6">✅ Active</span>
+                                        {% else %}
+                                        <span class="badge bg-danger fs-6">❌ Expired</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Days Remaining</th>
+                                    <td>
+                                        {% if days_remaining > 0 %}
+                                        <span class="fw-bold text-primary">{{ days_remaining }} days</span>
+                                        {% elif days_remaining == 0 and tenant.subscription_end %}
+                                        <span class="fw-bold text-warning">Expires Today</span>
+                                        {% else %}
+                                        <span class="fw-bold text-danger">Expired</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Start Date</th>
+                                    <td>
+                                        {% if tenant.subscription_start %}
+                                        {{ tenant.subscription_start|date:"Y-m-d H:i" }}
+                                        {% else %}
+                                        <span class="text-muted">Not set</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>End Date</th>
+                                    <td>
+                                        {% if tenant.subscription_end %}
+                                        {{ tenant.subscription_end|date:"Y-m-d H:i" }}
+                                        {% else %}
+                                        <span class="text-muted">Not set</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Auto Renew</th>
+                                    <td>
+                                        {% if tenant.auto_renew %}
+                                        <span class="badge bg-success">✅ Enabled</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Disabled</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-center mb-3">Usage Statistics</h6>
+                                    
+                                    <!-- Users -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <label class="fw-bold">Users</label>
+                                            <span>{{ tenant_users_count|default:0 }} / {{ current_subscription.max_users|default:0 }}</span>
+                                        </div>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar bg-success" style="width: {{ tenant_users_percentage|default:0 }}%;">
+                                                {{ tenant_users_count|default:0 }} / {{ current_subscription.max_users|default:0 }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Products -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <label class="fw-bold">Products</label>
+                                            <span>{{ tenant_products_count|default:0 }} / {{ current_subscription.max_products|default:0 }}</span>
+                                        </div>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar bg-info" style="width: {{ tenant_products_percentage|default:0 }}%;">
+                                                {{ tenant_products_count|default:0 }} / {{ current_subscription.max_products|default:0 }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Branches -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <label class="fw-bold">Branches</label>
+                                            <span>{{ tenant_branches_count|default:0 }} / {{ current_subscription.max_branches|default:0 }}</span>
+                                        </div>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar bg-warning" style="width: {{ tenant_branches_percentage|default:0 }}%;">
+                                                {{ tenant_branches_count|default:0 }} / {{ current_subscription.max_branches|default:0 }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Storage -->
+                                    <div class="mb-0">
+                                        <div class="d-flex justify-content-between">
+                                            <label class="fw-bold">Storage</label>
+                                            <span>{{ tenant_storage_used|default:0 }} GB / {{ current_subscription.max_storage_gb|default:1 }} GB</span>
+                                        </div>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar bg-danger" style="width: {{ tenant_storage_percentage|default:0 }}%;">
+                                                {{ tenant_storage_used|default:0 }} GB / {{ current_subscription.max_storage_gb|default:1 }} GB
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Available Plans -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Available Plans</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for plan in all_plans %}
+                        <div class="col-md-3 mb-3">
+                            <div class="card h-100 {% if current_subscription and current_subscription.code == plan.code %}border-primary border-3{% endif %}">
+                                <div class="card-header text-center {% if current_subscription and current_subscription.code == plan.code %}bg-primary text-white{% else %}bg-light{% endif %}">
+                                    <h5 class="mb-0">
+                                        <i class="fas {{ plan.icon|default:'fa-building' }} me-2"></i>
+                                        {{ plan.name }}
+                                        {% if current_subscription and current_subscription.code == plan.code %}
+                                        <span class="badge bg-warning text-dark ms-2">Current</span>
+                                        {% endif %}
+                                    </h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <h2 class="text-primary">KES {{ plan.price_monthly|floatformat:0 }}</h2>
+                                    <p class="text-muted">per month</p>
+                                    <hr>
+                                    <ul class="list-unstyled text-start">
+                                        <li><i class="fas fa-check text-success me-2"></i>{{ plan.max_users }} Users</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>{{ plan.max_products }} Products</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>{{ plan.max_branches }} Branches</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>{{ plan.max_storage_gb }} GB Storage</li>
+                                        {% if plan.features.reports %}
+                                        <li><i class="fas fa-check text-success me-2"></i>📊 Reports</li>
+                                        {% endif %}
+                                        {% if plan.features.api %}
+                                        <li><i class="fas fa-check text-success me-2"></i>🔌 API Access</li>
+                                        {% endif %}
+                                        {% if plan.features.advanced_reports %}
+                                        <li><i class="fas fa-check text-success me-2"></i>📈 Advanced Reports</li>
+                                        {% endif %}
+                                        {% if plan.features.support %}
+                                        <li><i class="fas fa-check text-success me-2"></i>🛡️ Priority Support</li>
+                                        {% endif %}
+                                    </ul>
+                                    <div class="mt-3">
+                                        {% if current_subscription and current_subscription.code == plan.code %}
+                                        <button class="btn btn-outline-primary" disabled>
+                                            <i class="fas fa-check me-2"></i>Current Plan
+                                        </button>
+                                        {% else %}
+                                        <a href="{% url 'tenants:renew_subscription' tenant.id %}?plan={{ plan.code }}" class="btn btn-primary">
+                                            <i class="fas fa-arrow-right me-2"></i>Select Plan
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-footer text-center text-muted">
+                                    <small>{{ plan.description|default:"Perfect for growing businesses" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <div class="alert alert-info text-center">
+                                <i class="fas fa-info-circle me-2"></i>
+                                No subscription plans available. Please contact the system administrator.
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .progress {
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .progress-bar {
+        font-size: 0.75rem;
+        line-height: 25px;
+        font-weight: 500;
+    }
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .card-header {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}

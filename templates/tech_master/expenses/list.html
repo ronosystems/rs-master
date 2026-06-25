@@ -1,0 +1,206 @@
+<!-- templates/tech_master/expenses/list.html -->
+{% extends 'tech_master/base_tech.html' %}
+
+{% block title %}Expenses - Tech Master{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card-custom p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5><i class="fas fa-receipt me-2"></i>Expenses</h5>
+            <div>
+                <a href="{% url 'tech_master:add_expense' %}" class="btn btn-success btn-sm">
+                    <i class="fas fa-plus"></i> Add Expense
+                </a>
+                <a href="{% url 'tech_master:expense_report' %}" class="btn btn-info btn-sm text-white">
+                    <i class="fas fa-chart-bar"></i> Report
+                </a>
+            </div>
+        </div>
+        <hr>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Total Expenses</h6>
+                        <h3>KES {{ total_expenses|floatformat:2|default:"0.00" }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body">
+                        <h6 class="card-title">Pending</h6>
+                        <h3>{{ pending_count|default:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Approved</h6>
+                        <h3>{{ approved_count|default:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Paid</h6>
+                        <h3>{{ paid_count|default:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <form method="GET" class="row g-2">
+                    <div class="col-md-3">
+                        <input type="text" name="search" class="form-control form-control-sm" placeholder="Search expenses..." value="{{ search|default:'' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">All Status</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                            <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                            <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="category" class="form-select form-select-sm">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="date" class="form-select form-select-sm">
+                            <option value="">All Time</option>
+                            <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Today</option>
+                            <option value="week" {% if date_filter == 'week' %}selected{% endif %}>This Week</option>
+                            <option value="month" {% if date_filter == 'month' %}selected{% endif %}>This Month</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fas fa-search"></i> Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Expenses Table -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Payment Method</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in expenses %}
+                    <tr>
+                        <td>
+                            <strong>{{ expense.title }}</strong>
+                            {% if expense.description %}
+                            <br><small class="text-muted">{{ expense.description|truncatechars:30 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ expense.category.name|default:"Uncategorized" }}</td>
+                        <td>
+                            <strong>KES {{ expense.amount|floatformat:2 }}</strong>
+                        </td>
+                        <td>{{ expense.date|date:"Y-m-d" }}</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ expense.get_payment_method_display }}</span>
+                        </td>
+                        <td>
+                            {% if expense.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif expense.status == 'approved' %}
+                            <span class="badge bg-success">Approved</span>
+                            {% elif expense.status == 'rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                            {% elif expense.status == 'paid' %}
+                            <span class="badge bg-info">Paid</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'tech_master:expense_detail' expense.id %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if expense.status == 'pending' %}
+                            <a href="{% url 'tech_master:approve_expense' expense.id %}" class="btn btn-sm btn-success">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            <a href="{% url 'tech_master:reject_expense' expense.id %}" class="btn btn-sm btn-danger">
+                                <i class="fas fa-times"></i>
+                            </a>
+                            {% endif %}
+                            {% if expense.status == 'approved' %}
+                            <a href="{% url 'tech_master:mark_expense_paid' expense.id %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-money-bill"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                            No expenses found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if expenses.has_other_pages %}
+        <nav aria-label="Expenses pagination">
+            <ul class="pagination justify-content-center">
+                {% if expenses.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ expenses.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for num in expenses.paginator.page_range %}
+                <li class="page-item {% if expenses.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        {{ num }}
+                    </a>
+                </li>
+                {% endfor %}
+                
+                {% if expenses.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ expenses.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

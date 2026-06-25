@@ -1,0 +1,81 @@
+{% extends "shared/base_super_admin.html" %}
+
+{% block title %}{% if project_type %}Edit{% else %}Add{% endif %} Project Type{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header {% if project_type %}bg-warning{% else %}bg-primary{% endif %} text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>
+                        {% if project_type %}Edit{% else %}Add{% endif %} Project Type
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Name *</label>
+                            <input type="text" name="name" class="form-control" value="{{ project_type.name|default:'' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Code *</label>
+                            <input type="text" name="code" class="form-control" value="{{ project_type.code|default:'' }}" required>
+                            <small class="text-muted">Unique identifier (auto-uppercased)</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea name="description" class="form-control" rows="3">{{ project_type.description|default:'' }}</textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Icon</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas {{ project_type.icon|default:'fa-building' }}"></i></span>
+                                    <select name="icon" class="form-select">
+                                        {% for value, label in icons %}
+                                        <option value="{{ value }}" {% if project_type.icon == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Color</label>
+                                <select name="color" class="form-select">
+                                    {% for value, label in colors %}
+                                    <option value="{{ value }}" {% if project_type.color == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="isActive" {% if project_type.is_active or not project_type %}checked{% endif %}>
+                            <label class="form-check-label" for="isActive">Active</label>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>{% if project_type %}Update{% else %}Create{% endif %}
+                            </button>
+                            <a href="{% url 'tenants:project_type_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

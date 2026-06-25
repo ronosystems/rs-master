@@ -1,0 +1,110 @@
+{% extends 'tech_master/base_tech.html' %}
+
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-edit me-2"></i>
+                        Edit User: {{ edit_user.username }}
+                        {% if is_manager %}
+                        <span class="badge bg-warning text-dark ms-2">Manager Access</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if is_manager %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        You can only edit <strong>Cashiers</strong> and <strong>Sales Agents</strong>.
+                        <br>
+                        <small>Current role: <strong>{{ edit_user.get_role_display }}</strong></small>
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" action="{% url 'users:edit_user' edit_user.id %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Username *</label>
+                            <input type="text" name="username" class="form-control" value="{{ edit_user.username }}" required>
+                        </div>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">First Name</label>
+                                <input type="text" name="first_name" class="form-control" value="{{ edit_user.first_name }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" name="last_name" class="form-control" value="{{ edit_user.last_name }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ edit_user.email }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="text" name="phone_number" class="form-control" value="{{ edit_user.phone_number }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current">
+                            <small class="text-muted">Minimum 6 characters</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" name="confirm_password" class="form-control" placeholder="Confirm new password">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Role *</label>
+                            <select name="role" class="form-select" required>
+                                <option value="">-- Select Role --</option>
+                                {% for role_value, role_label in roles %}
+                                    <option value="{{ role_value }}" {% if edit_user.role == role_value %}selected{% endif %}>
+                                        {{ role_label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if is_manager %}
+                            <small class="text-muted">You can only assign Cashier or Sales Agent roles.</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">PIN Code (4-6 digits for POS)</label>
+                            <input type="text" name="pin_code" class="form-control" maxlength="6" value="{{ edit_user.pin_code }}" placeholder="Enter PIN code">
+                            <small class="text-muted">Optional numeric PIN for POS access</small>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" {% if edit_user.is_active %}checked{% endif %} id="isActive">
+                            <label class="form-check-label" for="isActive">Active</label>
+                        </div>
+                        
+                        <hr class="my-4">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i>Update User
+                            </button>
+                            <a href="{% url 'users:user_list' %}" class="btn btn-secondary px-4">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

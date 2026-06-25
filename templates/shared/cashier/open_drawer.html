@@ -1,0 +1,39 @@
+{% extends "shared/base_main.html" %}
+
+{% block title %}Open Cash Drawer{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-cash-register"></i> Open Cash Drawer</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        Open a new cash drawer for your shift. This will track all sales and transactions.
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Opening Amount (KES)</label>
+                            <input type="number" name="opening_amount" class="form-control" step="0.01" required autofocus>
+                            <small class="text-muted">Starting cash amount in drawer</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes (Optional)</label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="Any notes about this shift..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-check-circle"></i> Open Drawer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

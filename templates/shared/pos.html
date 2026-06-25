@@ -1,0 +1,901 @@
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Point of Sale - RS CellPOS{% endblock %}
+
+{% block content %}
+<style>
+    /* ============================================
+       POS LAYOUT - 3 COLUMN DESIGN
+    ============================================ */
+    .pos-container {
+        height: calc(100vh - 120px);
+        overflow: hidden;
+        display: flex;
+        gap: 15px;
+        padding: 10px 0;
+    }
+    
+    /* ============================================
+       LEFT COLUMN - 30% (Products)
+    ============================================ */
+    .pos-left {
+        width: 30%;
+        min-width: 30%;
+        display: flex;
+        flex-direction: column;
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
+    }
+    
+    .pos-left .search-section {
+        flex-shrink: 0;
+        margin-bottom: 10px;
+    }
+    
+    .pos-left .products-grid-container {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    
+    .pos-left .products-grid-container::-webkit-scrollbar {
+        width: 4px;
+    }
+    .pos-left .products-grid-container::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+    }
+    
+    .product-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+    }
+    .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: #0d6efd;
+        background: #f0f7ff;
+    }
+    .product-name {
+        font-weight: 600;
+        font-size: 0.8rem;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .product-identifier {
+        font-size: 0.6rem;
+        color: #6c757d;
+        background: #f1f3f5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-block;
+        font-family: monospace;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .product-price {
+        font-size: 0.9rem;
+        font-weight: bold;
+        color: #28a745;
+        margin-top: 4px;
+    }
+    .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 8px;
+    }
+    .badge-imei { font-size: 0.5rem; background: #0d6efd; color: white; padding: 1px 5px; border-radius: 8px; }
+    .badge-barcode { font-size: 0.5rem; background: #28a745; color: white; padding: 1px 5px; border-radius: 8px; }
+    
+    /* ============================================
+       MIDDLE COLUMN - 50% (Cart)
+    ============================================ */
+    .pos-middle {
+        width: 50%;
+        min-width: 50%;
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
+        overflow: hidden;
+    }
+    
+    .pos-middle .cart-header {
+        flex-shrink: 0;
+        padding: 12px 18px;
+        border-bottom: 1px solid #e9ecef;
+        background: #00e1ff;
+    }
+    
+    .pos-middle .cart-items-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px 15px;
+    }
+    
+    .pos-middle .cart-items-container::-webkit-scrollbar {
+        width: 4px;
+    }
+    .pos-middle .cart-items-container::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+    }
+    
+    /* ============================================
+       CART TABLE STYLES
+    ============================================ */
+    .cart-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+    }
+    .cart-table th {
+        background: #f1f3f5;
+        padding: 8px 6px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: #000000;
+        border-bottom: 2px solid #000000;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        white-space: nowrap;
+    }
+    .cart-table td {
+        padding: 6px 6px;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .cart-table tr:hover td {
+        background: #f8f9fa;
+    }
+    .cart-table .col-id { width: 8%; text-align: center; }
+    .cart-table .col-qty { width: 12%; text-align: center; }
+    .cart-table .col-description { width: 30%; }
+    .cart-table .col-custom-price { width: 15%; }
+    .cart-table .col-price { width: 15%; }
+    .cart-table .col-total { width: 15%; font-weight: bold; }
+    .cart-table .col-actions { width: 5%; text-align: center; }
+    
+    .cart-table .qty-control {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+    .cart-table .qty-control .qty-btn {
+        width: 22px;
+        height: 22px;
+        border: none;
+        background: #e9ecef;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 11px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .cart-table .qty-control .qty-btn:hover {
+        background: #e70000;
+        color: white;
+    }
+    .cart-table .qty-control .qty-number {
+        font-weight: 600;
+        min-width: 20px;
+        text-align: center;
+    }
+    .cart-table .custom-price-input {
+        width: 80px;
+        padding: 2px 4px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        text-align: right;
+    }
+    .cart-table .custom-price-input:focus {
+        border-color: #0d6efd;
+        outline: none;
+        box-shadow: 0 0 0 2px rgb(0, 0, 0);
+    }
+    .cart-table .remove-btn {
+        background: #ffffff;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        font-size: 0.8rem;
+        padding: 2px 4px;
+        transition: all 0.2s;
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
+    }
+    .cart-table .remove-btn:hover {
+        background: #dee2e6;
+        color: #a71d2a;
+        transform: scale(1.2);
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
+    }
+    
+    /* ============================================
+       CART FOOTER - Totals
+    ============================================ */
+    .cart-footer {
+        flex-shrink: 0;
+        padding: 12px 18px;
+        border-top: 2px solid #000000;
+        background: white;
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        font-size: 0.9rem;
+    }
+    .summary-row.total {
+        border-top: 2px solid #000000;
+        margin-top: 4px;
+        padding-top: 8px;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    .price-inclusive {
+        font-size: 0.6rem;
+        color: #28a745;
+        background: #d4edda;
+        padding: 1px 8px;
+        border-radius: 10px;
+        display: inline-block;
+    }
+    
+    /* ============================================
+       RIGHT COLUMN - 20% (Payment + Customer)
+    ============================================ */
+    .pos-right {
+        width: 20%;
+        min-width: 20%;
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
+        padding: 15px;
+        overflow: hidden;
+    }
+    
+    .pos-right .customer-section {
+        flex-shrink: 0;
+        margin-bottom: 12px;
+    }
+    .pos-right .customer-section label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 4px;
+        display: block;
+    }
+    
+    .pos-right .payment-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .pos-right .payment-section label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 4px;
+        display: block;
+    }
+    
+    .pos-right .payment-section .form-control,
+    .pos-right .payment-section .form-select {
+        font-size: 0.85rem;
+        padding: 6px 10px;
+    }
+    
+    .pos-right .submit-section {
+        flex-shrink: 0;
+        margin-top: auto;
+        padding-top: 12px;
+    }
+    
+    .pos-right .submit-section .btn {
+        font-size: 0.9rem;
+        padding: 10px;
+        font-weight: 600;
+        border-radius: 8px;
+    }
+    
+    /* ============================================
+       RESPONSIVE
+    ============================================ */
+    @media (max-width: 992px) {
+        .pos-container {
+            flex-direction: column;
+            height: auto;
+            overflow: visible;
+        }
+        .pos-left, .pos-middle, .pos-right {
+            width: 100% !important;
+            min-width: 100% !important;
+            max-height: 400px;
+        }
+        .pos-right {
+            max-height: 300px;
+        }
+        .cart-table {
+            font-size: 0.7rem;
+        }
+        .cart-table .custom-price-input {
+            width: 60px;
+        }
+        .cart-table .col-id { width: 5%; }
+        .cart-table .col-qty { width: 15%; }
+        .cart-table .col-description { width: 25%; }
+        .cart-table .col-custom-price { width: 18%; }
+        .cart-table .col-price { width: 18%; }
+        .cart-table .col-total { width: 15%; }
+        .cart-table .col-actions { width: 4%; }
+    }
+    
+    /* ============================================
+       SCROLLBAR STYLING
+    ============================================ */
+    ::-webkit-scrollbar {
+        width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="pos-container">
+        
+        <!-- ============================================ -->
+        <!-- LEFT COLUMN - 30% (Products) -->
+        <!-- ============================================ -->
+        <div class="pos-left">
+            <div class="search-section">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-primary text-white"><i class="fas fa-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search products..." autofocus>
+                    <button class="btn btn-primary btn-sm" onclick="searchProducts()">Go</button>
+                </div>
+            </div>
+            <div class="products-grid-container" id="productsContainer">
+                <div id="productsGrid" class="products-grid">
+                    <div class="text-center py-5" style="grid-column: 1 / -1;">
+                        <div class="spinner-border text-primary spinner-border-sm"></div>
+                        <p class="mt-2 text-muted small">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============================================ -->
+        <!-- MIDDLE COLUMN - 50% (Cart with Table) -->
+        <!-- ============================================ -->
+        <div class="pos-middle">
+            <div class="cart-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-shopping-cart me-2"></i>Cart</h6>
+                <div>
+                    <span class="badge bg-primary me-2" id="itemCount">0 items</span>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearCart()"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>
+            
+            <div class="cart-items-container" id="cartContainer">
+                <div id="cartItems">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-shopping-cart fa-2x mb-2 opacity-50"></i>
+                        <p class="small">Cart is empty</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cart Footer - Totals -->
+            <div class="cart-footer">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <strong id="subtotal">KES 0.00</strong>
+                </div>
+                <div class="summary-row total">
+                    <span>Total:</span>
+                    <strong id="total">KES 0.00</strong>
+                </div>
+                <div class="text-end mt-1">
+                    <span class="price-inclusive"><i class="fas fa-check-circle me-1"></i> All prices include 16% VAT</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============================================ -->
+        <!-- RIGHT COLUMN - 20% (Payment + Customer) -->
+        <!-- ============================================ -->
+        <div class="pos-right">
+            
+            <!-- Customer Section -->
+            <div class="customer-section">
+                <label><i class="fas fa-user me-1"></i> Customer</label>
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" id="customerPhone" class="form-control" placeholder="Phone">
+                    <button class="btn btn-outline-success btn-sm" onclick="searchCustomer()"><i class="fas fa-search"></i></button>
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="customerInfo" style="display: none;">
+                    <div class="alert alert-info py-1 mb-0 small">
+                        <strong id="customerName"></strong><br>
+                        <span id="customerPhoneDisplay"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Section -->
+            <div class="payment-section">
+                <label><i class="fas fa-credit-card me-1"></i> Payment Method</label>
+                <select id="paymentMethod" class="form-select form-select-sm mb-2">
+                    <option value="cash">💵 Cash</option>
+                    <option value="card">💳 Card</option>
+                    <option value="mobile">📱 Mobile Money</option>
+                </select>
+                
+                <label><i class="fas fa-money-bill-wave me-1"></i> Amount Paid</label>
+                <input type="number" id="amountPaid" class="form-control form-control-sm" placeholder="0.00" step="0.01">
+                
+                <div id="changeDue" style="display: none;" class="mt-2">
+                    <div class="alert alert-success py-1 mb-0 small">
+                        <strong>Change:</strong> KES <span id="changeAmount">0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="submit-section">
+                <button class="btn btn-success w-100" onclick="processPayment()" id="checkoutBtn" disabled>
+                    <i class="fas fa-check-circle me-2"></i> Complete Sale
+                </button>
+            </div>
+            
+        </div>
+        
+    </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h6 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Customer</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="newCustomerName" class="form-control form-control-sm mb-2" placeholder="Name">
+                <input type="text" id="newCustomerPhone" class="form-control form-control-sm mb-2" placeholder="Phone">
+                <input type="email" id="newCustomerEmail" class="form-control form-control-sm" placeholder="Email">
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success btn-sm" onclick="saveCustomer()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // ============================================
+    // GLOBAL VARIABLES
+    // ============================================
+    let cart = [];
+    let currentCustomer = null;
+    let itemCounter = 1;
+    
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', () => {
+        loadProducts();
+        loadCart();
+        document.getElementById('searchInput').addEventListener('keypress', e => e.key === 'Enter' && searchProducts());
+        document.getElementById('amountPaid').addEventListener('input', calculateChange);
+        document.getElementById('customerPhone').addEventListener('keypress', e => e.key === 'Enter' && searchCustomer());
+    });
+    
+    // ============================================
+    // PRODUCT FUNCTIONS
+    // ============================================
+    function loadProducts() {
+        fetch('/portal/api/search-product/?q=')
+            .then(r => r.json())
+            .then(data => displayProducts(data.results || []))
+            .catch(() => {
+                document.getElementById('productsGrid').innerHTML = '<div class="text-center py-5" style="grid-column: 1 / -1;"><p class="text-muted small">Error loading products</p></div>';
+            });
+    }
+    
+    function searchProducts() {
+        const q = document.getElementById('searchInput').value.trim();
+        if (!q) return loadProducts();
+        fetch(`/portal/api/search-product/?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => displayProducts(data.results || []));
+    }
+    
+    function displayProducts(products) {
+        const grid = document.getElementById('productsGrid');
+        if (!products || !products.length) {
+            grid.innerHTML = '<div class="text-center py-5" style="grid-column: 1 / -1;"><p class="text-muted small">No products found</p></div>';
+            return;
+        }
+        grid.innerHTML = products.map(p => {
+            const identifier = p.identifier || p.sku || '';
+            const badge = p.type === 'unit' ? '<span class="badge-imei">IMEI</span>' : '<span class="badge-barcode">BARCODE</span>';
+            return `<div class="product-card" onclick="addToCart(${p.id}, '${p.type || 'product'}')">
+                <div class="product-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>
+                <div class="product-identifier">${escapeHtml(identifier.substring(0, 12))} ${badge}</div>
+                <div class="product-price">KES ${(p.price || 0).toLocaleString()}</div>
+            </div>`;
+        }).join('');
+    }
+    
+    // ============================================
+    // CART FUNCTIONS - TABLE BASED
+    // ============================================
+    function addToCart(id, type) {
+        fetch('/portal/api/add-to-cart/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({item_id: id, type: type, quantity: 1})
+        }).then(r => r.json()).then(data => { 
+            if (data.success) { 
+                loadCart(); 
+            } else { 
+                showToast(data.error || 'Error adding item', 'error');
+            } 
+        });
+    }
+    
+    function loadCart() {
+        fetch('/portal/api/get-cart/')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) { 
+                    cart = data.cart; 
+                    displayCart(data.cart); 
+                    updateTotals(data.subtotal, data.total); 
+                    document.getElementById('checkoutBtn').disabled = cart.length === 0;
+                    document.getElementById('itemCount').innerHTML = `${cart.length} items`;
+                }
+            });
+    }
+    
+    function displayCart(items) {
+        const container = document.getElementById('cartItems');
+        if (!items || !items.length) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-shopping-cart fa-2x mb-2 opacity-50"></i>
+                    <p class="small">Cart is empty</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <table class="cart-table">
+                <thead>
+                    <tr>
+                        <th class="col-id">#</th>
+                        <th class="col-qty">Qty</th>
+                        <th class="col-description">Description</th>
+                        <th class="col-custom-price">Custom Price</th>
+                        <th class="col-price">Price</th>
+                        <th class="col-total">Total</th>
+                        <th class="col-actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        items.forEach((item, index) => {
+            const identifier = item.identifier || item.sku || '';
+            const rowNum = index + 1;
+            const itemTotal = item.price * item.quantity;
+            
+            html += `
+                <tr data-id="${item.id}" data-type="${item.type}">
+                    <td class="col-id">${rowNum}</td>
+                    <td class="col-qty">
+                        <div class="qty-control">
+                            <button class="qty-btn" onclick="updateQty(${item.id}, '${item.type}', -1)">−</button>
+                            <span class="qty-number">${item.quantity}</span>
+                            <button class="qty-btn" onclick="updateQty(${item.id}, '${item.type}', 1)">+</button>
+                        </div>
+                    </td>
+                    <td class="col-description">
+                        <div class="fw-bold small">${escapeHtml(item.name)}</div>
+                        <div class="small text-muted" style="font-size: 0.6rem;">${escapeHtml(identifier)}</div>
+                    </td>
+                    <td class="col-custom-price">
+                        <input type="number" class="custom-price-input" 
+                               value="${item.price}" 
+                               step="0.01"
+                               onchange="updateCustomPrice(${item.id}, '${item.type}', this.value)">
+                    </td>
+                    <td class="col-price">KES ${Number(item.price).toLocaleString()}</td>
+                    <td class="col-total">KES ${Number(itemTotal).toLocaleString()}</td>
+                    <td class="col-actions">
+                        <button class="remove-btn" onclick="removeFromCart(${item.id}, '${item.type}')" title="Remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    }
+    
+    function updateQty(id, type, delta) {
+        const item = cart.find(i => i.id === id && i.type === type);
+        if (!item) return;
+        const newQty = item.quantity + delta;
+        if (newQty < 1) { removeFromCart(id, type); return; }
+        
+        fetch('/portal/api/update-cart/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({item_id: id, type: type, quantity: newQty})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                cart = data.cart;
+                displayCart(data.cart);
+                updateTotals(data.subtotal, data.total);
+                document.getElementById('checkoutBtn').disabled = cart.length === 0;
+                document.getElementById('itemCount').innerHTML = `${cart.length} items`;
+            }
+        });
+    }
+    
+    function updateCustomPrice(id, type, value) {
+        const price = parseFloat(value);
+        if (isNaN(price) || price < 0) {
+            showToast('Invalid price', 'error');
+            loadCart();
+            return;
+        }
+        
+        fetch('/portal/api/update-cart-price/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({item_id: id, type: type, price: price})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                cart = data.cart;
+                displayCart(data.cart);
+                updateTotals(data.subtotal, data.total);
+            } else {
+                showToast(data.error || 'Error updating price', 'error');
+                loadCart();
+            }
+        }).catch(() => loadCart());
+    }
+    
+    function removeFromCart(id, type) {
+        fetch('/portal/api/remove-from-cart/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({item_id: id, type: type})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                cart = data.cart;
+                displayCart(data.cart);
+                updateTotals(data.subtotal, data.total);
+                document.getElementById('checkoutBtn').disabled = cart.length === 0;
+                document.getElementById('itemCount').innerHTML = `${cart.length} items`;
+            }
+        });
+    }
+    
+    function clearCart() { 
+        if (!cart.length) return;
+        Swal.fire({
+            title: 'Clear Cart?',
+            text: 'This will remove all items from your cart.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, clear'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/portal/api/clear-cart/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}})
+                    .then(() => loadCart());
+            }
+        });
+    }
+    
+    // ============================================
+    // TOTALS - Using Backend Values (No Tax Display)
+    // ============================================
+    function updateTotals(subtotal, total) {
+        document.getElementById('subtotal').innerHTML = `KES ${Number(subtotal || 0).toLocaleString()}`;
+        document.getElementById('total').innerHTML = `KES ${Number(total || 0).toLocaleString()}`;
+    }
+    
+    // ============================================
+    // PAYMENT FUNCTIONS
+    // ============================================
+    function calculateChange() {
+        const totalText = document.getElementById('total').innerText;
+        const total = parseFloat(totalText.replace(/[^0-9.-]/g, '')) || 0;
+        const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+        
+        if (paid >= total && total > 0) {
+            document.getElementById('changeAmount').innerHTML = (paid - total).toLocaleString();
+            document.getElementById('changeDue').style.display = 'block';
+        } else {
+            document.getElementById('changeDue').style.display = 'none';
+        }
+    }
+    
+    function processPayment() {
+        const totalText = document.getElementById('total').innerText;
+        const total = parseFloat(totalText.replace(/[^0-9.-]/g, '')) || 0;
+        const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+        
+        if (cart.length === 0) {
+            showToast('Cart is empty', 'error');
+            return;
+        }
+        if (paid < total) {
+            showToast('Insufficient payment amount', 'error');
+            return;
+        }
+        
+        document.getElementById('checkoutBtn').disabled = true;
+        document.getElementById('checkoutBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+        
+        fetch('/portal/api/process-payment/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({
+                payment_method: document.getElementById('paymentMethod').value,
+                amount_paid: paid,
+                customer_id: currentCustomer?.id
+            })
+        }).then(r => r.json()).then(data => {
+            document.getElementById('checkoutBtn').disabled = false;
+            document.getElementById('checkoutBtn').innerHTML = '<i class="fas fa-check-circle me-2"></i> Complete Sale';
+            
+            if (data.success) {
+                Swal.fire({
+                    title: '✅ Sale Complete!',
+                    html: `<strong>${data.receipt_number}</strong><br>Total: KES ${data.total.toLocaleString()}<br>Paid: KES ${data.amount_paid.toLocaleString()}<br>Change: KES ${data.change.toLocaleString()}<br><hr><small class="text-muted">Price includes 16% VAT</small>`,
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+                loadCart();
+                document.getElementById('amountPaid').value = '';
+                document.getElementById('changeDue').style.display = 'none';
+                document.getElementById('customerPhone').value = '';
+                document.getElementById('customerInfo').style.display = 'none';
+                currentCustomer = null;
+            } else {
+                showToast(data.error || 'Payment failed', 'error');
+            }
+        }).catch(err => {
+            document.getElementById('checkoutBtn').disabled = false;
+            document.getElementById('checkoutBtn').innerHTML = '<i class="fas fa-check-circle me-2"></i> Complete Sale';
+            showToast('Payment processing error', 'error');
+            console.error(err);
+        });
+    }
+    
+    // ============================================
+    // CUSTOMER FUNCTIONS
+    // ============================================
+    function searchCustomer() {
+        const phone = document.getElementById('customerPhone').value;
+        if (!phone || phone.length < 10) {
+            showToast('Enter valid phone number', 'warning');
+            return;
+        }
+        fetch(`/portal/api/search-customer/?phone=${phone}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.found) {
+                    currentCustomer = data;
+                    document.getElementById('customerName').innerHTML = data.name;
+                    document.getElementById('customerPhoneDisplay').innerHTML = data.phone;
+                    document.getElementById('customerInfo').style.display = 'block';
+                    showToast('Customer found', 'success');
+                } else {
+                    showToast('Customer not found', 'warning');
+                }
+            });
+    }
+    
+    function saveCustomer() {
+        const name = document.getElementById('newCustomerName').value.trim();
+        const phone = document.getElementById('newCustomerPhone').value.trim();
+        if (!name || !phone) {
+            showToast('Name and phone required', 'error');
+            return;
+        }
+        const fd = new FormData();
+        fd.append('name', name);
+        fd.append('phone', phone);
+        fd.append('email', document.getElementById('newCustomerEmail').value);
+        fetch('/portal/api/add-customer/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}, body: fd})
+            .then(r => r.json()).then(data => {
+                if (data.success) {
+                    showToast('Customer added', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('addCustomerModal')).hide();
+                    document.getElementById('customerPhone').value = phone;
+                    searchCustomer();
+                    document.getElementById('newCustomerName').value = '';
+                    document.getElementById('newCustomerPhone').value = '';
+                    document.getElementById('newCustomerEmail').value = '';
+                } else {
+                    showToast(data.error || 'Failed to add customer', 'error');
+                }
+            });
+    }
+    
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    function getCsrfToken() { 
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+               document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1]; 
+    }
+    
+    function showToast(msg, type) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            icon: type,
+            title: msg
+        });
+    }
+    
+    function escapeHtml(t) { 
+        if (!t) return ''; 
+        const d = document.createElement('div'); 
+        d.textContent = t; 
+        return d.innerHTML; 
+    }
+</script>
+{% endblock %}

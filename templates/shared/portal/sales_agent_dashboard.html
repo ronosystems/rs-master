@@ -1,0 +1,169 @@
+{% extends "shared/base_main.html" %}
+{% load static %}
+
+{% block title %}Sales Agent Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <!-- Welcome Banner Row -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #0f67b3, #0284c7);">
+                <div class="card-body">
+                    <h4 class="text-white mb-0">
+                        <i class="fas fa-user-check me-2"></i> Welcome, {{ user.get_full_name|default:user.username }}!
+                    </h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #0f67b3, #0284c7);">
+                <div class="card-body">
+                    <h4 class="text-white mb-0">
+                        <i class="fas fa-store me-2"></i> {{ tenant.company_name|default:"POS System" }} AUTHORIZED STAFF
+                    </h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <!-- Card 1: Today's Sales -->
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Today's Sales</p>
+                            <h3 class="mb-0 text-success">KES {{ today_sales|floatformat:2 }}</h3>
+                            <small class="text-muted">{{ today_count }} transactions</small>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-chart-line fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card 2: Today's Transactions -->
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Today's Transactions</p>
+                            <h3 class="mb-0 text-primary">{{ today_count }}</h3>
+                            <small class="text-muted">Sales completed</small>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-receipt fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card 3: Available Units -->
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Available Units</p>
+                            <h3 class="mb-0 text-warning">{{ available_units }}</h3>
+                            <small class="text-muted">In stock to sell</small>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-cubes fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 4: Monthly Target Sales -->
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1">Monthly Target</p>
+                            <h3 class="mb-0 text-info">{{ target_transactions }} Devices</h3>
+                            <small class="text-muted">{{ monthly_sales_count }} Devices</small>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-bullseye fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0"><i class="fas fa-bolt text-primary me-2"></i>Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="{% url 'new_sale' %}" class="btn btn-success w-100 py-3">
+                                <i class="fas fa-plus-circle fa-2x d-block mb-2"></i>
+                                New Sale
+                            </a>
+                            <p class="text-muted small mt-2 mb-0 text-center">Register a new sale for customer</p>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{% url 'my_stock' %}" class="btn btn-info text-white w-100 py-3">
+                                <i class="fas fa-boxes fa-2x d-block mb-2"></i>
+                                My Stock
+                            </a>
+                            <p class="text-muted small mt-2 mb-0 text-center">View your assigned stock</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Timer Footer -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <small class="text-muted">
+                <i class="fas fa-clock me-1"></i> Session Time: <span id="sessionTime">00:00:00</span>
+            </small>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 12px;
+    }
+    .btn {
+        border-radius: 10px;
+    }
+</style>
+
+<script>
+    // Session timer
+    let startTime = new Date();
+    setInterval(function() {
+        const now = new Date();
+        const diff = new Date(now - startTime);
+        const hours = String(diff.getUTCHours()).padStart(2, '0');
+        const minutes = String(diff.getUTCMinutes()).padStart(2, '0');
+        const seconds = String(diff.getUTCSeconds()).padStart(2, '0');
+        const sessionTime = document.getElementById('sessionTime');
+        if (sessionTime) {
+            sessionTime.innerText = `${hours}:${minutes}:${seconds}`;
+        }
+    }, 1000);
+</script>
+{% endblock %}

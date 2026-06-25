@@ -1,0 +1,56 @@
+{% extends "tech_master/base_tech.html" %}
+
+{% block title %}Add Supplier{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add Supplier</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Supplier Name *</label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contact Person</label>
+                            <input type="text" name="contact_person" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone *</label>
+                            <input type="text" name="phone" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            <textarea name="address" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tax ID</label>
+                            <input type="text" name="tax_id" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payment Terms</label>
+                            <input type="text" name="payment_terms" class="form-control" placeholder="e.g., Net 30 days">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="isActive" checked>
+                            <label class="form-check-label" for="isActive">Active</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Supplier</button>
+                        <a href="{% url 'tech_master:supplier_list' %}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

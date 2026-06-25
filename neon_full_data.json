@@ -1,0 +1,256 @@
+[
+{
+  "model": "admin.logentry",
+  "pk": 1,
+  "fields": {
+    "action_time": "2026-06-21T23:14:51.584Z",
+    "user": 1,
+    "content_type": 7,
+    "object_id": "1",
+    "object_repr": "FIELDMAX ELECTRONICS",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Logo\"]}}]"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 1,
+  "fields": {
+    "name": "TECH MASTER",
+    "code": "TECH_MASTER",
+    "description": "POS & Inventory for Electronics",
+    "icon": "fa-microchip",
+    "color": "#0d6efd",
+    "is_active": true,
+    "created_at": "2026-06-21T17:49:56.571Z",
+    "updated_at": "2026-06-22T12:21:10.078Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 2,
+  "fields": {
+    "name": "HOTEL MASTER",
+    "code": "HOTEL_MASTER",
+    "description": "Hotel & Booking Management",
+    "icon": "fa-hotel",
+    "color": "#fd7e14",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:02.268Z",
+    "updated_at": "2026-06-22T12:21:11.105Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 3,
+  "fields": {
+    "name": "FOOD MASTER",
+    "code": "FOOD_MASTER",
+    "description": "Restaurant & Kitchen Management",
+    "icon": "fa-utensils",
+    "color": "#198754",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:06.826Z",
+    "updated_at": "2026-06-22T12:21:12.336Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 4,
+  "fields": {
+    "name": "RETAIL MASTER",
+    "code": "RETAIL_MASTER",
+    "description": "General Retail Management",
+    "icon": "fa-store",
+    "color": "#6f42c1",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:09.499Z",
+    "updated_at": "2026-06-22T12:21:13.672Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 5,
+  "fields": {
+    "name": "HEALTH MASTER",
+    "code": "HEALTH_MASTER",
+    "description": "Pharmacy & Health Management",
+    "icon": "fa-heartbeat",
+    "color": "#dc3545",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:11.339Z",
+    "updated_at": "2026-06-22T12:21:14.998Z"
+  }
+},
+{
+  "model": "tenants.projecttype",
+  "pk": 6,
+  "fields": {
+    "name": "FASHION MASTER",
+    "code": "FASHION_MASTER",
+    "description": "Fashion & Clothing Management",
+    "icon": "fa-tshirt",
+    "color": "#e83e8c",
+    "is_active": false,
+    "created_at": "2026-06-21T17:50:13.182Z",
+    "updated_at": "2026-06-22T12:21:16.225Z"
+  }
+},
+{
+  "model": "tenants.tenant",
+  "pk": 1,
+  "fields": {
+    "company_name": "FIELDMAX ELECTRONICS",
+    "company_address": "ELDORET, KENYA",
+    "company_phone": "0722558544",
+    "company_email": "fieldmaxsupliers@gmail.com",
+    "company_pin": "P1234567890K",
+    "logo": "tenant_logos/LOGO_f8ID7Xu.jpg",
+    "owner": 2,
+    "project_type": 1,
+    "code": "FIELDMAX_ELECTRONICS",
+    "status": "active",
+    "subscription_plan": "BASIC",
+    "subscription_start": "2026-06-20T21:00:00Z",
+    "subscription_end": "2026-07-21T21:00:00Z",
+    "auto_renew": true,
+    "created_at": "2026-06-21T21:04:21.262Z",
+    "updated_at": "2026-06-21T23:14:51.344Z"
+  }
+},
+{
+  "model": "tenants.subscriptionplan",
+  "pk": 1,
+  "fields": {
+    "name": "MONTHLY BASIC SUBSCRIPTIONS",
+    "code": "BASIC",
+    "price_monthly": "999.00",
+    "price_yearly": "9999.00",
+    "max_users": 10,
+    "max_products": 1000,
+    "max_branches": 10,
+    "max_storage_gb": 10,
+    "features": {
+      "api": false,
+      "domain": false,
+      "reports": false,
+      "support": false,
+      "currencies": false,
+      "advanced_reports": false
+    },
+    "icon": "fa-building",
+    "color": "primary",
+    "is_active": true,
+    "order": 0,
+    "description": "",
+    "created_at": "2026-06-21T19:50:57.755Z",
+    "updated_at": "2026-06-21T19:50:57.755Z"
+  }
+},
+{
+  "model": "users.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$ItX1jtmyknZ9NAOvG5TM0N$wD4pjKGGRzasQiwvNNtJr9xLYL6T2YHOrd7ZbBCex1Y=",
+    "last_login": "2026-06-21T20:59:40.343Z",
+    "is_superuser": true,
+    "username": "RONOSYSTEMS",
+    "first_name": "",
+    "last_name": "",
+    "email": "ronosystems@gmail.com",
+    "is_staff": true,
+    "date_joined": "2026-06-21T17:54:14.241Z",
+    "tenant": null,
+    "role": "cashier",
+    "phone_number": "",
+    "pin_code": "",
+    "require_pin_for_pos": true,
+    "is_active": true,
+    "created_at": "2026-06-21T17:54:15.041Z",
+    "updated_at": "2026-06-21T17:54:15.041Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$kV3mQbdCjOUg6tvnXhQ68j$kbErlw35wg7XH6AiKCDarIoyPIRYq3wGrTD4Ol2mr1o=",
+    "last_login": "2026-06-22T09:37:11.255Z",
+    "is_superuser": false,
+    "username": "FIELDMAX",
+    "first_name": "FIELDMAX",
+    "last_name": "ADMIN",
+    "email": "info@fieldmax.com",
+    "is_staff": false,
+    "date_joined": "2026-06-21T21:04:21.787Z",
+    "tenant": 1,
+    "role": "admin",
+    "phone_number": "0722558544",
+    "pin_code": "2200",
+    "require_pin_for_pos": true,
+    "is_active": true,
+    "created_at": "2026-06-21T21:04:22.599Z",
+    "updated_at": "2026-06-21T21:04:22.599Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "settings.receiptsetting",
+  "pk": 1,
+  "fields": {
+    "tenant": 1,
+    "business_name": "FIELDMAX ELECTRONICS",
+    "business_address": "ELDORET, KENYA",
+    "business_phone": "0722558544",
+    "business_email": "fieldmaxsupliers@gmail.com",
+    "business_tax_pin": "",
+    "show_business_name": true,
+    "show_address": true,
+    "show_phone": true,
+    "show_email": true,
+    "show_tax_pin": false,
+    "show_receipt_number": true,
+    "show_sale_date": true,
+    "show_sale_time": true,
+    "show_agent_user": true,
+    "show_buyer_name": true,
+    "show_buyer_phone": true,
+    "show_buyer_id": true,
+    "show_next_of_kin_name": true,
+    "show_next_of_kin_phone": true,
+    "show_items_table": true,
+    "show_imei": true,
+    "show_quantity": true,
+    "show_unit_price": true,
+    "show_line_total": true,
+    "show_gross_total": true,
+    "show_footer_message": true,
+    "footer_text": "Thank you for your business!",
+    "created_at": "2026-06-21T21:04:23.254Z",
+    "updated_at": "2026-06-21T21:04:23.254Z"
+  }
+},
+{
+  "model": "settings.profilesetting",
+  "pk": 1,
+  "fields": {
+    "user": 2,
+    "theme": "light",
+    "language": "en",
+    "currency": "KES",
+    "date_format": "Y-m-d",
+    "time_format": "H:i",
+    "notifications_enabled": true,
+    "email_notifications": true,
+    "sms_notifications": true,
+    "push_notifications": true,
+    "notify_on_sale": true,
+    "notify_on_stock": true,
+    "created_at": "2026-06-21T21:04:24.390Z",
+    "updated_at": "2026-06-21T21:04:24.390Z"
+  }
+}
+]

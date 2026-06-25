@@ -1,0 +1,91 @@
+{% extends 'tech_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Add New Branch - Inventory Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">Add New Branch</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Branch Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" required 
+                                       placeholder="e.g., Main Store, Mombasa Branch">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="code" class="form-label">Branch Code *</label>
+                                <input type="text" class="form-control" id="code" name="code" required 
+                                       placeholder="e.g., MAIN, MSA, NRB">
+                                <small class="text-muted">Unique code for this branch (will be auto-uppercased)</small>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="branch_type" class="form-label">Branch Type</label>
+                                <select class="form-control" id="branch_type" name="branch_type">
+                                    <option value="main">Main Store</option>
+                                    <option value="sub_branch">Sub-Branch</option>
+                                    <option value="warehouse">Warehouse</option>
+                                    <option value="outlet">Outlet</option>
+                                    <option value="kiosk">Kiosk</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="city" class="form-label">City</label>
+                                <input type="text" class="form-control" id="city" name="city" 
+                                       placeholder="e.g., Nairobi, Mombasa">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="2" 
+                                      placeholder="Physical address"></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" 
+                                       placeholder="e.g., 0712345678">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    <input type="checkbox" class="form-check-input" id="is_main_branch" name="is_main_branch">
+                                    <label class="form-check-label" for="is_main_branch">
+                                        Set as Main Branch
+                                    </label>
+                                    <br>
+                                    <small class="text-muted">Only one branch can be the main branch</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Create Branch
+                            </button>
+                            <a href="{% url 'tech_master:branch_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

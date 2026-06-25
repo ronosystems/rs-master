@@ -1,0 +1,322 @@
+{% extends "shared/base_main.html" %}
+
+{% block title %}Sales History{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-history"></i> Sales History</h5>
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <select class="form-select" onchange="location.href='?date='+this.value">
+                        <option value="">All Time</option>
+                        <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Today</option>
+                        <option value="week" {% if date_filter == 'week' %}selected{% endif %}>This Week</option>
+                        <option value="month" {% if date_filter == 'month' %}selected{% endif %}>This Month</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by invoice or customer...">
+                </div>
+                <div class="col-md-3">
+                    <select id="paymentFilter" class="form-select">
+                        <option value="">All Payments</option>
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="mobile">Mobile Money</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="refunded">Refunded</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="stat-card text-center">
+                        <div class="stat-icon mx-auto">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h6 class="mt-2">Total Revenue</h6>
+                        <h4 class="text-success">KES {{ total_revenue|floatformat:2 }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card text-center">
+                        <div class="stat-icon mx-auto">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <h6 class="mt-2">Total Transactions</h6>
+                        <h4 class="text-primary">{{ total_transactions }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card text-center">
+                        <div class="stat-icon mx-auto">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <h6 class="mt-2">Average Order Value</h6>
+                        <h4 class="text-info">
+                            KES {{ average_order|floatformat:2 }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sales Table -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="salesTable">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date & Time</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales %}
+                        <tr>
+                            <td><code>{{ sale.invoice_no }}</code></td>
+                            <td>{{ sale.created_at|date:"Y-m-d H:i:s" }}</td>
+                            <td>
+                                {{ sale.customer_name|default:"Walk-in Customer" }}
+                                {% if sale.customer_phone %}
+                                <br><small class="text-muted">{{ sale.customer_phone }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">{{ sale.items.count }}</td>
+                            <td class="text-end"><strong>KES {{ sale.total|floatformat:2 }}</strong></td>
+                            <td>
+                                {% if sale.payment_method == 'cash' %}
+                                    <span class="badge bg-success">💵 Cash</span>
+                                {% elif sale.payment_method == 'card' %}
+                                    <span class="badge bg-info">💳 Card</span>
+                                {% elif sale.payment_method == 'mobile' %}
+                                    <span class="badge bg-primary">📱 Mobile</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ sale.get_payment_method_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if sale.status == 'completed' %}
+                                    <span class="badge bg-success">✓ Completed</span>
+                                {% elif sale.status == 'cancelled' %}
+                                    <span class="badge bg-danger">✗ Cancelled</span>
+                                {% elif sale.status == 'refunded' %}
+                                    <span class="badge bg-warning">↺ Refunded</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ sale.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'receipt' sale.id %}" class="btn btn-primary" target="_blank" title="Print Receipt">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                    <a href="{% url 'create_return' sale.id %}" class="btn btn-warning" title="Return/Refund">
+                                        <i class="fas fa-undo-alt"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-info" onclick="showSaleDetails({{ sale.id }})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                         </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i>
+                                <p>No sales found</p>
+                            </td>
+                         </tr>
+                        {% endfor %}
+                    </tbody>
+                 </td>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sale Details Modal -->
+<div class="modal fade" id="saleDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-receipt"></i> Sale Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="saleDetailsContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    }
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #0f67b3, #0284c7);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+    .btn-group .btn {
+        margin: 0 2px;
+    }
+    .table th {
+        background: var(--primary, #0f67b3);
+        color: white;
+    }
+</style>
+
+<script>
+    // Search and filter functionality
+    document.getElementById('searchInput').addEventListener('keyup', filterTable);
+    document.getElementById('paymentFilter').addEventListener('change', filterTable);
+    document.getElementById('statusFilter').addEventListener('change', filterTable);
+    
+    function filterTable() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const paymentFilter = document.getElementById('paymentFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+        
+        const rows = document.querySelectorAll('#salesTable tbody tr');
+        
+        rows.forEach(row => {
+            if (row.cells.length < 7) return;
+            
+            const invoice = row.cells[0].innerText.toLowerCase();
+            const customer = row.cells[2].innerText.toLowerCase();
+            const payment = row.cells[5].innerText.toLowerCase();
+            const status = row.cells[6].innerText.toLowerCase();
+            
+            let show = true;
+            
+            if (searchText && !invoice.includes(searchText) && !customer.includes(searchText)) {
+                show = false;
+            }
+            
+            if (paymentFilter && !payment.includes(paymentFilter)) {
+                show = false;
+            }
+            
+            if (statusFilter && !status.includes(statusFilter)) {
+                show = false;
+            }
+            
+            row.style.display = show ? '' : 'none';
+        });
+    }
+    
+    function showSaleDetails(saleId) {
+        const modal = new bootstrap.Modal(document.getElementById('saleDetailsModal'));
+        const contentDiv = document.getElementById('saleDetailsContent');
+        
+        contentDiv.innerHTML = `<div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>`;
+        
+        modal.show();
+        
+        fetch(`/portal/api/sale-details/${saleId}/`)
+            .then(response => response.json())
+            .then(data => {
+                let itemsHtml = '';
+                data.items.forEach(item => {
+                    itemsHtml += `
+                        <tr>
+                            <td>${item.product_name}</td>
+                            <td class="text-center">${item.quantity}</td>
+                            <td class="text-end">KES ${item.price}</td>
+                            <td class="text-end"><strong>KES ${item.subtotal}</strong></td>
+                        </tr>
+                    `;
+                });
+                
+                contentDiv.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Sale Information</h6>
+                            <p><strong>Invoice:</strong> ${data.invoice_no}</p>
+                            <p><strong>Date:</strong> ${data.date}</p>
+                            <p><strong>Cashier:</strong> ${data.cashier}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Customer Information</h6>
+                            <p><strong>Name:</strong> ${data.customer_name || 'Walk-in Customer'}</p>
+                            <p><strong>Phone:</strong> ${data.customer_phone || '-'}</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Items Sold</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Price</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHtml}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                    <td class="text-end"><strong>KES ${data.total}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Payment Method:</strong></td>
+                                    <td class="text-end">${data.payment_method}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Status:</strong></td>
+                                    <td class="text-end">${data.status}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                contentDiv.innerHTML = `<div class="alert alert-danger">Error loading sale details</div>`;
+            });
+    }
+</script>
+{% endblock %}

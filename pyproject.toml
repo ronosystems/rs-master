@@ -1,0 +1,15 @@
+[tool.pylance]
+extraPaths = ["."]
+
+[tool.pyright]
+include = ["apps", "config"]
+exclude = ["venv", "static", "media", "logs"]
+typeCheckingMode = "basic"
+reportMissingImports = "warning"
+reportAttributeAccessIssue = "warning"
+reportGeneralTypeIssues = "warning"
+reportUnusedImport = "warning"
+reportOptionalMemberAccess = "warning"
+
+[tool.django-stubs]
+settings_module = "config.settings"

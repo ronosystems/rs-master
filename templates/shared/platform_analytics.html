@@ -1,0 +1,122 @@
+{% extends "shared/base_super_admin.html" %}
+
+{% block title %}Platform Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="fw-bold">
+                <i class="fas fa-chart-pie text-primary me-2"></i>Platform Analytics
+            </h4>
+            <p class="text-muted">Platform performance and insights</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="text-muted">Total Tenants</h6>
+                    <h2 class="fw-bold">{{ total_tenants }}</h2>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up me-1"></i>{{ new_tenants_last_30 }} new (30 days)
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="text-muted">Active Tenants</h6>
+                    <h2 class="fw-bold text-success">{{ active_tenants }}</h2>
+                    <small>{{ active_tenants|floatformat:0 }}% of total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="text-muted">Total Users</h6>
+                    <h2 class="fw-bold">{{ total_users }}</h2>
+                    <small class="text-muted">Across all tenants</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="text-muted">Revenue (This Month)</h6>
+                    <h2 class="fw-bold text-primary">KES {{ monthly_revenue|floatformat:0 }}</h2>
+                    <small>Total: KES {{ total_revenue|floatformat:0 }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plan Distribution -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 p-4">
+                    <h6 class="fw-bold mb-0">Subscription Plan Distribution</h6>
+                </div>
+                <div class="card-body p-4">
+                    {% if plan_distribution %}
+                        {% for plan_name, count in plan_distribution.items %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>{{ plan_name }}</span>
+                            <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No subscription plans data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 p-4">
+                    <h6 class="fw-bold mb-0">Recent Tenants</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Tenant</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tenant in recent_tenants %}
+                                <tr>
+                                    <td>{{ tenant.company_name }}</td>
+                                    <td>
+                                        {% if tenant.status == 'active' %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% elif tenant.status == 'pending' %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ tenant.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ tenant.created_at|date:"d M Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-3">No tenants</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

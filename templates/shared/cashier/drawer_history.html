@@ -1,0 +1,73 @@
+{% extends "shared/base_main.html" %}
+
+{% block title %}Drawer History{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card-custom p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5><i class="fas fa-history me-2"></i>Cash Drawer History</h5>
+            <a href="{% url 'open_drawer' %}" class="btn btn-success btn-sm">
+                <i class="fas fa-plus"></i> Open New Drawer
+            </a>
+        </div>
+        <hr>
+        
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Opened</th>
+                        <th>Closed</th>
+                        <th>Opening</th>
+                        <th>Sales</th>
+                        <th>Expected</th>
+                        <th>Closing</th>
+                        <th>Difference</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for drawer in drawers %}
+                    <tr>
+                        <td>{{ drawer.opened_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ drawer.closed_at|date:"Y-m-d H:i"|default:"-" }}</td>
+                        <td>KES {{ drawer.opening_amount|floatformat:2 }}</td>
+                        <td>KES {{ drawer.total_sales|floatformat:2 }}</td>
+                        <td>KES {{ drawer.expected_amount|floatformat:2 }}</td>
+                        <td>KES {{ drawer.closing_amount|floatformat:2|default:"-" }}</td>
+                        <td>
+                            {% if drawer.closing_amount %}
+                                KES {{ drawer.closing_amount|floatformat:2|add:drawer.expected_amount|floatformat:2 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if drawer.is_open %}
+                                <span class="badge bg-success">Open</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Closed</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'drawer_detail' drawer.id %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4">
+                            <i class="fas fa-inbox fa-2x text-muted mb-2 d-block"></i>
+                            No cash drawers found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

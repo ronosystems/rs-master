@@ -1,0 +1,165 @@
+# ============================================
+# PYTHON
+# ============================================
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+*.egg
+*.egg-info/
+
+# ============================================
+# DJANGO
+# ============================================
+*.log
+*.pot
+*.pyc
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/static/
+/media/
+.DS_Store
+.env.local
+.env.*.local
+*.sqlite3
+
+# ============================================
+# ENVIRONMENT FILES (SECRETS)
+# ============================================
+.env
+.env.production
+.env.local
+.env.*.local
+.env.test
+
+# ============================================
+# VIRTUAL ENVIRONMENT
+# ============================================
+venv/
+env/
+ENV/
+venv.bak/
+env.bak/
+.venv/
+.env/
+virtualenv/
+
+# ============================================
+# IDE / EDITOR
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.idea/
+.vscode/
+*.iml
+*.bak
+*.tmp
+*.temp
+.vscode/
+.idea/
+
+# ============================================
+# TESTING
+# ============================================
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+coverage.xml
+
+# ============================================
+# LOGS
+# ============================================
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# ============================================
+# DATABASES
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+*.mdb
+
+# ============================================
+# BACKUP FILES
+# ============================================
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+
+# ============================================
+# OS GENERATED FILES
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ============================================
+# NODE MODULES (if using any frontend)
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ============================================
+# REACT / VUE / FRONTEND BUILD
+# ============================================
+build/
+dist/
+out/
+.next/
+.nuxt/
+.cache/
+
+# ============================================
+# DOCKER
+# ============================================
+docker-compose.override.yml
+*.pid
+*.seed
+*.pid.lock
+
+# ============================================
+# MISC
+# ============================================
+*.tar.gz
+*.zip
+*.rar
+*.7z
+*.tgz
+*.gz
+*.bz2
