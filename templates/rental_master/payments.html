@@ -1,0 +1,92 @@
+<!-- apps/rental_master/templates/rental_master/payments.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Payments - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-money-bill-wave me-2" style="color: #28a745;"></i>Payments</h4>
+        <div>
+            <a href="{% url 'rental_master:record_payment' %}" class="btn" style="background-color: #28a745; color: white;">
+                <i class="fas fa-plus me-1"></i> Record Payment
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Status</option>
+                        <option value="paid" {% if request.GET.status == 'paid' %}selected{% endif %}>Paid</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>Overdue</option>
+                        <option value="partial" {% if request.GET.status == 'partial' %}selected{% endif %}>Partially Paid</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    {% if request.GET.status %}
+                        <a href="{% url 'rental_master:payments' %}" class="btn btn-outline-secondary">Clear Filter</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Unit</th>
+                        <th>Tenant</th>
+                        <th>Amount Paid</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                            <td>{{ payment.rental_unit.unit_number }}</td>
+                            <td>{{ payment.tenant_profile.full_name }}</td>
+                            <td>KES {{ payment.amount_paid|floatformat:0 }}</td>
+                            <td>{{ payment.get_payment_method_display }}</td>
+                            <td>
+                                <span class="badge {% if payment.payment_status == 'paid' %}bg-success{% elif payment.payment_status == 'pending' %}bg-warning{% elif payment.payment_status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ payment.get_payment_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-money-bill-wave fa-4x text-muted mb-3" style="color: #28a745;"></i>
+                <h4>No Payments Recorded</h4>
+                <p class="text-muted">Record your first rent payment.</p>
+                <a href="{% url 'rental_master:record_payment' %}" class="btn" style="background-color: #28a745; color: white;">
+                    <i class="fas fa-plus me-1"></i> Record Payment
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

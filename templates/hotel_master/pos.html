@@ -1,0 +1,587 @@
+<!-- templates/hotel_master/pos.html -->
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<style>
+    .pos-container {
+        height: calc(100vh - 180px);
+        overflow: hidden;
+    }
+    
+    .pos-left {
+        height: 100%;
+        overflow-y: auto;
+    }
+    
+    .pos-right {
+        height: 100%;
+        overflow-y: auto;
+    }
+    
+    .room-item {
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+    }
+    
+    .room-item:hover {
+        background: #fff3e0;
+        border-color: #fd7e14;
+        transform: translateX(5px);
+    }
+    
+    .room-item.selected {
+        background: #fff3e0;
+        border-color: #fd7e14;
+        border-left: 4px solid #fd7e14;
+    }
+    
+    .room-item.occupied {
+        background: #f8f9fa;
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .room-item.occupied:hover {
+        transform: none;
+        background: #f8f9fa;
+        border-color: #e9ecef;
+    }
+    
+    .guest-form .form-control, 
+    .guest-form .form-select {
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s;
+    }
+    
+    .guest-form .form-control:focus,
+    .guest-form .form-select:focus {
+        border-color: #fd7e14;
+        box-shadow: 0 0 0 0.2rem rgba(253, 126, 20, 0.25);
+    }
+    
+    .guest-form .form-label {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #495057;
+    }
+    
+    .assignment-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 10px;
+        background: #f8f9fa;
+        transition: all 0.3s;
+    }
+    
+    .assignment-card:hover {
+        border-color: #fd7e14;
+        background: #fff3e0;
+    }
+    
+    .assignment-card .guest-name {
+        font-weight: 600;
+        color: #212529;
+    }
+    
+    .assignment-card .guest-details {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+    
+    @media (max-width: 992px) {
+        .pos-container {
+            height: auto;
+            overflow: visible;
+        }
+        .pos-left, .pos-right {
+            height: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    }
+</style>
+
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-primary text-white rounded-4 overflow-hidden">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="fw-bold mb-1">
+                                <i class="fas fa-user-check me-2"></i>Guest Room Assignment
+                            </h3>
+                            <p class="mb-0 opacity-75">{{ company_settings.company_name|default:tenant.company_name }}</p>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-light text-dark px-3 py-2">
+                                <i class="fas fa-clock me-1"></i>{{ now|date:"H:i" }}
+                            </span>
+                            <span class="badge bg-success text-white ms-2 px-3 py-2">
+                                <i class="fas fa-user-check me-1"></i>{{ request.user.get_full_name|default:request.user.username }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout - 2 Columns -->
+    <div class="pos-container">
+        <div class="row g-4 h-100">
+            <!-- Left Column - Available Rooms -->
+            <div class="col-md-6 pos-left">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-0 p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0"><i class="fas fa-bed me-2"></i>Available Rooms</h6>
+                            <span class="badge bg-success" id="availableCount">0 available</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="input-group mb-3">
+                            <input type="text" id="roomSearch" class="form-control form-control-sm" placeholder="Search room by number or type...">
+                            <button class="btn btn-warning btn-sm" onclick="searchRooms()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="resetRoomSearch()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div id="roomList" class="room-list">
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-bed fa-2x d-block mb-2 opacity-25"></i>
+                                <p class="small">Loading rooms...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Assignment Form -->
+            <div class="col-md-6 pos-right">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white border-0 p-3">
+                        <h6 class="fw-bold mb-0"><i class="fas fa-user-plus me-2"></i>Assign Guest to Room</h6>
+                    </div>
+                    <div class="card-body p-3 guest-form">
+                        <!-- Selected Room Display -->
+                        <div class="mb-3">
+                            <label class="form-label">Selected Room</label>
+                            <div id="selectedRoomDisplay" class="assignment-card text-center">
+                                <div class="text-muted small">
+                                    <i class="fas fa-arrow-left me-2"></i>Select a room from the left
+                                </div>
+                            </div>
+                        </div>
+
+                        <form id="assignmentForm" onsubmit="assignGuest(event)">
+                            {% csrf_token %}
+                            
+                            <!-- Guest Information -->
+                            <div class="mb-3">
+                                <label class="form-label">Guest Name <span class="text-danger">*</span></label>
+                                <input type="text" id="guestName" class="form-control" placeholder="Enter guest full name" required>
+                            </div>
+                            
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                    <input type="tel" id="guestPhone" class="form-control" placeholder="07XX XXX XXX" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" id="guestEmail" class="form-control" placeholder="guest@example.com">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">ID/Passport Number</label>
+                                    <input type="text" id="guestId" class="form-control" placeholder="ID or passport number">
+                                </div>
+                            </div>
+                            
+                            
+                            <!-- Assignment Details -->
+                            <hr>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Check-in Date <span class="text-danger">*</span></label>
+                                    <input type="date" id="checkinDate" class="form-control" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Check-out Date <span class="text-danger">*</span></label>
+                                    <input type="date" id="checkoutDate" class="form-control" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Number of Guests</label>
+                                    <input type="number" id="guestCount" class="form-control" value="1" min="1" max="10">
+                                </div>
+                            </div>
+                            
+                            <!-- Add-ons -->
+                            <hr>
+                            <div class="mb-3">
+                                <label class="form-label">Add-ons & Extras</label>
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="extraBreakfast">
+                                            <label class="form-check-label small" for="extraBreakfast">
+                                                Breakfast <span class="text-muted">(+KES 500)</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="extraParking">
+                                            <label class="form-check-label small" for="extraParking">
+                                                Parking <span class="text-muted">(+KES 300)</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="extraLateCheckout">
+                                            <label class="form-check-label small" for="extraLateCheckout">
+                                                Late Check-out <span class="text-muted">(+KES 1000)</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Special Requests -->
+                            <div class="mb-3">
+                                <label class="form-label">Special Requests</label>
+                                <textarea id="specialRequests" class="form-control" rows="2" placeholder="Any special requests or notes..."></textarea>
+                            </div>
+                            
+                            <!-- Submit Button -->
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success btn-lg" id="assignBtn">
+                                    <i class="fas fa-check-circle me-2"></i>Assign Guest to Room
+                                </button>
+                                <button type="reset" class="btn btn-outline-secondary" onclick="resetForm()">
+                                    <i class="fas fa-undo me-2"></i>Reset Form
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // ============================================
+    // GLOBAL VARIABLES
+    // ============================================
+    let selectedRoom = null;
+    let allRooms = [];
+    
+    // ============================================
+    // ROOM FUNCTIONS
+    // ============================================
+    function loadRooms() {
+        fetch('/hotel/api/rooms/?status=available')
+            .then(response => response.json())
+            .then(data => {
+                allRooms = data.rooms || [];
+                displayRooms(allRooms);
+                updateAvailableCount(allRooms.length);
+            })
+            .catch(() => {
+                document.getElementById('roomList').innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-exclamation-circle fa-2x d-block mb-2 opacity-25"></i>
+                        <p class="small">Error loading rooms</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadRooms()">
+                            <i class="fas fa-sync-alt me-1"></i>Retry
+                        </button>
+                    </div>
+                `;
+            });
+    }
+    
+    function searchRooms() {
+        const query = document.getElementById('roomSearch').value.trim().toLowerCase();
+        if (!query) {
+            displayRooms(allRooms);
+            return;
+        }
+        
+        const filtered = allRooms.filter(room => 
+            room.room_number.toLowerCase().includes(query) ||
+            room.room_type.toLowerCase().includes(query) ||
+            room.floor.toString().includes(query)
+        );
+        displayRooms(filtered);
+    }
+    
+    function resetRoomSearch() {
+        document.getElementById('roomSearch').value = '';
+        displayRooms(allRooms);
+    }
+    
+    function displayRooms(rooms) {
+        const container = document.getElementById('roomList');
+        if (!rooms || rooms.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-bed fa-3x d-block mb-3 opacity-25"></i>
+                    <p class="small">${allRooms.length === 0 ? 'No rooms available' : 'No rooms match your search'}</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = rooms.map(room => `
+            <div class="room-item ${room.status === 'occupied' ? 'occupied' : ''}" 
+                 onclick="${room.status === 'available' ? `selectRoom(${room.id}, '${room.room_number}', '${room.room_type}', ${room.floor}, ${room.price})` : ''}"
+                 data-id="${room.id}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold">Room ${room.room_number}</div>
+                        <small class="text-muted">${room.room_type} | Floor ${room.floor}</small>
+                        <div class="mt-1">
+                            <span class="badge bg-${room.status === 'available' ? 'success' : 'danger'} status-badge">
+                                ${room.status === 'available' ? 'Available' : 'Occupied'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-success">KES ${room.price.toLocaleString()}</div>
+                        <small class="text-muted">per night</small>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function updateAvailableCount(count) {
+        document.getElementById('availableCount').textContent = `${count} available`;
+    }
+    
+    function selectRoom(id, number, type, floor, price) {
+        selectedRoom = { id, number, type, floor, price };
+        
+        // Update UI
+        document.querySelectorAll('.room-item').forEach(el => el.classList.remove('selected'));
+        document.querySelector(`.room-item[data-id="${id}"]`).classList.add('selected');
+        
+        // Update display
+        document.getElementById('selectedRoomDisplay').innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fw-bold">Room ${number}</div>
+                    <div class="guest-details">${type} | Floor ${floor}</div>
+                    <div class="guest-details mt-1">
+                        <span class="badge bg-success">Available</span>
+                        <span class="ms-2 fw-bold text-success">KES ${price.toLocaleString()}/night</span>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearSelectedRoom()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Set default dates
+        const today = new Date();
+        const checkout = new Date();
+        checkout.setDate(today.getDate() + 1);
+        
+        if (!document.getElementById('checkinDate').value) {
+            document.getElementById('checkinDate').value = today.toISOString().split('T')[0];
+            document.getElementById('checkoutDate').value = checkout.toISOString().split('T')[0];
+        }
+        
+        showToast(`Room ${number} selected`, 'success');
+    }
+    
+    function clearSelectedRoom() {
+        selectedRoom = null;
+        document.querySelectorAll('.room-item').forEach(el => el.classList.remove('selected'));
+        document.getElementById('selectedRoomDisplay').innerHTML = `
+            <div class="text-muted small">
+                <i class="fas fa-arrow-left me-2"></i>Select a room from the left
+            </div>
+        `;
+    }
+    
+    // ============================================
+    // ASSIGNMENT FUNCTIONS
+    // ============================================
+    function assignGuest(event) {
+        event.preventDefault();
+        
+        if (!selectedRoom) {
+            showToast('Please select a room first', 'warning');
+            return;
+        }
+        
+        // Get form data
+        const formData = {
+            room_id: selectedRoom.id,
+            guest_name: document.getElementById('guestName').value.trim(),
+            phone: document.getElementById('guestPhone').value.trim(),
+            email: document.getElementById('guestEmail').value.trim(),
+            id_number: document.getElementById('guestId').value.trim(),
+            checkin_date: document.getElementById('checkinDate').value,
+            checkout_date: document.getElementById('checkoutDate').value,
+            guest_count: parseInt(document.getElementById('guestCount').value) || 1,
+            extras: {
+                breakfast: document.getElementById('extraBreakfast').checked,
+                parking: document.getElementById('extraParking').checked,
+                late_checkout: document.getElementById('extraLateCheckout').checked
+            },
+            special_requests: document.getElementById('specialRequests').value.trim(),
+            tenant_id: {{ tenant.id }}
+        };
+        
+        // Validate
+        if (!formData.guest_name || !formData.phone) {
+            showToast('Please fill in guest name and phone number', 'warning');
+            return;
+        }
+        
+        if (!formData.checkin_date || !formData.checkout_date) {
+            showToast('Please select check-in and check-out dates', 'warning');
+            return;
+        }
+        
+        // Validate dates
+        if (formData.checkin_date >= formData.checkout_date) {
+            showToast('Check-out date must be after check-in date', 'warning');
+            return;
+        }
+        
+        // Submit
+        const btn = document.getElementById('assignBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Assigning...';
+        
+        fetch('/hotel/api/assign-guest/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(result => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Assign Guest to Room';
+            
+            if (result.success) {
+                Swal.fire({
+                    title: '✅ Guest Assigned Successfully!',
+                    html: `
+                        <div class="text-start">
+                            <p><strong>Guest:</strong> ${result.guest_name}</p>
+                            <p><strong>Room:</strong> ${result.room_number}</p>
+                            <p><strong>Check-in:</strong> ${result.checkin_date}</p>
+                            <p><strong>Check-out:</strong> ${result.checkout_date}</p>
+                            ${result.booking_id ? `<p><strong>Booking ID:</strong> #${result.booking_id}</p>` : ''}
+                        </div>
+                        <hr>
+                        <p class="text-muted small mb-0">A confirmation has been sent to the guest</p>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    // Reset form and reload rooms
+                    resetForm();
+                    loadRooms();
+                });
+            } else {
+                showToast(result.error || 'Assignment failed', 'error');
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Assign Guest to Room';
+            showToast('Error assigning guest', 'error');
+            console.error(error);
+        });
+    }
+    
+    function resetForm() {
+        document.getElementById('assignmentForm').reset();
+        clearSelectedRoom();
+        document.getElementById('guestCount').value = 1;
+        document.querySelectorAll('.form-check-input').forEach(cb => cb.checked = false);
+        document.getElementById('specialRequests').value = '';
+        
+        // Clear date fields
+        document.getElementById('checkinDate').value = '';
+        document.getElementById('checkoutDate').value = '';
+    }
+    
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+               document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1];
+    }
+    
+    function showToast(msg, type) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            icon: type,
+            title: msg
+        });
+    }
+    
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load available rooms
+        loadRooms();
+        
+        // Search on enter key
+        document.getElementById('roomSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchRooms();
+        });
+        
+        // Set default dates
+        const today = new Date();
+        const checkout = new Date();
+        checkout.setDate(today.getDate() + 1);
+        
+        document.getElementById('checkinDate').value = today.toISOString().split('T')[0];
+        document.getElementById('checkoutDate').value = checkout.toISOString().split('T')[0];
+        
+        // Auto-reset room selection when form is reset
+        document.querySelector('button[type="reset"]').addEventListener('click', function() {
+            clearSelectedRoom();
+        });
+    });
+</script>
+{% endblock %}

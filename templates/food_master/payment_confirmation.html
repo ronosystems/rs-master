@@ -1,0 +1,843 @@
+<!-- templates/food_master/payment_confirmation.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Payment Confirmation - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<style>
+    .payment-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    .payment-card:hover {
+        border-color: #e67e22;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .order-summary {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+    }
+    .order-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .order-item:last-child { border-bottom: none; }
+    .status-badge {
+        font-size: 0.8rem;
+        padding: 4px 12px;
+    }
+    .payment-method-btn {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    .payment-method-btn:hover {
+        border-color: #e67e22;
+        background: #fdf0e6;
+    }
+    .payment-method-btn.active {
+        border-color: #28a745;
+        background: #d4edda;
+    }
+    .payment-method-btn .icon {
+        font-size: 1.5rem;
+        display: block;
+        margin-bottom: 5px;
+    }
+    .suggestions-container {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .suggestions-container .suggestion-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.2s;
+    }
+    .suggestions-container .suggestion-item:hover {
+        background: #fdf0e6;
+    }
+    .suggestions-container .suggestion-item .order-number {
+        font-weight: 600;
+        color: #e67e22;
+    }
+    .suggestions-container .suggestion-item .order-info {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    .search-wrapper {
+        position: relative;
+    }
+    .receipt-container {
+        max-width: 320px;
+        margin: 0 auto;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        padding: 15px;
+        background: white;
+        color: #000;
+    }
+    .receipt-container .receipt-header {
+        text-align: center;
+        border-bottom: 2px dashed #333;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+    }
+    .receipt-container .receipt-header h5 {
+        font-weight: bold;
+        margin-bottom: 3px;
+        font-size: 1.1rem;
+    }
+    .receipt-container .receipt-header p {
+        margin-bottom: 2px;
+        font-size: 10px;
+    }
+    .receipt-container .receipt-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 0;
+        font-size: 10px;
+    }
+    .receipt-container .receipt-totals {
+        border-top: 2px solid #333;
+        padding-top: 8px;
+        margin-top: 8px;
+    }
+    .receipt-container .receipt-totals .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 0;
+        font-size: 10px;
+    }
+    .receipt-container .receipt-totals .total {
+        font-weight: bold;
+        font-size: 1.2em;
+        border-top: 1px solid #333;
+        padding-top: 5px;
+        margin-top: 5px;
+    }
+    .receipt-container .receipt-footer {
+        text-align: center;
+        border-top: 2px dashed #333;
+        padding-top: 8px;
+        margin-top: 8px;
+        font-size: 9px;
+    }
+    .receipt-container .receipt-payment {
+        border-top: 1px solid #333;
+        padding-top: 5px;
+        margin-top: 5px;
+    }
+    .input-group-text {
+        background: #f8f9fa;
+    }
+    .suggestion-loading {
+        padding: 12px;
+        text-align: center;
+        color: #6c757d;
+    }
+    .redirect-btn {
+        transition: all 0.3s ease;
+    }
+    .redirect-btn:hover {
+        transform: translateX(5px);
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-credit-card me-2" style="color: #28a745;"></i>Payment Confirmation</h4>
+        <div>
+            <span class="badge bg-warning text-dark me-2">CASHIER</span>
+            <span class="badge bg-info">{{ company_settings.company_name|default:tenant.company_name }}</span>
+        </div>
+    </div>
+
+    <!-- Search Order -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Search by Order Number</label>
+                    <div class="search-wrapper">
+                        <div class="input-group">
+                            <input type="text" id="searchOrder" class="form-control" 
+                                   placeholder="e.g., ORD-2024..." autocomplete="off">
+                            <button class="btn btn-primary" onclick="searchOrder()">
+                                <i class="fas fa-search me-1"></i> Search
+                            </button>
+                        </div>
+                        <div class="suggestions-container" id="orderSuggestions"></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Or Search by Phone</label>
+                    <div class="search-wrapper">
+                        <div class="input-group">
+                            <input type="text" id="searchPhone" class="form-control" 
+                                   placeholder="Customer Phone" autocomplete="off">
+                            <button class="btn btn-primary" onclick="searchByPhone()">
+                                <i class="fas fa-search me-1"></i> Search
+                            </button>
+                        </div>
+                        <div class="suggestions-container" id="phoneSuggestions"></div>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" onclick="clearSearch()">
+                        <i class="fas fa-undo me-1"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingDisplay" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Searching for order...</p>
+    </div>
+
+    <!-- Order Details -->
+    <div id="orderDisplay" style="display: none;">
+        <div class="row g-4">
+            <!-- Order Summary -->
+            <div class="col-md-7">
+                <div class="order-summary">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Order <span id="displayOrderNumber" class="text-primary"></span></h5>
+                        <span class="badge status-badge" id="displayOrderStatus">Pending</span>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-4"><small>Table:</small> <strong id="displayTable">N/A</strong></div>
+                        <div class="col-4"><small>Guests:</small> <strong id="displayGuests">1</strong></div>
+                        <div class="col-4"><small>Date:</small> <strong id="displayDate"></strong></div>
+                    </div>
+                    
+                    <div id="displayItems"></div>
+                    
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between"><span>Subtotal:</span> <span id="displaySubtotal">KES 0.00</span></div>
+                        <div class="d-flex justify-content-between"><span>Tax (16%):</span> <span id="displayTax">KES 0.00</span></div>
+                        <div class="d-flex justify-content-between fw-bold fs-5" style="color: #e67e22;">
+                            <span>TOTAL:</span> <span id="displayTotal">KES 0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- View Order Details Button -->
+                    <div class="mt-3">
+                        <a href="#" id="viewOrderDetailsBtn" class="btn btn-info w-100 redirect-btn">
+                            <i class="fas fa-external-link-alt me-2"></i> View Full Order Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment -->
+            <div class="col-md-5">
+                <div class="card payment-card">
+                    <h6><i class="fas fa-money-bill-wave me-2" style="color: #28a745;"></i>Process Payment</h6>
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="payment-method-btn active" data-method="cash" onclick="selectPaymentMethod('cash')">
+                                    <span class="icon">💵</span>
+                                    Cash
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="payment-method-btn" data-method="mpesa" onclick="selectPaymentMethod('mpesa')">
+                                    <span class="icon">📱</span>
+                                    M-Pesa
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="payment-method-btn" data-method="card" onclick="selectPaymentMethod('card')">
+                                    <span class="icon">💳</span>
+                                    Card
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="payment-method-btn" data-method="bank" onclick="selectPaymentMethod('bank')">
+                                    <span class="icon">🏦</span>
+                                    Bank
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Amount Paid (KES)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">KES</span>
+                            <input type="number" id="amountPaid" class="form-control" placeholder="0.00" step="0.01" oninput="calculateChange()">
+                        </div>
+                    </div>
+
+                    <div id="changeDisplay" class="alert alert-success" style="display: none;">
+                        <strong>Change:</strong> KES <span id="changeAmount">0.00</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Transaction Reference (Optional)</label>
+                        <input type="text" id="transactionRef" class="form-control" placeholder="e.g., M-Pesa confirmation code">
+                    </div>
+
+                    <button class="btn btn-success w-100 btn-lg" onclick="confirmPayment()" id="confirmPaymentBtn" disabled>
+                        <i class="fas fa-check-circle me-2"></i> Confirm Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- No Order Found -->
+    <div id="noOrderDisplay" class="text-center py-5" style="display: none;">
+        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+        <h4>No Order Found</h4>
+        <p class="text-muted">Please search for an order using the order number or customer phone.</p>
+    </div>
+
+    <!-- Order Already Paid -->
+    <div id="alreadyPaidDisplay" class="text-center py-5" style="display: none;">
+        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+        <h4>Order Already Paid</h4>
+        <p class="text-muted" id="alreadyPaidMessage">This order has already been paid.</p>
+        <a href="#" id="viewPaidOrderBtn" class="btn btn-info mt-3 redirect-btn">
+            <i class="fas fa-external-link-alt me-2"></i> View Order Details
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+let currentOrder = null;
+let selectedPaymentMethod = 'cash';
+let searchTimeout = null;
+
+// ============================================
+// CSRF TOKEN
+// ============================================
+function getCsrfToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    return token ? token.value : '';
+}
+
+// ============================================
+// SEARCH SUGGESTIONS - Order Number
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    const searchOrder = document.getElementById('searchOrder');
+    const searchPhone = document.getElementById('searchPhone');
+    
+    if (searchOrder) {
+        searchOrder.addEventListener('input', function() {
+            const query = this.value.trim();
+            const suggestionsContainer = document.getElementById('orderSuggestions');
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 3) {
+                if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                if (suggestionsContainer) {
+                    suggestionsContainer.innerHTML = '<div class="suggestion-loading"><span class="spinner-border spinner-border-sm me-2"></span>Searching...</div>';
+                    suggestionsContainer.style.display = 'block';
+                }
+                
+                fetch(`/food/api/payment/search-suggestions/?q=${encodeURIComponent(query)}&type=order`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (suggestionsContainer) {
+                            if (data.success && data.suggestions && data.suggestions.length > 0) {
+                                let html = '';
+                                data.suggestions.forEach(order => {
+                                    const statusColor = order.payment_status === 'paid' ? 'text-success' : 'text-warning';
+                                    html += `
+                                        <div class="suggestion-item" onclick="selectOrderSuggestion('${order.order_number}')">
+                                            <div class="order-number">${order.order_number}</div>
+                                            <div class="order-info">
+                                                Total: KES ${order.total_amount.toFixed(2)} | 
+                                                Status: <span class="${statusColor}">${order.payment_status}</span>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                suggestionsContainer.innerHTML = html;
+                            } else {
+                                suggestionsContainer.innerHTML = '<div class="suggestion-item text-muted">No orders found</div>';
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        if (suggestionsContainer) {
+                            suggestionsContainer.innerHTML = '<div class="suggestion-item text-danger">Error searching</div>';
+                        }
+                    });
+            }, 300);
+        });
+    }
+    
+    if (searchPhone) {
+        searchPhone.addEventListener('input', function() {
+            const query = this.value.trim();
+            const suggestionsContainer = document.getElementById('phoneSuggestions');
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 3) {
+                if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                if (suggestionsContainer) {
+                    suggestionsContainer.innerHTML = '<div class="suggestion-loading"><span class="spinner-border spinner-border-sm me-2"></span>Searching...</div>';
+                    suggestionsContainer.style.display = 'block';
+                }
+                
+                fetch(`/food/api/payment/search-suggestions/?q=${encodeURIComponent(query)}&type=phone`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (suggestionsContainer) {
+                            if (data.success && data.suggestions && data.suggestions.length > 0) {
+                                let html = '';
+                                data.suggestions.forEach(order => {
+                                    const statusColor = order.payment_status === 'paid' ? 'text-success' : 'text-warning';
+                                    html += `
+                                        <div class="suggestion-item" onclick="selectPhoneSuggestion('${order.order_number}')">
+                                            <div class="order-number">${order.order_number}</div>
+                                            <div class="order-info">
+                                                Customer: ${order.customer_name || 'Walk-in'} | 
+                                                Total: KES ${order.total_amount.toFixed(2)} | 
+                                                Status: <span class="${statusColor}">${order.payment_status}</span>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                suggestionsContainer.innerHTML = html;
+                            } else {
+                                suggestionsContainer.innerHTML = '<div class="suggestion-item text-muted">No orders found</div>';
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        if (suggestionsContainer) {
+                            suggestionsContainer.innerHTML = '<div class="suggestion-item text-danger">Error searching</div>';
+                        }
+                    });
+            }, 300);
+        });
+    }
+});
+
+function selectOrderSuggestion(orderNumber) {
+    document.getElementById('searchOrder').value = orderNumber;
+    const suggestionsContainer = document.getElementById('orderSuggestions');
+    if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+    searchOrder();
+}
+
+function selectPhoneSuggestion(orderNumber) {
+    document.getElementById('searchPhone').value = '';
+    const phoneSuggestions = document.getElementById('phoneSuggestions');
+    if (phoneSuggestions) phoneSuggestions.style.display = 'none';
+    document.getElementById('searchOrder').value = orderNumber;
+    searchOrder();
+}
+
+// ============================================
+// SEARCH FUNCTIONS
+// ============================================
+function searchOrder() {
+    const orderNumber = document.getElementById('searchOrder').value.trim();
+    if (!orderNumber) {
+        showToast('Please enter an order number', 'warning');
+        return;
+    }
+    
+    const suggestionsContainer = document.getElementById('orderSuggestions');
+    if (suggestionsContainer) suggestionsContainer.style.display = 'none';
+    showLoading(true);
+    
+    fetch(`/food/api/payment/search-order/?order_number=${encodeURIComponent(orderNumber)}`)
+        .then(r => r.json())
+        .then(data => {
+            showLoading(false);
+            console.log('Search result:', data);
+            
+            if (data.success && data.order) {
+                displayOrder(data.order);
+            } else {
+                document.getElementById('orderDisplay').style.display = 'none';
+                document.getElementById('noOrderDisplay').style.display = 'block';
+                document.getElementById('alreadyPaidDisplay').style.display = 'none';
+                showToast(data.message || 'Order not found', 'error');
+            }
+        })
+        .catch(error => {
+            showLoading(false);
+            console.error('Search error:', error);
+            showToast('Error searching order. Please try again.', 'error');
+        });
+}
+
+function searchByPhone() {
+    const phone = document.getElementById('searchPhone').value.trim();
+    if (!phone || phone.length < 10) {
+        showToast('Enter valid phone number (10+ digits)', 'warning');
+        return;
+    }
+    
+    const phoneSuggestions = document.getElementById('phoneSuggestions');
+    if (phoneSuggestions) phoneSuggestions.style.display = 'none';
+    showLoading(true);
+    
+    fetch(`/food/api/payment/search-order/?phone=${encodeURIComponent(phone)}`)
+        .then(r => r.json())
+        .then(data => {
+            showLoading(false);
+            console.log('Phone search result:', data);
+            
+            if (data.success && data.order) {
+                displayOrder(data.order);
+            } else {
+                document.getElementById('orderDisplay').style.display = 'none';
+                document.getElementById('noOrderDisplay').style.display = 'block';
+                document.getElementById('alreadyPaidDisplay').style.display = 'none';
+                showToast(data.message || 'No pending orders found for this phone', 'error');
+            }
+        })
+        .catch(error => {
+            showLoading(false);
+            console.error('Phone search error:', error);
+            showToast('Error searching. Please try again.', 'error');
+        });
+}
+
+function clearSearch() {
+    document.getElementById('searchOrder').value = '';
+    document.getElementById('searchPhone').value = '';
+    document.getElementById('orderDisplay').style.display = 'none';
+    document.getElementById('noOrderDisplay').style.display = 'none';
+    document.getElementById('alreadyPaidDisplay').style.display = 'none';
+    document.getElementById('loadingDisplay').style.display = 'none';
+    
+    const orderSuggestions = document.getElementById('orderSuggestions');
+    const phoneSuggestions = document.getElementById('phoneSuggestions');
+    if (orderSuggestions) orderSuggestions.style.display = 'none';
+    if (phoneSuggestions) phoneSuggestions.style.display = 'none';
+    
+    currentOrder = null;
+    document.getElementById('confirmPaymentBtn').disabled = true;
+}
+
+function showLoading(show) {
+    document.getElementById('loadingDisplay').style.display = show ? 'block' : 'none';
+    document.getElementById('orderDisplay').style.display = 'none';
+    document.getElementById('noOrderDisplay').style.display = 'none';
+    document.getElementById('alreadyPaidDisplay').style.display = 'none';
+}
+
+// ============================================
+// DISPLAY ORDER
+// ============================================
+function displayOrder(order) {
+    currentOrder = order;
+    document.getElementById('orderDisplay').style.display = 'block';
+    document.getElementById('noOrderDisplay').style.display = 'none';
+    document.getElementById('alreadyPaidDisplay').style.display = 'none';
+    
+    // Update order number
+    const orderNumberEl = document.getElementById('displayOrderNumber');
+    if (orderNumberEl) orderNumberEl.textContent = order.order_number;
+    
+    // Update status
+    const statusBadge = document.getElementById('displayOrderStatus');
+    if (statusBadge) {
+        const statusColors = {
+            'pending': 'warning',
+            'paid': 'success',
+            'partial': 'info',
+            'refunded': 'danger',
+            'completed': 'success',
+            'cancelled': 'danger',
+        };
+        const color = statusColors[order.status] || 'secondary';
+        statusBadge.textContent = order.status_display || order.status || 'Pending';
+        statusBadge.className = `badge status-badge bg-${color}`;
+    }
+    
+    // Update table
+    const tableEl = document.getElementById('displayTable');
+    if (tableEl) tableEl.textContent = order.table_number || 'N/A';
+    
+    // Update guests
+    const guestsEl = document.getElementById('displayGuests');
+    if (guestsEl) guestsEl.textContent = order.guest_count || '1';
+    
+    // Update date
+    const dateEl = document.getElementById('displayDate');
+    if (dateEl) {
+        const date = new Date(order.created_at);
+        dateEl.textContent = date.toLocaleString();
+    }
+    
+    // Update items
+    const itemsContainer = document.getElementById('displayItems');
+    if (itemsContainer) {
+        let itemsHtml = '<div class="border-top pt-2 mt-2">';
+        if (order.items && order.items.length > 0) {
+            order.items.forEach(item => {
+                itemsHtml += `
+                    <div class="order-item">
+                        <span>${item.quantity}x ${item.name}</span>
+                        <span>KES ${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                `;
+            });
+        } else {
+            itemsHtml += '<div class="text-muted">No items in this order</div>';
+        }
+        itemsHtml += '</div>';
+        itemsContainer.innerHTML = itemsHtml;
+    }
+    
+    // Update totals
+    const subtotalEl = document.getElementById('displaySubtotal');
+    if (subtotalEl) subtotalEl.textContent = `KES ${(order.subtotal || 0).toFixed(2)}`;
+    
+    const taxEl = document.getElementById('displayTax');
+    if (taxEl) taxEl.textContent = `KES ${(order.tax || 0).toFixed(2)}`;
+    
+    const totalEl = document.getElementById('displayTotal');
+    if (totalEl) totalEl.textContent = `KES ${(order.total || 0).toFixed(2)}`;
+    
+    // Set up View Order Details button
+    const viewBtn = document.getElementById('viewOrderDetailsBtn');
+    if (viewBtn) {
+        viewBtn.href = `/food/orders/${order.id}/`;
+    }
+    
+    // Enable confirm button
+    const confirmBtn = document.getElementById('confirmPaymentBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirm Payment';
+    }
+    
+    // Reset payment fields
+    const amountPaid = document.getElementById('amountPaid');
+    if (amountPaid) amountPaid.value = order.total.toFixed(2);
+    
+    const changeDisplay = document.getElementById('changeDisplay');
+    if (changeDisplay) changeDisplay.style.display = 'none';
+    
+    const transactionRef = document.getElementById('transactionRef');
+    if (transactionRef) transactionRef.value = '';
+    
+    // Auto-calculate change
+    calculateChange();
+}
+
+// ============================================
+// PAYMENT FUNCTIONS
+// ============================================
+function selectPaymentMethod(method) {
+    selectedPaymentMethod = method;
+    document.querySelectorAll('.payment-method-btn').forEach(btn => btn.classList.remove('active'));
+    const selectedBtn = document.querySelector(`.payment-method-btn[data-method="${method}"]`);
+    if (selectedBtn) selectedBtn.classList.add('active');
+}
+
+function calculateChange() {
+    if (!currentOrder) return;
+    const total = currentOrder.total || 0;
+    const amountPaid = document.getElementById('amountPaid');
+    const changeDisplay = document.getElementById('changeDisplay');
+    const changeAmount = document.getElementById('changeAmount');
+    
+    if (!amountPaid || !changeDisplay || !changeAmount) return;
+    
+    const paid = parseFloat(amountPaid.value) || 0;
+    
+    if (paid >= total && total > 0) {
+        changeAmount.textContent = (paid - total).toFixed(2);
+        changeDisplay.style.display = 'block';
+    } else {
+        changeDisplay.style.display = 'none';
+    }
+}
+
+function confirmPayment() {
+    if (!currentOrder) {
+        showToast('No order selected', 'error');
+        return;
+    }
+    
+    if (currentOrder.payment_status === 'paid') {
+        showToast('This order is already paid!', 'warning');
+        return;
+    }
+    
+    const total = currentOrder.total || 0;
+    const amountPaid = document.getElementById('amountPaid');
+    const paid = parseFloat(amountPaid ? amountPaid.value : 0) || 0;
+    const transactionRef = document.getElementById('transactionRef');
+    const ref = transactionRef ? transactionRef.value.trim() : '';
+    
+    if (paid < total) {
+        showToast(`Amount paid (KES ${paid.toFixed(2)}) is less than total (KES ${total.toFixed(2)})`, 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('confirmPaymentBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+    }
+    
+    fetch('/food/api/payment/confirm-payment/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            order_id: currentOrder.id,
+            payment_method: selectedPaymentMethod,
+            amount_paid: paid,
+            transaction_reference: ref
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirm Payment';
+        }
+        
+        if (data.success) {
+            Swal.fire({
+                title: '✅ Payment Confirmed!',
+                html: `
+                    <strong>Order: ${currentOrder.order_number}</strong><br>
+                    Amount: KES ${data.amount_paid.toFixed(2)}<br>
+                    Method: ${selectedPaymentMethod.toUpperCase()}<br>
+                    Change: KES ${data.change.toFixed(2)}
+                    ${data.receipt_number ? `<br>Receipt: ${data.receipt_number}` : ''}
+                `,
+                icon: 'success',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                // Redirect to order details after payment
+                window.location.href = `/food/orders/${currentOrder.id}/`;
+            });
+        } else {
+            showToast(data.message || 'Payment confirmation failed', 'error');
+        }
+    })
+    .catch(() => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirm Payment';
+        }
+        showToast('Network error. Please try again.', 'error');
+    });
+}
+
+// ============================================
+// UTILITY
+// ============================================
+function showToast(msg, type) {
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        icon: type || 'info',
+        title: msg
+    });
+}
+
+// ============================================
+// CLOSE SUGGESTIONS ON CLICK OUTSIDE
+// ============================================
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-wrapper')) {
+        const orderSuggestions = document.getElementById('orderSuggestions');
+        const phoneSuggestions = document.getElementById('phoneSuggestions');
+        if (orderSuggestions) orderSuggestions.style.display = 'none';
+        if (phoneSuggestions) phoneSuggestions.style.display = 'none';
+    }
+});
+
+// ============================================
+// ENTER KEY SUPPORT
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    const searchOrder = document.getElementById('searchOrder');
+    const searchPhone = document.getElementById('searchPhone');
+    const amountPaid = document.getElementById('amountPaid');
+    
+    if (searchOrder) {
+        searchOrder.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const suggestions = document.getElementById('orderSuggestions');
+                if (suggestions) suggestions.style.display = 'none';
+                searchOrder();
+            }
+        });
+    }
+    
+    if (searchPhone) {
+        searchPhone.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const suggestions = document.getElementById('phoneSuggestions');
+                if (suggestions) suggestions.style.display = 'none';
+                searchByPhone();
+            }
+        });
+    }
+    
+    if (amountPaid) {
+        amountPaid.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') confirmPayment();
+        });
+    }
+    
+    console.log('Payment Confirmation Page Loaded');
+});
+</script>
+{% endblock %}

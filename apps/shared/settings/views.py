@@ -3,17 +3,29 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.hashers import check_password
 from django.db import transaction
+from decimal import Decimal
+from .models import CompanySetting
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.utils import timezone
 from .models import ReceiptSetting, ProfileSetting, SystemSetting
 from apps.shared.users.models import User
 from apps.shared.tenants.models import Tenant
+from django.core.exceptions import PermissionDenied
+from apps.shared.settings.models import (
+    SystemSetting, 
+    ReceiptSetting, 
+    ProfileSetting, 
+    PaymentSetting
+)
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +128,7 @@ def system_settings_export(request):
 # RECEIPT SETTINGS - TENANT ADMIN ONLY
 # ============================================
 
+
 @login_required
 def receipt_settings(request):
     """Receipt settings view"""
@@ -135,6 +148,17 @@ def receipt_settings(request):
         settings.business_phone = request.POST.get('business_phone', '')
         settings.business_email = request.POST.get('business_email', '')
         settings.business_tax_pin = request.POST.get('business_tax_pin', '')
+        
+        # ============================================
+        # HANDLE LOGO UPLOAD
+        # ============================================
+        if request.FILES.get('logo'):
+            settings.logo = request.FILES['logo']
+        
+        # ============================================
+        # LOGO TOGGLE
+        # ============================================
+        settings.show_logo_on_receipts = request.POST.get('show_logo_on_receipts') == 'on'
         
         # Business Header Toggles
         settings.show_business_name = request.POST.get('show_business_name') == 'on'
@@ -168,6 +192,24 @@ def receipt_settings(request):
         settings.show_footer_message = request.POST.get('show_footer_message') == 'on'
         settings.footer_text = request.POST.get('footer_text', 'Thank you for your business!')
         
+        # ============================================
+        # VAT / TAX SETTINGS - NEW
+        # ============================================
+        settings.show_vat_on_receipt = request.POST.get('show_vat_on_receipt') == 'on'
+        
+        # VAT Rate - Convert to Decimal safely
+        vat_rate = request.POST.get('vat_rate', 16)
+        try:
+            settings.vat_rate = Decimal(str(vat_rate))
+        except (ValueError, TypeError):
+            settings.vat_rate = Decimal('16.00')
+        
+        # VAT Label
+        settings.vat_label = request.POST.get('vat_label', 'VAT')
+        
+        # Tax Type
+        settings.tax_type = request.POST.get('tax_type', 'exclusive')
+        
         settings.save()
         
         messages.success(request, 'Receipt settings updated successfully!')
@@ -178,6 +220,7 @@ def receipt_settings(request):
         'tenant': tenant,
     }
     return render(request, 'shared/settings/receipt_settings.html', context)
+
 
 
 # ============================================
@@ -320,3 +363,320 @@ def profile_settings(request):
         'tenant': request.user.tenant,
     }
     return render(request, 'shared/settings/profile_settings.html', context)
+
+
+# apps/shared/settings/views.py - Add this if not exists
+
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.contrib.auth.hashers import check_password
+
+
+@login_required
+def change_pin(request):
+    """Change user's PIN"""
+    user = request.user
+    
+    if request.method == 'POST':
+        current_pin = request.POST.get('current_pin', '').strip()
+        new_pin = request.POST.get('new_pin', '').strip()
+        confirm_pin = request.POST.get('confirm_pin', '').strip()
+        
+        # Validate current PIN
+        if user.pin_code and not user.check_pin(current_pin):
+            messages.error(request, 'Current PIN is incorrect.')
+            return redirect('settings:change_pin')
+        
+        # Validate new PIN
+        if len(new_pin) < 4 or len(new_pin) > 6 or not new_pin.isdigit():
+            messages.error(request, 'New PIN must be 4-6 digits (numbers only).')
+            return redirect('settings:change_pin')
+        
+        if new_pin != confirm_pin:
+            messages.error(request, 'PINs do not match.')
+            return redirect('settings:change_pin')
+        
+        # Set new PIN
+        user.pin_code = new_pin
+        user.save()
+        
+        # Log activity
+        from apps.shared.users.models import UserActivityLog
+        UserActivityLog.log_activity(
+            user=user,
+            action='pin_change',
+            details={'pin_changed': True},
+            request=request
+        )
+        
+        messages.success(request, 'PIN changed successfully!')
+        return redirect('settings:profile_settings')
+    
+    context = {
+        'user': user,
+        'has_pin': user.has_pin(),
+        'active_tab': 'security',
+    }
+    return render(request, 'shared/settings/change_pin.html', context)
+
+
+# ============ PAYMENT SETTINGS VIEWS ============
+
+@login_required
+def payment_settings_view(request):
+    """Render payment settings page"""
+    tenant = request.user.tenant
+    if not tenant:
+        raise PermissionDenied("No tenant associated with user")
+    
+    # Get or create payment settings
+    payment_settings, created = PaymentSetting.objects.get_or_create(tenant=tenant)
+    
+    context = {
+        'payment_settings': payment_settings,
+        'tenant': tenant,
+    }
+    return render(request, 'shared/settings/payment_settings.html', context)
+
+
+@login_required
+def api_payment_settings(request):
+    """Get payment settings as JSON"""
+    tenant = request.user.tenant
+    if not tenant:
+        return JsonResponse({'error': 'No tenant associated'}, status=403)
+    
+    try:
+        payment_settings = PaymentSetting.objects.get(tenant=tenant)
+        data = {
+            'id': payment_settings.id,
+            'tenant_id': payment_settings.tenant_id,
+            'enable_cash': payment_settings.enable_cash,
+            'enable_mpesa': payment_settings.enable_mpesa,
+            'enable_card': payment_settings.enable_card,
+            'enable_bank_transfer': payment_settings.enable_bank_transfer,
+            'enable_credit': payment_settings.enable_credit,
+            'mpesa_shortcode': payment_settings.mpesa_shortcode,
+            'mpesa_consumer_key': payment_settings.mpesa_consumer_key,
+            'mpesa_consumer_secret': payment_settings.mpesa_consumer_secret,
+            'mpesa_passkey': payment_settings.mpesa_passkey,
+            'mpesa_environment': payment_settings.mpesa_environment,
+            'card_payment_gateway': payment_settings.card_payment_gateway,
+            'card_public_key': payment_settings.card_public_key,
+            'card_secret_key': payment_settings.card_secret_key,
+            'card_webhook_secret': payment_settings.card_webhook_secret,
+
+            # ============================================
+            # RECEIPT PAYMENT DETAILS - ADD THESE
+            # ============================================
+            'till_number': payment_settings.till_number or '',
+            'paybill_number': payment_settings.paybill_number or '',
+            'account_number': payment_settings.account_number or '',
+            'show_till_number': payment_settings.show_till_number,
+            'show_paybill': payment_settings.show_paybill,
+            'show_account_number': payment_settings.show_account_number,
+            'show_payment_details_on_receipt': payment_settings.show_payment_details_on_receipt,
+            
+
+            'bank_name': payment_settings.bank_name,
+            'bank_account_name': payment_settings.bank_account_name,
+            'bank_account_number': payment_settings.bank_account_number,
+            'bank_branch': payment_settings.bank_branch,
+            'bank_swift_code': payment_settings.bank_swift_code,
+            'credit_limit_enabled': payment_settings.credit_limit_enabled,
+            'credit_limit_amount': str(payment_settings.credit_limit_amount),
+            'credit_days_allowed': payment_settings.credit_days_allowed,
+            'credit_interest_rate': str(payment_settings.credit_interest_rate),
+            'credit_fee_percentage': str(payment_settings.credit_fee_percentage),
+            'require_payment_confirmation': payment_settings.require_payment_confirmation,
+            'require_payment_receipt': payment_settings.require_payment_receipt,
+            'send_payment_receipt_email': payment_settings.send_payment_receipt_email,
+            'send_payment_receipt_sms': payment_settings.send_payment_receipt_sms,
+            'max_cash_payment': str(payment_settings.max_cash_payment) if payment_settings.max_cash_payment else None,
+            'min_cash_payment': str(payment_settings.min_cash_payment),
+            'max_mpesa_payment': str(payment_settings.max_mpesa_payment) if payment_settings.max_mpesa_payment else None,
+            'min_mpesa_payment': str(payment_settings.min_mpesa_payment),
+            'enable_partial_payment': payment_settings.enable_partial_payment,
+            'enable_deposit_payment': payment_settings.enable_deposit_payment,
+            'deposit_percentage': str(payment_settings.deposit_percentage),
+            'display_currency': payment_settings.display_currency,
+            'display_currency_symbol': payment_settings.display_currency_symbol,
+            'currency_position': payment_settings.currency_position,
+            'decimal_places': payment_settings.decimal_places,
+            'thousand_separator': payment_settings.thousand_separator,
+            'decimal_separator': payment_settings.decimal_separator,
+            'enable_tax': payment_settings.enable_tax,
+            'tax_percentage': str(payment_settings.tax_percentage),
+            'tax_inclusive': payment_settings.tax_inclusive,
+            'tax_label': payment_settings.tax_label,
+            'payment_footer_text': payment_settings.payment_footer_text,
+            'show_payment_instructions': payment_settings.show_payment_instructions,
+            'payment_instructions': payment_settings.payment_instructions,
+            'enabled_payment_methods': payment_settings.get_enabled_payment_methods(),
+        }
+        return JsonResponse(data)
+    except PaymentSetting.DoesNotExist:
+        return JsonResponse({'error': 'Payment settings not found'}, status=404)
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_update_payment_settings(request):
+    """Update payment settings"""
+    tenant = request.user.tenant
+    if not tenant:
+        return JsonResponse({'error': 'No tenant associated'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        payment_settings, created = PaymentSetting.objects.get_or_create(tenant=tenant)
+        
+        # Update fields
+        fields_to_update = [
+            'enable_cash', 'enable_mpesa', 'enable_card', 'enable_bank_transfer', 'enable_credit',
+            'mpesa_shortcode', 'mpesa_consumer_key', 'mpesa_consumer_secret', 'mpesa_passkey',
+            'mpesa_environment', 'card_payment_gateway', 'card_public_key', 'card_secret_key',
+            'card_webhook_secret', 'bank_name', 'bank_account_name', 'bank_account_number',
+            'bank_branch', 'bank_swift_code', 'credit_limit_enabled', 'credit_days_allowed',
+            'require_payment_confirmation', 'require_payment_receipt', 'send_payment_receipt_email',
+            'send_payment_receipt_sms', 'enable_partial_payment', 'enable_deposit_payment',
+            'display_currency', 'display_currency_symbol', 'currency_position',
+            'decimal_places', 'thousand_separator', 'decimal_separator',
+            'enable_tax', 'tax_inclusive', 'tax_label',
+            'payment_footer_text', 'show_payment_instructions', 'payment_instructions',
+            
+            # ============================================
+            # RECEIPT PAYMENT DETAILS - ADD THESE
+            # ============================================
+            'till_number', 'paybill_number', 'account_number',
+            'show_till_number', 'show_paybill', 'show_account_number',
+            'show_payment_details_on_receipt'
+        ]
+        
+        for field in fields_to_update:
+            if field in data:
+                setattr(payment_settings, field, data[field])
+        
+        # Decimal fields
+        decimal_fields = [
+            'credit_limit_amount', 'credit_interest_rate', 'credit_fee_percentage',
+            'max_cash_payment', 'min_cash_payment', 'max_mpesa_payment', 'min_mpesa_payment',
+            'deposit_percentage', 'tax_percentage'
+        ]
+        
+        for field in decimal_fields:
+            if field in data and data[field] is not None:
+                try:
+                    setattr(payment_settings, field, Decimal(str(data[field])))
+                except (ValueError, TypeError):
+                    pass
+        
+        payment_settings.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Payment settings updated successfully',
+            'id': payment_settings.id
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.error(f"Error updating payment settings: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def api_payment_methods(request):
+    """Get available payment methods for current tenant"""
+    tenant = request.user.tenant
+    if not tenant:
+        return JsonResponse({'error': 'No tenant associated'}, status=403)
+    
+    try:
+        payment_settings = PaymentSetting.objects.get(tenant=tenant)
+        methods = payment_settings.get_enabled_payment_methods()
+        
+        # Get method details
+        method_details = []
+        for method in methods:
+            method_details.append({
+                'id': method,
+                'name': payment_settings.get_payment_method_display(method),
+                'enabled': True,
+                'limits': {
+                    'min': None,  # You can add min/max limits per method if needed
+                    'max': None,
+                }
+            })
+        
+        return JsonResponse({
+            'payment_methods': method_details,
+            'default_currency': payment_settings.display_currency,
+            'currency_symbol': payment_settings.display_currency_symbol,
+        })
+    except PaymentSetting.DoesNotExist:
+        return JsonResponse({'error': 'Payment settings not found'}, status=404)
+
+@login_required
+def company_settings(request):
+    """Company Settings View"""
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+    
+    # Get or create company settings
+    settings, created = CompanySetting.objects.get_or_create(tenant=tenant)
+    
+    if request.method == 'POST':
+        # Company Details
+        settings.company_name = request.POST.get('company_name', '')
+        settings.company_address = request.POST.get('company_address', '')
+        settings.company_phone = request.POST.get('company_phone', '')
+        settings.company_email = request.POST.get('company_email', '')
+        settings.company_website = request.POST.get('company_website', '')
+        settings.company_tax_pin = request.POST.get('company_tax_pin', '')
+        
+        # Branding Colors
+        settings.primary_color = request.POST.get('primary_color', '#0d6efd')
+        settings.secondary_color = request.POST.get('secondary_color', '#6c757d')
+        settings.accent_color = request.POST.get('accent_color', '#ffc107')
+        
+        # Display Settings
+        settings.show_logo_on_receipts = request.POST.get('show_logo_on_receipts') == 'on'
+        settings.show_logo_on_invoices = request.POST.get('show_logo_on_invoices') == 'on'
+        settings.show_logo_on_reports = request.POST.get('show_logo_on_reports') == 'on'
+        settings.show_logo_on_dashboard = request.POST.get('show_logo_on_dashboard') == 'on'
+        
+        # Handle Logo Upload
+        if request.FILES.get('logo'):
+            settings.logo = request.FILES['logo']
+        
+        # Handle Favicon Upload
+        if request.FILES.get('favicon'):
+            settings.favicon = request.FILES['favicon']
+        
+        settings.save()
+        
+        # ✅ FORCE CLEAR ALL CACHES for this tenant
+        cache.delete(f"settings_{tenant.id}_global")
+        cache.delete(f"settings_{tenant.id}_None_global")
+        
+        # ✅ Also clear the system settings cache
+        cache.delete("settings_system_global")
+        
+        messages.success(request, '✅ Company settings updated successfully!')
+        return redirect('settings:company_settings')
+    
+    context = {
+        'tenant': tenant,
+        'settings': settings,
+        'active_tab': 'settings',
+    }
+    return render(request, 'shared/settings/company_settings.html', context)
+
+

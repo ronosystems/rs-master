@@ -1,0 +1,1377 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <title>{% block title %}  {{ company_settings.company_name|default:tenant.company_name }} {% endblock %}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    
+    <!-- Bootstrap - CDN with local fallback -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+          rel="stylesheet" 
+          onerror="this.onerror=null;this.href='{% static 'css/bootstrap.min.css' %}'">
+    
+    <!-- Font Awesome - CDN with local fallback -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+          onerror="this.onerror=null;this.href='{% static 'css/all.min.css' %}'">
+    
+    
+    <!-- Simple data URI favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>®️</text></svg>">
+    
+    
+    <style>
+        /* ============================================ */
+        /* ALL YOUR EXISTING STYLES */
+        /* ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bs-body-bg);
+            overflow-x: hidden;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Theme Variables */
+        [data-bs-theme="light"] {
+            --sidebar-bg: #ffffff;
+            --sidebar-hover: #f8e8d0;
+            --sidebar-active: #f8e8d0;
+            --sidebar-text: #333;
+            --sidebar-border: #e0e0e0;
+            --footer-bg: #ffffff;
+            --card-bg: #ffffff;
+        }
+
+        [data-bs-theme="dark"] {
+            --sidebar-bg: #1a1a2e;
+            --sidebar-hover: #2d2d44;
+            --sidebar-active: #d4a373;
+            --sidebar-text: #ffffff;
+            --sidebar-border: #2d2d44;
+            --footer-bg: #1a1a2e;
+            --card-bg: #1e1e2e;
+        }
+
+        /* ============================================ */
+        /* BRANDING COLORS FROM COMPANY SETTINGS */
+        /* ============================================ */
+        :root {
+            --brand-primary: {% if company_settings and company_settings.primary_color %}{{ company_settings.primary_color }}{% else %}#d4a373{% endif %};
+            --brand-secondary: {% if company_settings and company_settings.secondary_color %}{{ company_settings.secondary_color }}{% else %}#cc8b5c{% endif %};
+            --brand-accent: {% if company_settings and company_settings.accent_color %}{{ company_settings.accent_color }}{% else %}#f4a460{% endif %};
+        }
+
+        /* Fixed Top Navbar - Rental Theme */
+        .fixed-top-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: linear-gradient(135deg, #1a1a2e, #2d1b0e);
+            color: white;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .mobile-menu-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .company-logo {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .company-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .company-name {
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: 0.5px;
+            color: white;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 998;
+            display: none;
+            transition: all 0.3s;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.05);
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: white;
+        }
+
+        .user-role {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            color: white;
+        }
+
+        .dropdown-menu-profile {
+            right: 0;
+            left: auto;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.986);
+            border: none;
+        }
+
+        /* Fixed Left Sidebar */
+        .fixed-left-sidebar {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            background: #f5ede4;
+            box-shadow: 2px 0 15px rgb(0, 0, 0);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            border-right: 1px solid var(--sidebar-border);
+        }
+
+        .fixed-left-sidebar.collapsed {
+            width: 80px;
+        }
+
+        .sidebar-header {
+            position: sticky;
+            top: 0;
+            background: var(--sidebar-bg);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 20px;
+            border-bottom: 1px solid var(--sidebar-border);
+            margin-bottom: 10px;
+            z-index: 10;
+        }
+
+        .sidebar-toggle {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 10px;
+            transition: all 0.3s;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .fixed-left-sidebar.collapsed .sidebar-header {
+            justify-content: center;
+        }
+
+        .sidebar-menu-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0 10px;
+        }
+
+        .sidebar-menu {
+            padding: 5px 0 20px 0;
+        }
+
+        /* ============================================ */
+        /* SUB-MENU STYLES */
+        /* ============================================ */
+        .menu-group {
+            margin: 4px 0;
+        }
+
+        .menu-group .menu-title {
+            padding: 12px 15px 8px 15px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            color: #000000;
+            letter-spacing: 1px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .menu-group .menu-title:hover {
+            background: var(--sidebar-hover);
+        }
+
+        .menu-group .menu-title .toggle-icon {
+            font-size: 0.7rem;
+            transition: transform 0.3s ease;
+            opacity: 0.7;
+        }
+
+        .menu-group .menu-title.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .menu-group .sub-menu {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        .menu-group .sub-menu.open {
+            max-height: 1000px;
+            opacity: 1;
+        }
+
+        .menu-group .sub-menu .menu-item {
+            padding-left: 35px !important;
+        }
+
+        .sidebar-menu .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin: 4px 0;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            transition: all 0.3s;
+            gap: 15px;
+            border-radius: 10px;
+        }
+
+        .sidebar-menu .menu-item:hover {
+            background: var(--sidebar-hover);
+            color: #d4a373;
+            transform: translateX(5px);
+        }
+
+        .sidebar-menu .menu-item.active {
+            background: var(--sidebar-active);
+            color: #000000;
+            border-right: 3px solid #d4a373;
+        }
+
+        .sidebar-menu .menu-item i {
+            width: 24px;
+            font-size: 1.2rem;
+        }
+
+        .sidebar-menu .menu-item span {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .sidebar-menu .menu-divider {
+            height: 1px;
+            background: var(--sidebar-border);
+            margin: 15px 15px;
+        }
+
+        .fixed-left-sidebar.collapsed .menu-item span {
+            display: none;
+        }
+
+        .fixed-left-sidebar.collapsed .menu-title {
+            text-align: center;
+            font-size: 0.6rem;
+            padding: 15px 5px;
+            justify-content: center;
+        }
+
+        .fixed-left-sidebar.collapsed .menu-title .toggle-icon {
+            display: none;
+        }
+
+        .fixed-left-sidebar.collapsed .menu-item {
+            justify-content: center;
+            padding: 12px 0;
+        }
+
+        .fixed-left-sidebar.collapsed .sub-menu {
+            max-height: 0 !important;
+            opacity: 0 !important;
+        }
+
+        /* Sidebar Footer */
+        .sidebar-footer {
+            position: sticky;
+            bottom: 0;
+            background: var(--sidebar-bg);
+            border-top: 1px solid var(--sidebar-border);
+            padding: 15px;
+            margin-top: 10px;
+            z-index: 10;
+        }
+
+        .sidebar-footer .footer-btn {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 15px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .sidebar-footer .footer-btn:hover {
+            background: var(--sidebar-hover);
+            box-shadow: 0 2px 10px rgb(0, 0, 0);
+        }
+
+        .sidebar-footer .footer-btn i {
+            width: 24px;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-footer .footer-btn span {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .sidebar-footer .footer-btn.help-btn {
+            background: linear-gradient(135deg, #d4a373, #cc8b5c);
+            color: white;
+            box-shadow: 0 2px 10px rgb(0, 0, 0);
+        }
+
+        .sidebar-footer .footer-btn.help-btn:hover {
+            background: linear-gradient(135deg, #cc8b5c, #b8754a);
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgb(0, 0, 0);
+        }
+
+        .fixed-left-sidebar.collapsed .sidebar-footer .footer-btn span {
+            display: none;
+        }
+
+        .fixed-left-sidebar.collapsed .sidebar-footer .footer-btn {
+            justify-content: center;
+            padding: 12px 0;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 80px;
+            margin-left: 280px;
+            min-height: calc(100vh - 130px);
+            padding: 25px 30px;
+            transition: all 0.3s ease;
+            background: #f8f4f0;
+        }
+
+        .main-content.sidebar-collapsed {
+            margin-left: 80px;
+        }
+
+        /* Fixed Footer */
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            left: 280px;
+            right: 0;
+            height: 50px;
+            background: var(--footer-bg);
+            border-top: 1px solid var(--sidebar-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            font-size: 0.8rem;
+            color: var(--sidebar-text);
+            z-index: 998;
+            transition: all 0.3s ease;
+        }
+
+        .fixed-footer.sidebar-collapsed {
+            left: 80px;
+        }
+
+        /* Scrollbar styling */
+        .sidebar-menu-wrapper::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .sidebar-menu-wrapper::-webkit-scrollbar-track {
+            background: var(--sidebar-border);
+            border-radius: 10px;
+        }
+
+        .sidebar-menu-wrapper::-webkit-scrollbar-thumb {
+            background: #d4a373;
+            border-radius: 10px;
+        }
+
+        /* Card styling */
+        .card {
+            background: var(--card-bg);
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        /* Project Badge */
+        .project-badge {
+            font-size: 0.6rem;
+            padding: 2px 10px;
+            border-radius: 12px;
+            margin-left: 8px;
+        }
+        .project-badge.rental { background: #d4a373; color: white; }
+        .project-badge.tech { background: #0d6efd; color: white; }
+        .project-badge.food { background: #198754; color: white; }
+        .project-badge.hotel { background: #ffc107; color: #000; }
+        .project-badge.retail { background: #6f42c1; color: white; }
+        .project-badge.health { background: #dc3545; color: white; }
+        .project-badge.fashion { background: #e83e8c; color: white; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .fixed-top-navbar {
+                height: 70px;
+                padding: 0 15px;
+            }
+            
+            .mobile-menu-btn {
+                display: flex !important;
+            }
+            
+            .navbar-left {
+                gap: 10px;
+            }
+            
+            .fixed-left-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                top: 70px;
+            }
+            
+            .fixed-left-sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+                margin-top: 70px;
+            }
+            
+            .fixed-footer {
+                left: 0;
+            }
+            
+            .company-name {
+                display: none;
+            }
+            
+            .user-info {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
+<!-- ============================================ -->
+<!-- FIXED TOP NAVBAR -->
+<!-- ============================================ -->
+<div class="fixed-top-navbar">
+    <div class="navbar-left">
+        <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <div class="company-logo" id="companyLogo">
+            {% if company_settings and company_settings.show_logo_on_dashboard and company_settings.has_valid_logo %}
+                <img src="{{ company_settings.logo.url }}" 
+                     alt="{{ company_settings.company_name|default:tenant.company_name }}" 
+                     style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;"
+                     onerror="this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex'">
+                <div class="logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">
+                    <i class="fas fa-home" style="font-size: 1.5rem; color: white;"></i>
+                </div>
+            {% elif tenant_has_valid_logo and tenant_logo_url %}
+                <img src="{{ tenant_logo_url }}" 
+                     alt="{{ company_settings.company_name|default:tenant.company_name }}" 
+                     style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;"
+                     onerror="this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex'">
+                <div class="logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">
+                    <i class="fas fa-home" style="font-size: 1.5rem; color: white;"></i>
+                </div>
+            {% else %}
+                <i class="fas fa-home" style="font-size: 1.5rem; color: white;"></i>
+            {% endif %}
+        </div>
+        
+        <div class="company-name" style="color: {% if company_settings and company_settings.primary_color %}{{ company_settings.primary_color }}{% else %}white{% endif %};">
+            {{ company_settings.company_name|default:tenant.company_name|default:"Rental Master" }}
+        </div>
+    </div>
+    
+    <div class="navbar-right">
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+            <i class="fas fa-moon"></i>
+        </button>
+        <div class="user-info">
+            <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+            <div class="user-role">
+                {% if user.is_super_admin or user.is_tenant_admin %}
+                    Rental Admin
+                {% elif user.is_regular_user %}
+                    Rental Manager
+                {% else %}
+                    Rental Staff
+                {% endif %}
+            </div>
+        </div>
+        <div class="dropdown">
+            <div class="user-avatar" data-bs-toggle="dropdown">
+                <i class="fas fa-user-circle fa-2x"></i>
+            </div>
+            <ul class="dropdown-menu dropdown-menu-profile">
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'portal:profile' %}">
+                    <i class="fas fa-user me-2"></i> My Profile
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'portal:change_password' %}">
+                    <i class="fas fa-key me-2"></i> Change Password
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="{% url 'portal:logout' %}">
+                    <i class="fas fa-sign-out-alt me-2"></i> Logout
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- ============================================ -->
+<!-- FIXED LEFT SIDEBAR - RENTAL MASTER WITH WORKING URLS -->
+<!-- ============================================ -->
+<div class="fixed-left-sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <button class="sidebar-toggle" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+        
+    <div class="sidebar-menu-wrapper">
+        <div class="sidebar-menu">
+                    
+            <!-- ============================================ -->
+            <!-- DASHBOARD - ALL ROLES -->
+            <!-- ============================================ -->
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    📊 DASHBOARD
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu open">
+                    <a href="{% url 'rental_master:dashboard' %}" class="menu-item {% if active_tab == 'dashboard' %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Home Page</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- COMPANY - ADMIN ONLY -->
+            <!-- ============================================ -->
+            {% if user.is_super_admin or user.is_tenant_admin %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    🏢 COMPANY
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if tenant %}
+                        <a href="{% url 'tenants:my_subscription' tenant.id %}" class="menu-item">
+                            <i class="fas fa-crown"></i>
+                            <span>Check Plans</span>
+                        </a>
+                    {% else %}
+                        <a href="javascript:void(0)" class="menu-item disabled" onclick="event.preventDefault(); alert('No tenant assigned!');">
+                            <i class="fas fa-crown"></i>
+                            <span>My Subscription</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================ -->
+            <!-- MEMBERS - ADMIN ONLY -->
+            <!-- ============================================ -->
+            {% if user.is_super_admin or user.is_tenant_admin %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    👥 MEMBERS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'users:user_list' %}" class="menu-item">
+                        <i class="fas fa-users"></i>
+                        <span>Manage Users</span>
+                    </a>
+                    <a href="{% url 'users:user_create' %}" class="menu-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Onboard Staff</span>
+                    </a>
+                    <a href="{% url 'permissions:role_list' %}" class="menu-item">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Role Permissions</span>
+                    </a>
+                    <a href="{% url 'permissions:system_permissions' %}" class="menu-item">
+                        <i class="fas fa-lock"></i>
+                        <span>System Permissions</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================ -->
+            <!-- BRANCHES - ADMIN & PROPERTY MANAGER -->
+            <!-- ============================================ -->
+            {% if user.is_super_admin or user.is_tenant_admin %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    📍 BRANCHES
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'rental_master:branches' %}" class="menu-item {% if active_tab == 'branches' %}active{% endif %}">
+                        <i class="fas fa-store"></i>
+                        <span>All Branches</span>
+                    </a>
+                    {% if user.is_super_admin or user.is_tenant_admin %}
+                    <a href="{% url 'rental_master:add_branch' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Add Branch</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================ -->
+            <!-- PROPERTY MANAGEMENT -->
+            <!-- ============================================ -->
+             {% if user.is_super_admin or user.is_tenant_admin %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    🏢 PROPERTIES
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'rental_master:properties' %}" class="menu-item {% if active_tab == 'properties' %}active{% endif %}">
+                        <i class="fas fa-building"></i>
+                        <span>All Properties</span>
+                    </a>
+                    {% if user.is_super_admin or user.is_tenant_admin %}
+                    <a href="{% url 'rental_master:add_property' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Add Property</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================ -->
+            <!-- UNIT MANAGEMENT -->
+            <!-- ============================================ -->
+            {% if user.is_super_admin or user.is_tenant_admin %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    🏠 UNITS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'rental_master:units' %}" class="menu-item {% if active_tab == 'units' %}active{% endif %}">
+                        <i class="fas fa-door-open"></i>
+                        <span>All Units</span>
+                    </a>
+                    <a href="{% url 'rental_master:units' %}?status=available" class="menu-item">
+                        <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                        <span>Available Units</span>
+                    </a>
+                    <a href="{% url 'rental_master:units' %}?status=occupied" class="menu-item">
+                        <i class="fas fa-users" style="color: #ffc107;"></i>
+                        <span>Occupied Units</span>
+                    </a>
+                    <a href="{% url 'rental_master:units' %}?status=maintenance" class="menu-item">
+                        <i class="fas fa-tools" style="color: #dc3545;"></i>
+                        <span>Under Maintenance</span>
+                    </a>
+                    {% if user.is_super_admin or user.is_tenant_admin %}
+                    <a href="{% url 'rental_master:add_unit' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Add Unit</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================ -->
+            <!-- TENANT MANAGEMENT -->
+            <!-- ============================================ -->
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    👥 TENANTS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'rental_master:tenants' %}" class="menu-item {% if active_tab == 'tenants' %}active{% endif %}">
+                        <i class="fas fa-users"></i>
+                        <span>All Tenants</span>
+                    </a>
+                    <a href="{% url 'rental_master:tenants' %}?has_active_lease=yes" class="menu-item">
+                        <i class="fas fa-home" style="color: #28a745;"></i>
+                        <span>Active Tenants</span>
+                    </a>
+                    <a href="{% url 'rental_master:tenants' %}?has_active_lease=no" class="menu-item">
+                        <i class="fas fa-user-slash" style="color: #dc3545;"></i>
+                        <span>Inactive Tenants</span>
+                    </a>
+                    {% if user.is_super_admin or user.is_tenant_admin %}
+                    <a href="{% url 'rental_master:add_tenant' %}" class="menu-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Add Tenant</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- LEASE MANAGEMENT -->
+            <!-- ============================================ -->
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    📄 LEASES
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'rental_master:leases' %}" class="menu-item {% if active_tab == 'leases' %}active{% endif %}">
+                        <i class="fas fa-file-signature"></i>
+                        <span>All Leases</span>
+                    </a>
+                    <a href="{% url 'rental_master:leases' %}?status=active" class="menu-item">
+                        <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                        <span>Active Leases</span>
+                    </a>
+                    <a href="{% url 'rental_master:leases' %}?status=expired" class="menu-item">
+                        <i class="fas fa-clock" style="color: #ffc107;"></i>
+                        <span>Expired Leases</span>
+                    </a>
+                    <a href="{% url 'rental_master:leases' %}?status=terminated" class="menu-item">
+                        <i class="fas fa-times-circle" style="color: #dc3545;"></i>
+                        <span>Terminated Leases</span>
+                    </a>
+                    {% if user.is_super_admin or user.is_tenant_admin %}
+                    <a href="{% url 'rental_master:create_lease' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Create Lease</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- PAYMENT MANAGEMENT -->
+            <!-- ============================================ -->
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    💰 PAYMENTS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'rental_master:payments' %}" class="menu-item {% if active_tab == 'payments' %}active{% endif %}">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>All Payments</span>
+                    </a>
+                    <a href="{% url 'rental_master:payments' %}?status=paid" class="menu-item">
+                        <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                        <span>Paid</span>
+                    </a>
+                    <a href="{% url 'rental_master:payments' %}?status=pending" class="menu-item">
+                        <i class="fas fa-clock" style="color: #ffc107;"></i>
+                        <span>Pending</span>
+                    </a>
+                    <a href="{% url 'rental_master:payments' %}?status=overdue" class="menu-item">
+                        <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
+                        <span>Overdue</span>
+                    </a>
+                    {% if user.is_super_admin or user.is_tenant_admin %}
+                    <a href="{% url 'rental_master:record_payment' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Record Payment</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- DEPOSITS -->
+            <!-- ============================================ -->
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    💎 DEPOSITS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'rental_master:deposits' %}" class="menu-item {% if active_tab == 'deposits' %}active{% endif %}">
+                        <i class="fas fa-hand-holding-usd"></i>
+                        <span>All Deposits</span>
+                    </a>
+                    <a href="{% url 'rental_master:deposits' %}?status=paid" class="menu-item">
+                        <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                        <span>Paid</span>
+                    </a>
+                    <a href="{% url 'rental_master:deposits' %}?status=refunded" class="menu-item">
+                        <i class="fas fa-undo-alt" style="color: #17a2b8;"></i>
+                        <span>Refunded</span>
+                    </a>
+                    <a href="{% url 'rental_master:deposits' %}?status=pending" class="menu-item">
+                        <i class="fas fa-clock" style="color: #ffc107;"></i>
+                        <span>Pending</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- REPORTS - ADMIN ONLY -->
+            <!-- ============================================ -->
+            {% if user.is_super_admin or user.is_tenant_admin %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    📈 REPORTS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'rental_master:occupancy_report' %}" class="menu-item">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Occupancy Report</span>
+                    </a>
+                    <a href="{% url 'rental_master:revenue_report' %}" class="menu-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Revenue Report</span>
+                    </a>
+                    <a href="{% url 'rental_master:rent_collection' %}" class="menu-item">
+                        <i class="fas fa-file-invoice"></i>
+                        <span>Rent Collection</span>
+                    </a>
+                    <a href="{% url 'rental_master:export_reports' %}" class="menu-item">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>Export Reports</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================ -->
+            <!-- SETTINGS - ADMIN ONLY -->
+            <!-- ============================================ -->
+            {% if user.is_super_admin or user.is_tenant_admin %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    ⚙️ SETTINGS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'settings:receipt_settings' %}" class="menu-item">
+                        <i class="fas fa-receipt"></i>
+                        <span>Receipt Settings</span>
+                    </a>
+                    <a href="{% url 'settings:payment_settings' %}" class="menu-item">
+                        <i class="fas fa-dollar"></i>
+                        <span>Payment Settings</span>
+                    </a>
+                    <a href="{% url 'settings:company_settings' %}" class="menu-item">
+                        <i class="fas fa-building"></i>
+                        <span>Company Settings</span>
+                    </a>
+                    <a href="{% url 'rental_master:room_sizes' %}" class="menu-item">
+                        <i class="fas fa-tag"></i>
+                        <span>Room Sizes</span>
+                    </a>
+                    <a href="{% url 'rental_master:property_types' %}" class="menu-item">
+                        <i class="fas fa-layer-group"></i>
+                        <span>Property Types</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================ -->
+            <!-- CARETAKER ONLY - Based on Project Role -->
+            <!-- ============================================ -->
+            {% with caretaker_role=user.role_assignments.all|dictsort:"role.codename" %}
+                {% for assignment in caretaker_role %}
+                    {% if assignment.is_active and assignment.role.codename == 'caretaker' %}
+                    <div class="menu-group">
+                        <div class="menu-title" onclick="toggleSubMenu(this)">
+                            🔧 MAINTENANCE
+                            <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                        </div>
+                        <div class="sub-menu">
+                            <a href="{% url 'rental_master:maintenance_requests' %}" class="menu-item">
+                                <i class="fas fa-tools"></i>
+                                <span>Maintenance Units</span>
+                            </a>
+                            <a href="{% url 'rental_master:new_request' %}" class="menu-item">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>Maintenance Request</span>
+                            </a>
+                            <a href="{% url 'rental_master:task_list' %}" class="menu-item">
+                                <i class="fas fa-clipboard-list"></i>
+                                <span>Maintenance Tasks</span>
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% endwith %}
+
+            <!-- ============================================ -->
+            <!-- PROFILE SETTINGS - ALL ROLES -->
+            <!-- ============================================ -->
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    👤 PROFILE
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <a href="{% url 'settings:profile_settings' %}" class="menu-item">
+                        <i class="fas fa-user-cog"></i>
+                        <span>Profile Settings</span>
+                    </a>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+        <a href="{% url 'portal:no_project_assigned' %}" class="footer-btn help-btn">
+            <i class="fas fa-help"></i>
+            <span><Center> 🔴🟡🟢 About RS Master </Center></span>
+            <span class="badge bg-danger ms-1" id="chatBadge" style="display: none;">0</span>
+        </a>
+    </div>
+</div>
+
+
+
+<!-- ============================================ -->
+<!-- MAIN CONTENT -->
+<!-- ============================================ -->
+<div class="main-content" id="mainContent">
+
+    <!-- Show restricted access warning for admin with expired subscription -->
+    {% if subscription_restricted %}
+    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Restricted Access!</strong> Your subscription has expired. 
+        Please <a href="{% url 'tenants:tenant_subscription' tenant.id %}" class="alert-link">renew now</a> to restore full access.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+        
+    {% block content %}{% endblock %}
+</div>
+
+<!-- ============================================ -->
+<!-- FIXED FOOTER -->
+<!-- ============================================ -->
+<div class="fixed-footer" id="footer">
+    <div>
+        Copyright
+        <i class="fas fa-copyright me-1"></i> <span id="currentYear"></span> 
+        {{ company_settings.company_name|default:tenant.company_name|default:"Rental Master" }}
+        | All Rights Reserved
+    </div>
+    <div>
+        <i class="fas fa-code-branch me-1"></i> Version 2.0
+        {% if project_type %}
+            <span class="project-badge rental">
+                {{ project_type.name }}
+            </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- jQuery - CDN with local fallback -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" 
+        onerror="this.onerror=null;this.src='{% static 'js/jquery.min.js' %}'"></script>
+
+<!-- Bootstrap JS - CDN with local fallback -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" 
+        onerror="this.onerror=null;this.src='{% static 'js/bootstrap.bundle.min.js' %}'"></script>
+
+<script>
+// ============================================
+// SUB-MENU TOGGLE FUNCTION
+// ============================================
+function toggleSubMenu(titleElement) {
+    const menuGroup = titleElement.closest('.menu-group');
+    if (!menuGroup) return;
+    
+    const subMenu = menuGroup.querySelector('.sub-menu');
+    if (!subMenu) return;
+    
+    subMenu.classList.toggle('open');
+    titleElement.classList.toggle('collapsed');
+    
+    const allGroups = document.querySelectorAll('.menu-group');
+    allGroups.forEach(group => {
+        if (group !== menuGroup) {
+            const otherSubMenu = group.querySelector('.sub-menu');
+            const otherTitle = group.querySelector('.menu-title');
+            if (otherSubMenu && otherSubMenu.classList.contains('open')) {
+                otherSubMenu.classList.remove('open');
+                if (otherTitle) otherTitle.classList.remove('collapsed');
+            }
+        }
+    });
+    
+    const menuStates = JSON.parse(localStorage.getItem('menuStates') || '{}');
+    const menuKey = titleElement.textContent.trim();
+    menuStates[menuKey] = subMenu.classList.contains('open');
+    localStorage.setItem('menuStates', JSON.stringify(menuStates));
+}
+
+// ============================================
+// RESTORE SUB-MENU STATES
+// ============================================
+function restoreMenuStates() {
+    const menuStates = JSON.parse(localStorage.getItem('menuStates') || '{}');
+    document.querySelectorAll('.menu-group').forEach(group => {
+        const title = group.querySelector('.menu-title');
+        const subMenu = group.querySelector('.sub-menu');
+        if (title && subMenu) {
+            const menuKey = title.textContent.trim();
+            if (menuStates[menuKey]) {
+                subMenu.classList.add('open');
+                title.classList.remove('collapsed');
+            }
+        }
+    });
+}
+
+// ============================================
+// LOGO ERROR HANDLING
+// ============================================
+function handleLogoError(img) {
+    console.warn('Logo image failed to load:', img.src);
+    const parent = img.parentElement;
+    img.style.display = 'none';
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-home';
+    icon.style.fontSize = '1.5rem';
+    icon.style.color = 'white';
+    parent.appendChild(icon);
+}
+</script>
+
+<script>
+    // Theme Toggle
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-bs-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        html.setAttribute('data-bs-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        const themeIcon = document.querySelector('#themeToggle i');
+        if (newTheme === 'dark') {
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+        } else {
+            themeIcon.classList.remove('fa-sun');
+            themeIcon.classList.add('fa-moon');
+        }
+    }
+    
+    function loadTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        const themeIcon = document.querySelector('#themeToggle i');
+        if (savedTheme === 'dark') {
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+        } else {
+            themeIcon.classList.remove('fa-sun');
+            themeIcon.classList.add('fa-moon');
+        }
+    }
+    
+    document.getElementById('currentYear').innerText = new Date().getFullYear();
+    
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const footer = document.getElementById('footer');
+        
+        sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('sidebar-collapsed');
+        footer.classList.toggle('sidebar-collapsed');
+        
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+    }
+    
+    function toggleMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    
+    function loadSidebarState() {
+        if (window.innerWidth > 768) {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                const sidebar = document.getElementById('sidebar');
+                const mainContent = document.getElementById('mainContent');
+                const footer = document.getElementById('footer');
+                
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('sidebar-collapsed');
+                footer.classList.add('sidebar-collapsed');
+            }
+        }
+    }
+    
+    function setActiveMenuItem() {
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('.menu-item').forEach(item => {
+            const href = item.getAttribute('href');
+            if (href && (currentPath === href || currentPath.startsWith(href))) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+    
+    function showHelp() {
+        alert('📞 For Rental support, please contact your Property Manager');
+    }
+    
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            closeMobileSidebar();
+            loadSidebarState();
+        } else {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('collapsed');
+        }
+    });
+    
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (this.getAttribute('href') === 'javascript:void(0)') {
+                e.preventDefault();
+                return;
+            }
+            if (window.innerWidth <= 768) {
+                closeMobileSidebar();
+            }
+        });
+    });
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTheme();
+        loadSidebarState();
+        setActiveMenuItem();
+        restoreMenuStates();
+    });
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+    
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(function(alert) {
+            alert.style.transition = 'opacity 0.5s ease';
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 500);
+        });
+    }, 5000);
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

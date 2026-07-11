@@ -1,0 +1,117 @@
+<!-- apps/rental_master/templates/rental_master/maintenance_detail.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Request #{{ request.id }} - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-tools me-2" style="color: #dc3545;"></i>Request #{{ request.id }} - {{ request.title }}</h4>
+        <div>
+            <a href="{% url 'rental_master:maintenance_requests' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Requests
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Request Details -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-2" style="color: #dc3545;"></i>
+                    Request Details
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Title:</strong> {{ request.title }}</p>
+                            <p><strong>Category:</strong> {{ request.get_category_display }}</p>
+                            <p><strong>Priority:</strong> 
+                                <span class="badge {% if request.priority == 'urgent' %}bg-danger{% elif request.priority == 'high' %}bg-warning{% elif request.priority == 'medium' %}bg-info{% else %}bg-secondary{% endif %}">
+                                    {{ request.get_priority_display }}
+                                </span>
+                            </p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge {% if request.status == 'pending' %}bg-warning{% elif request.status == 'in_progress' %}bg-info{% elif request.status == 'completed' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ request.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Unit:</strong> {{ request.rental_unit.unit_number }}</p>
+                            <p><strong>Property:</strong> {{ request.rental_unit.property.name }}</p>
+                            <p><strong>Reported By:</strong> {{ request.reported_by|default:"-" }}</p>
+                            <p><strong>Reported On:</strong> {{ request.created_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Description</h6>
+                    <p>{{ request.description }}</p>
+                    {% if request.notes %}
+                        <hr>
+                        <h6>Notes</h6>
+                        <p>{{ request.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Update -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-edit me-2" style="color: #dc3545;"></i>
+                    Update Status
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% url 'rental_master:update_maintenance_status' request.id %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Change Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="pending" {% if request.status == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="in_progress" {% if request.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="completed" {% if request.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="cancelled" {% if request.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Add Note</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Add any notes..."></textarea>
+                        </div>
+                        <button type="submit" class="btn w-100" style="background-color: #dc3545; color: white;">
+                            <i class="fas fa-save me-1"></i> Update Status
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Info -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header">
+                    <i class="fas fa-clock me-2" style="color: #17a2b8;"></i>
+                    Timeline
+                </div>
+                <div class="card-body">
+                    <p><small><strong>Created:</strong> {{ request.created_at|date:"M d, Y H:i" }}</small></p>
+                    <p><small><strong>Last Updated:</strong> {{ request.updated_at|date:"M d, Y H:i" }}</small></p>
+                    {% if request.scheduled_date %}
+                        <p><small><strong>Scheduled:</strong> {{ request.scheduled_date|date:"M d, Y H:i" }}</small></p>
+                    {% endif %}
+                    {% if request.completed_date %}
+                        <p><small><strong>Completed:</strong> {{ request.completed_date|date:"M d, Y H:i" }}</small></p>
+                    {% endif %}
+                    {% if request.is_overdue %}
+                        <div class="alert alert-danger mb-0">
+                            <i class="fas fa-exclamation-triangle me-1"></i> This request is overdue!
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

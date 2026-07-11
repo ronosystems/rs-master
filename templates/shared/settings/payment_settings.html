@@ -1,0 +1,692 @@
+<!-- templates/settings/payment_settings.html -->
+
+{% extends "shared/base_shared.html" %}
+{% load static %}
+
+{% block title %}Payment Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Payment Settings</h5>
+                    <p class="text-muted mb-0">Configure payment methods, receipt details, and preferences for {{ tenant.company_name }}</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- LEFT COLUMN - Settings Form -->
+                        <div class="col-lg-7">
+                            <form id="paymentSettingsForm">
+                                {% csrf_token %}
+                                
+                                <!-- Payment Methods -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="border-bottom pb-2">Payment Methods</h6>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input payment-toggle" type="checkbox" id="enableCash" 
+                                                   {% if payment_settings.enable_cash %}checked{% endif %}
+                                                   onchange="updatePreview()">
+                                            <label class="form-check-label" for="enableCash">Cash</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input payment-toggle" type="checkbox" id="enableMpesa" 
+                                                   {% if payment_settings.enable_mpesa %}checked{% endif %}
+                                                   onchange="updatePreview()">
+                                            <label class="form-check-label" for="enableMpesa">M-Pesa</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input payment-toggle" type="checkbox" id="enableCard" 
+                                                   {% if payment_settings.enable_card %}checked{% endif %}
+                                                   onchange="updatePreview()">
+                                            <label class="form-check-label" for="enableCard">Card Payment</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input payment-toggle" type="checkbox" id="enableBankTransfer" 
+                                                   {% if payment_settings.enable_bank_transfer %}checked{% endif %}
+                                                   onchange="updatePreview()">
+                                            <label class="form-check-label" for="enableBankTransfer">Bank Transfer</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input payment-toggle" type="checkbox" id="enableCredit" 
+                                                   {% if payment_settings.enable_credit %}checked{% endif %}
+                                                   onchange="updatePreview()">
+                                            <label class="form-check-label" for="enableCredit">Credit</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- M-Pesa Settings -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="border-bottom pb-2">M-Pesa Settings</h6>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Shortcode</label>
+                                        <input type="text" class="form-control preview-field" id="mpesaShortcode" 
+                                               value="{{ payment_settings.mpesa_shortcode }}"
+                                               oninput="updatePreview()">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Environment</label>
+                                        <select class="form-select" id="mpesaEnvironment">
+                                            <option value="sandbox" {% if payment_settings.mpesa_environment == 'sandbox' %}selected{% endif %}>Sandbox</option>
+                                            <option value="production" {% if payment_settings.mpesa_environment == 'production' %}selected{% endif %}>Production</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Consumer Key</label>
+                                        <input type="text" class="form-control" id="mpesaConsumerKey" 
+                                               value="{{ payment_settings.mpesa_consumer_key }}">
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Consumer Secret</label>
+                                        <input type="password" class="form-control" id="mpesaConsumerSecret" 
+                                               value="{{ payment_settings.mpesa_consumer_secret }}">
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Passkey</label>
+                                        <input type="password" class="form-control" id="mpesaPasskey" 
+                                               value="{{ payment_settings.mpesa_passkey }}">
+                                    </div>
+                                </div>
+                                
+                                <!-- ============================================ -->
+                                <!-- RECEIPT PAYMENT DETAILS - 3 COLUMNS -->
+                                <!-- ============================================ -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="border-bottom pb-2">
+                                            <i class="fas fa-receipt me-2"></i>Receipt Payment Details
+                                        </h6>
+                                        <small class="text-muted">These details will appear on customer receipts</small>
+                                    </div>
+                                    
+                                    <!-- Column 1: Till Number -->
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-money-bill-wave me-1 text-success"></i>
+                                            Till Number
+                                        </label>
+                                        <input type="text" class="form-control preview-field" id="tillNumber" 
+                                               value="{{ payment_settings.till_number }}"
+                                               placeholder="e.g., 123456"
+                                               oninput="updatePreview()">
+                                        <small class="text-muted">Till number for cash payments</small>
+                                    </div>
+                                    
+                                    <!-- Column 2: Paybill Number -->
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-mobile-alt me-1 text-primary"></i>
+                                            Paybill Number
+                                        </label>
+                                        <input type="text" class="form-control preview-field" id="paybillNumber" 
+                                               value="{{ payment_settings.paybill_number }}"
+                                               placeholder="e.g., 247247"
+                                               oninput="updatePreview()">
+                                        <small class="text-muted">Paybill number for M-Pesa payments</small>
+                                    </div>
+                                    
+                                    <!-- Column 3: Account Number -->
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-hashtag me-1 text-warning"></i>
+                                            Account Number
+                                        </label>
+                                        <input type="text" class="form-control preview-field" id="accountNumber" 
+                                               value="{{ payment_settings.account_number }}"
+                                               placeholder="e.g., 1234567890"
+                                               oninput="updatePreview()">
+                                        <small class="text-muted">Account number for M-Pesa paybill</small>
+                                    </div>
+                                    
+                                    <!-- Full width - Show on receipt toggle -->
+                                    <div class="col-12 mt-2">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input preview-field" type="checkbox" id="showPaymentDetailsOnReceipt" 
+                                                   {% if payment_settings.show_payment_details_on_receipt %}checked{% endif %}
+                                                   onchange="updatePreview()">
+                                            <label class="form-check-label" for="showPaymentDetailsOnReceipt">
+                                                <i class="fas fa-eye me-1"></i>
+                                                Show Payment Details on Receipt
+                                            </label>
+                                            <br>
+                                            <small class="text-muted">Display Till, Paybill, and Account numbers on customer receipts</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Card Payment Settings -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="border-bottom pb-2">Card Payment Settings</h6>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Payment Gateway</label>
+                                        <select class="form-select" id="cardPaymentGateway">
+                                            <option value="">None</option>
+                                            <option value="stripe" {% if payment_settings.card_payment_gateway == 'stripe' %}selected{% endif %}>Stripe</option>
+                                            <option value="paypal" {% if payment_settings.card_payment_gateway == 'paypal' %}selected{% endif %}>PayPal</option>
+                                            <option value="flutterwave" {% if payment_settings.card_payment_gateway == 'flutterwave' %}selected{% endif %}>Flutterwave</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Public Key</label>
+                                        <input type="text" class="form-control" id="cardPublicKey" 
+                                               value="{{ payment_settings.card_public_key }}">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Secret Key</label>
+                                        <input type="password" class="form-control" id="cardSecretKey" 
+                                               value="{{ payment_settings.card_secret_key }}">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Webhook Secret</label>
+                                        <input type="password" class="form-control" id="cardWebhookSecret" 
+                                               value="{{ payment_settings.card_webhook_secret }}">
+                                    </div>
+                                </div>
+                                
+                                <!-- Currency & Tax Settings -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="border-bottom pb-2">Currency & Tax Settings</h6>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Display Currency</label>
+                                        <input type="text" class="form-control preview-field" id="displayCurrency" 
+                                               value="{{ payment_settings.display_currency }}"
+                                               oninput="updatePreview()">
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Currency Symbol</label>
+                                        <input type="text" class="form-control preview-field" id="displayCurrencySymbol" 
+                                               value="{{ payment_settings.display_currency_symbol }}"
+                                               oninput="updatePreview()">
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Currency Position</label>
+                                        <select class="form-select preview-field" id="currencyPosition" onchange="updatePreview()">
+                                            <option value="before" {% if payment_settings.currency_position == 'before' %}selected{% endif %}>Before Amount</option>
+                                            <option value="after" {% if payment_settings.currency_position == 'after' %}selected{% endif %}>After Amount</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input preview-field" type="checkbox" id="enableTax" 
+                                                   {% if payment_settings.enable_tax %}checked{% endif %}
+                                                   onchange="updatePreview()">
+                                            <label class="form-check-label" for="enableTax">Enable Tax (VAT)</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Tax Percentage (%)</label>
+                                        <input type="number" class="form-control preview-field" id="taxPercentage" step="0.01" 
+                                               value="{{ payment_settings.tax_percentage }}"
+                                               oninput="updatePreview()">
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input preview-field" type="checkbox" id="taxInclusive" 
+                                                   {% if payment_settings.tax_inclusive %}checked{% endif %}
+                                                   onchange="updatePreview()">
+                                            <label class="form-check-label" for="taxInclusive">Tax Inclusive (included in price)</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Tax Label</label>
+                                        <input type="text" class="form-control preview-field" id="taxLabel" 
+                                               value="{{ payment_settings.tax_label }}"
+                                               oninput="updatePreview()">
+                                    </div>
+                                </div>
+                                
+                                <!-- Footer Settings -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="border-bottom pb-2">Payment Footer</h6>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input preview-field" type="checkbox" id="showPaymentInstructions" 
+                                                   {% if payment_settings.show_payment_instructions %}checked{% endif %}
+                                                   onchange="updatePreview()">
+                                            <label class="form-check-label" for="showPaymentInstructions">Show Payment Instructions</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label">Payment Instructions</label>
+                                        <textarea class="form-control preview-field" id="paymentInstructions" rows="2"
+                                                  oninput="updatePreview()">{{ payment_settings.payment_instructions }}</textarea>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label">Footer Text</label>
+                                        <input type="text" class="form-control preview-field" id="paymentFooterText" 
+                                               value="{{ payment_settings.payment_footer_text }}"
+                                               oninput="updatePreview()">
+                                    </div>
+                                </div>
+                                
+                                <!-- Save Button -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> Save Settings
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" onclick="resetToSaved()">
+                                            <i class="fas fa-undo"></i> Reset
+                                        </button>
+                                        <div id="saveMessage" class="mt-3"></div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- RIGHT COLUMN - Preview -->
+                        <div class="col-lg-5">
+                            <div class="sticky-top" style="top: 100px;">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0"><i class="fas fa-eye me-2"></i>Payment Preview</h6>
+                                    </div>
+                                    <div class="card-body p-3" id="previewContainer">
+                                        <div class="text-center text-muted py-3" id="previewPlaceholder">
+                                            <i class="fas fa-receipt fa-3x d-block mb-2 opacity-25"></i>
+                                            <p>Payment preview will appear here</p>
+                                            <small>Update any setting above to see changes</small>
+                                        </div>
+                                        <div id="previewContent" style="display: none;"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3 text-muted small">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Changes are reflected in real-time as you update the settings.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .preview-method-item {
+        transition: all 0.3s ease;
+    }
+    .preview-method-item:hover {
+        transform: translateX(5px);
+    }
+    .sticky-top {
+        z-index: 1;
+    }
+    .payment-preview .payment-details-box {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 10px;
+        border: 1px solid #e9ecef;
+    }
+    .payment-preview .payment-details-box .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 0;
+        font-size: 11px;
+    }
+    .payment-preview .payment-details-box .detail-row strong {
+        color: #333;
+    }
+    @media (max-width: 992px) {
+        .sticky-top {
+            position: relative !important;
+            top: 0 !important;
+        }
+    }
+</style>
+
+{% block extra_js %}
+<script>
+    // Store initial values for reset
+    const initialValues = {};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Store initial values
+        document.querySelectorAll('.preview-field').forEach(field => {
+            if (field.type === 'checkbox') {
+                initialValues[field.id] = field.checked;
+            } else {
+                initialValues[field.id] = field.value;
+            }
+        });
+        
+        // Initial preview
+        setTimeout(updatePreview, 100);
+    });
+
+    function updatePreview() {
+        // Get company name from tenant or use default
+        const companyName = '{{ tenant.company_name|default:"Your Store" }}';
+        
+        // Get all settings
+        const settings = {
+            // Payment Methods
+            enableCash: document.getElementById('enableCash').checked,
+            enableMpesa: document.getElementById('enableMpesa').checked,
+            enableCard: document.getElementById('enableCard').checked,
+            enableBankTransfer: document.getElementById('enableBankTransfer').checked,
+            enableCredit: document.getElementById('enableCredit').checked,
+            
+            // Currency
+            currency: document.getElementById('displayCurrency').value || 'KES',
+            currencySymbol: document.getElementById('displayCurrencySymbol').value || 'KSh',
+            currencyPosition: document.getElementById('currencyPosition').value || 'before',
+            
+            // Tax
+            enableTax: document.getElementById('enableTax').checked,
+            taxPercentage: parseFloat(document.getElementById('taxPercentage').value) || 0,
+            taxInclusive: document.getElementById('taxInclusive').checked,
+            taxLabel: document.getElementById('taxLabel').value || 'VAT',
+            
+            // Footer
+            showPaymentInstructions: document.getElementById('showPaymentInstructions').checked,
+            paymentInstructions: document.getElementById('paymentInstructions').value || '',
+            paymentFooterText: document.getElementById('paymentFooterText').value || '',
+            
+            // M-Pesa
+            mpesaShortcode: document.getElementById('mpesaShortcode').value || 'N/A',
+            
+            // Receipt Payment Details
+            tillNumber: document.getElementById('tillNumber').value || 'N/A',
+            paybillNumber: document.getElementById('paybillNumber').value || 'N/A',
+            accountNumber: document.getElementById('accountNumber').value || 'N/A',
+            showPaymentDetailsOnReceipt: document.getElementById('showPaymentDetailsOnReceipt').checked,
+        };
+
+        // Calculate totals
+        const subtotal = 1000.00;
+        let tax = 0;
+        let total = subtotal;
+        
+        if (settings.enableTax && !settings.taxInclusive) {
+            tax = subtotal * (settings.taxPercentage / 100);
+            total = subtotal + tax;
+        } else if (settings.enableTax && settings.taxInclusive) {
+            // Tax is included in the price
+            tax = subtotal * (settings.taxPercentage / (100 + settings.taxPercentage));
+            total = subtotal;
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            const formatted = amount.toFixed(2);
+            if (settings.currencyPosition === 'before') {
+                return settings.currencySymbol + ' ' + formatted;
+            } else {
+                return formatted + ' ' + settings.currencySymbol;
+            }
+        }
+
+        // Build preview HTML
+        let html = `
+            <div class="payment-preview">
+                <div class="text-center mb-3">
+                    <h6 class="mb-1">${companyName}</h6>
+                    <small class="text-muted">Payment Summary</small>
+                </div>
+                
+                <div class="border rounded p-2 mb-3 bg-light">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Item Total</span>
+                        <span>${formatCurrency(subtotal)}</span>
+                    </div>
+                    ${settings.enableTax ? `
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>${settings.taxLabel} (${settings.taxPercentage}%)</span>
+                        <span>${settings.taxInclusive ? 'Included' : formatCurrency(tax)}</span>
+                    </div>
+                    ` : ''}
+                    <div class="d-flex justify-content-between fw-bold border-top pt-1">
+                        <span>Total</span>
+                        <span>${formatCurrency(total)}</span>
+                    </div>
+                </div>
+                
+                <div class="mb-2">
+                    <small class="text-dark d-block mb-1">Payment Methods</small>
+                    <div class="d-flex flex-wrap gap-1">
+        `;
+
+        // Payment methods
+        const methods = [
+            { id: 'enableCash', label: '💵 Cash', enabled: settings.enableCash },
+            { id: 'enableMpesa', label: '📱 M-Pesa', enabled: settings.enableMpesa },
+            { id: 'enableCard', label: '💳 Card', enabled: settings.enableCard },
+            { id: 'enableBankTransfer', label: '🏦 Bank Transfer', enabled: settings.enableBankTransfer },
+            { id: 'enableCredit', label: '📊 Credit', enabled: settings.enableCredit }
+        ];
+
+        let hasEnabled = false;
+        methods.forEach(method => {
+            if (method.enabled) {
+                hasEnabled = true;
+                html += `
+                    <span class="badge bg-success bg-opacity-10 text-dark border border-success px-2 py-1 preview-method-item">
+                        ${method.label}
+                    </span>
+                `;
+            }
+        });
+
+        if (!hasEnabled) {
+            html += `
+                <span class="text-dark small">No payment methods enabled</span>
+            `;
+        }
+
+        html += `
+                    </div>
+                </div>
+        `;
+
+        // M-Pesa info
+        if (settings.enableMpesa && settings.mpesaShortcode !== 'N/A') {
+            html += `
+                <div class="mb-2">
+                    <small class="text-dark d-block">M-Pesa Paybill</small>
+                    <span class="badge bg-primary">${settings.mpesaShortcode}</span>
+                </div>
+            `;
+        }
+
+        // Receipt Payment Details Preview - 3 Columns
+        if (settings.showPaymentDetailsOnReceipt) {
+            html += `
+                <div class="payment-details-box mb-2">
+                    <small class="text-dark d-block mb-2">Payment Details</small>
+                    <div class="row g-1">
+                        <div class="col-4">
+                            <div class="text-center p-1 bg-white rounded border">
+                                <div class="text-muted small">Till No</div>
+                                <div class="fw-bold text-success">${settings.tillNumber}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-1 bg-white rounded border">
+                                <div class="text-muted small">Paybill</div>
+                                <div class="fw-bold text-primary">${settings.paybillNumber}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-1 bg-white rounded border">
+                                <div class="text-muted small">Account</div>
+                                <div class="fw-bold text-warning">${settings.accountNumber}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span class="badge bg-light text-muted small">These details appear on customer receipts</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Payment Instructions
+        if (settings.showPaymentInstructions && settings.paymentInstructions) {
+            html += `
+                <div class="mb-2 p-2 bg-light rounded small">
+                    <i class="fas fa-info-circle text-primary me-1"></i>
+                    <span class="text-dark">${settings.paymentInstructions}</span>
+                </div>
+            `;
+        }
+
+        // Footer
+        if (settings.paymentFooterText) {
+            html += `
+                <div class="text-center mt-2 text-muted small">
+                    <i class="fas fa-heart text-danger" style="font-size: 0.6rem;"></i>
+                    <span class="text-dark">${settings.paymentFooterText}</span>                    
+                </div>
+            `;
+        }
+
+        html += `
+                <div class="text-center mt-2">
+                    <small class="text-muted" style="font-size: 0.6rem;">Powered by Tech Master POS</small>
+                </div>
+            </div>
+        `;
+
+        // Show the preview
+        const previewContainer = document.getElementById('previewContent');
+        const placeholder = document.getElementById('previewPlaceholder');
+        
+        if (previewContainer) {
+            previewContainer.innerHTML = html;
+            previewContainer.style.display = 'block';
+        }
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+    }
+
+    // Reset to saved values
+    function resetToSaved() {
+        document.querySelectorAll('.preview-field').forEach(field => {
+            if (field.type === 'checkbox') {
+                field.checked = initialValues[field.id] || false;
+            } else {
+                field.value = initialValues[field.id] || '';
+            }
+        });
+        updatePreview();
+        
+        // Show reset confirmation
+        const messageDiv = document.getElementById('saveMessage');
+        messageDiv.innerHTML = `<div class="alert alert-info">Settings reset to saved values</div>`;
+        setTimeout(() => {
+            messageDiv.innerHTML = '';
+        }, 3000);
+    }
+
+    // Form submission
+    document.getElementById('paymentSettingsForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            enable_cash: document.getElementById('enableCash').checked,
+            enable_mpesa: document.getElementById('enableMpesa').checked,
+            enable_card: document.getElementById('enableCard').checked,
+            enable_bank_transfer: document.getElementById('enableBankTransfer').checked,
+            enable_credit: document.getElementById('enableCredit').checked,
+            mpesa_shortcode: document.getElementById('mpesaShortcode').value,
+            mpesa_environment: document.getElementById('mpesaEnvironment').value,
+            mpesa_consumer_key: document.getElementById('mpesaConsumerKey').value,
+            mpesa_consumer_secret: document.getElementById('mpesaConsumerSecret').value,
+            mpesa_passkey: document.getElementById('mpesaPasskey').value,
+            card_payment_gateway: document.getElementById('cardPaymentGateway').value,
+            card_public_key: document.getElementById('cardPublicKey').value,
+            card_secret_key: document.getElementById('cardSecretKey').value,
+            card_webhook_secret: document.getElementById('cardWebhookSecret').value,
+            display_currency: document.getElementById('displayCurrency').value,
+            display_currency_symbol: document.getElementById('displayCurrencySymbol').value,
+            currency_position: document.getElementById('currencyPosition').value,
+            enable_tax: document.getElementById('enableTax').checked,
+            tax_percentage: document.getElementById('taxPercentage').value,
+            tax_inclusive: document.getElementById('taxInclusive').checked,
+            tax_label: document.getElementById('taxLabel').value,
+            show_payment_instructions: document.getElementById('showPaymentInstructions').checked,
+            payment_instructions: document.getElementById('paymentInstructions').value,
+            payment_footer_text: document.getElementById('paymentFooterText').value,
+            till_number: document.getElementById('tillNumber').value,
+            paybill_number: document.getElementById('paybillNumber').value,
+            account_number: document.getElementById('accountNumber').value,
+            show_payment_details_on_receipt: document.getElementById('showPaymentDetailsOnReceipt').checked,
+        };
+        
+        try {
+            const response = await fetch("{% url 'settings:api_update_payment_settings' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: JSON.stringify(formData),
+            });
+            
+            const result = await response.json();
+            const messageDiv = document.getElementById('saveMessage');
+            
+            if (result.success) {
+                messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                // Update initial values
+                document.querySelectorAll('.preview-field').forEach(field => {
+                    if (field.type === 'checkbox') {
+                        initialValues[field.id] = field.checked;
+                    } else {
+                        initialValues[field.id] = field.value;
+                    }
+                });
+                setTimeout(() => {
+                    messageDiv.innerHTML = '';
+                }, 5000);
+            } else {
+                messageDiv.innerHTML = `<div class="alert alert-danger">${result.error || 'Error saving settings'}</div>`;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('saveMessage').innerHTML = 
+                `<div class="alert alert-danger">An error occurred while saving settings</div>`;
+        }
+    });
+
+    // Real-time preview on any change
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('preview-field') || e.target.classList.contains('payment-toggle')) {
+            updatePreview();
+        }
+    });
+
+    // Also update on input for text fields
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('preview-field')) {
+            updatePreview();
+        }
+    });
+</script>
+{% endblock extra_js %}
+{% endblock %}

@@ -1,0 +1,170 @@
+<!-- templates/tech_master/branch_stock_list.html -->
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Branch Stock{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-clipboard-list text-primary me-2"></i>Company Stock Levels
+            </h4>
+        </div>
+        <div>
+            <a href="{% url 'tech_master:transfer_stock' %}" class="btn btn-primary">
+                <i class="fas fa-exchange-alt me-2"></i>Transfer Stock
+            </a>
+            <a href="{% url 'tech_master:branch_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Branches
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Branches</h6>
+                            <h3 class="fw-bold mb-0">{{ branch_stock_data|length }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-50 rounded p-3">
+                            <i class="fas fa-store text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Stock Items</h6>
+                            <h3 class="fw-bold mb-0">{{ total_stock_items|default:0 }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-3">
+                            <i class="fas fa-boxes text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Stock Value</h6>
+                            <h3 class="fw-bold mb-0">KES {{ total_stock_value|floatformat:0|default:"0" }}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-50 rounded p-3">
+                            <i class="fas fa-money-bill-wave text-info fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Branch Stock Cards -->
+    <div class="row g-4">
+        {% for data in branch_stock_data %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="fw-bold mb-1">
+                                <i class="fas fa-store text-primary me-2"></i>
+                                {{ data.branch.name }}
+                            </h5>
+                            <span class="badge bg-secondary">{{ data.branch.get_branch_type_display }}</span>
+                            {% if data.branch.is_main_branch %}
+                            <span class="badge bg-primary">Main Branch</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-code me-1"></i>{{ data.branch.code }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Stock Details -->
+                    <div class="row g-2 mt-2">
+                        <div class="col-6">
+                            <div class="bg-light rounded p-2 text-center">
+                                <div class="small text-muted">Products</div>
+                                <div class="fw-bold fs-5">{{ data.product_count }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded p-2 text-center">
+                                <div class="small text-muted">Units</div>
+                                <div class="fw-bold fs-5">{{ data.unit_count }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded p-2 text-center">
+                                <div class="small text-muted">Bulk Items</div>
+                                <div class="fw-bold fs-5">{{ data.bulk_quantity|default:0 }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded p-2 text-center">
+                                <div class="small text-muted">Single Items</div>
+                                <div class="fw-bold fs-5">{{ data.single_count|default:0 }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="bg-primary bg-opacity-50 rounded p-2 text-center">
+                                <div class="small text-muted">Total Stock Quantity</div>
+                                <div class="fw-bold fs-5">{{ data.stock_count }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="bg-success bg-opacity-50 rounded p-2 text-center">
+                                <div class="small text-muted">Stock Value</div>
+                                <div class="fw-bold fs-5">KES {{ data.stock_value|floatformat:0 }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <a href="{% url 'tech_master:branch_stock_detail' data.branch.id %}" 
+                           class="btn btn-outline-primary w-100">
+                            <i class="fas fa-eye me-2"></i>View Details
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-top">
+                    <small class="text-muted">
+                        <i class="fas fa-location-dot me-1"></i>
+                        {{ data.branch.city|default:"No location" }}
+                        {% if data.branch.phone %}
+                        | <i class="fas fa-phone me-1"></i>{{ data.branch.phone }}
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-store fa-4x d-block mb-3 opacity-25"></i>
+                <h5>No branches found</h5>
+                <p>Create a branch to start managing stock.</p>
+                <a href="{% url 'tech_master:add_branch' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add Branch
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

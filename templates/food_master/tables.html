@@ -1,0 +1,147 @@
+<!-- templates/food_master/tables.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Tables - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-chair me-2" style="color: #e67e22;"></i>Tables</h4>
+        <div>
+            <a href="{% url 'food_master:add_table' %}" class="btn" style="background-color: #e67e22; color: white;">
+                <i class="fas fa-plus me-1"></i> Add Table
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'food_master:tables' %}" class="btn btn-outline-secondary {% if not request.GET.status %}active{% endif %}">
+                    All Tables
+                </a>
+                <a href="{% url 'food_master:tables' %}?status=available" class="btn btn-outline-success {% if request.GET.status == 'available' %}active{% endif %}">
+                    <i class="fas fa-check-circle me-1"></i> Available
+                </a>
+                <a href="{% url 'food_master:tables' %}?status=occupied" class="btn btn-outline-danger {% if request.GET.status == 'occupied' %}active{% endif %}">
+                    <i class="fas fa-users me-1"></i> Occupied
+                </a>
+                <a href="{% url 'food_master:tables' %}?status=reserved" class="btn btn-outline-warning {% if request.GET.status == 'reserved' %}active{% endif %}">
+                    <i class="fas fa-calendar-check me-1"></i> Reserved
+                </a>
+                <a href="{% url 'food_master:tables' %}?status=cleaning" class="btn btn-outline-info {% if request.GET.status == 'cleaning' %}active{% endif %}">
+                    <i class="fas fa-broom me-1"></i> Cleaning
+                </a>
+                <a href="{% url 'food_master:tables' %}?status=maintenance" class="btn btn-outline-secondary {% if request.GET.status == 'maintenance' %}active{% endif %}">
+                    <i class="fas fa-tools me-1"></i> Maintenance
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables Grid -->
+    {% if tables %}
+        <div class="row g-4">
+            {% for table in tables %}
+                <div class="col-md-3 col-lg-2">
+                    <div class="card text-center h-100 shadow-sm 
+                         {% if table.status == 'available' %}border-success
+                         {% elif table.status == 'occupied' %}border-danger
+                         {% elif table.status == 'reserved' %}border-warning
+                         {% elif table.status == 'cleaning' %}border-info
+                         {% else %}border-secondary{% endif %}"
+                         style="border-width: 3px;">
+                        <div class="card-body">
+                            <h4 class="mb-1">{{ table.table_number }}</h4>
+                            <p class="small text-muted mb-2">
+                                <i class="fas fa-users me-1"></i> {{ table.capacity }} seats
+                            </p>
+                            <span class="badge {% if table.status == 'available' %}bg-success
+                                        {% elif table.status == 'occupied' %}bg-danger
+                                        {% elif table.status == 'reserved' %}bg-warning
+                                        {% elif table.status == 'cleaning' %}bg-info
+                                        {% else %}bg-secondary{% endif %}">
+                                {{ table.get_status_display }}
+                            </span>
+                            {% if table.location %}
+                                <p class="small text-muted mt-2 mb-0">
+                                    <i class="fas fa-map-pin me-1"></i> {{ table.location }}
+                                </p>
+                            {% endif %}
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewTable({{ table.id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% if table.status == 'available' %}
+                                    <button class="btn btn-sm btn-outline-success" onclick="occupyTable({{ table.id }})">
+                                        <i class="fas fa-user-check"></i>
+                                    </button>
+                                {% endif %}
+                                {% if table.status == 'occupied' %}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="freeTable({{ table.id }})">
+                                        <i class="fas fa-user-times"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-chair fa-4x text-muted mb-3" style="color: #e67e22;"></i>
+                <h4>No Tables Found</h4>
+                <p class="text-muted">Start adding tables for your restaurant.</p>
+                <a href="{% url 'food_master:add_table' %}" class="btn" style="background-color: #e67e22; color: white;">
+                    <i class="fas fa-plus me-1"></i> Add Table
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function viewTable(tableId) {
+    alert('View table: ' + tableId);
+}
+
+function occupyTable(tableId) {
+    if (confirm('Occupy this table?')) {
+        // AJAX call to occupy table
+        alert('Table ' + tableId + ' occupied');
+        location.reload();
+    }
+}
+
+function freeTable(tableId) {
+    if (confirm('Free this table?')) {
+        // AJAX call to free table
+        alert('Table ' + tableId + ' freed');
+        location.reload();
+    }
+}
+</script>
+
+<style>
+.btn.active {
+    background-color: #e67e22;
+    color: white;
+    border-color: #e67e22;
+}
+.btn-outline-secondary.active {
+    background-color: #6c757d;
+    color: white;
+}
+.card {
+    transition: transform 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+</style>
+{% endblock %}

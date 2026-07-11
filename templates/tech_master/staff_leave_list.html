@@ -1,0 +1,215 @@
+<!-- templates/tech_master/staff_leave_list.html -->
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Staff Leave Requests{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-calendar-alt text-primary me-2"></i>Staff Leave Requests
+            </h4>
+            <p class="text-muted mb-0">Manage staff leave requests</p>
+        </div>
+        <div>
+            <a href="{% url 'tech_master:staff_leave_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Leave Request
+            </a>
+            <a href="{% url 'tech_master:staff_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <select name="user" class="form-select">
+                        <option value="">All Staff</option>
+                        {% for member in staff_members %}
+                        <option value="{{ member.id }}" {% if request.GET.user == member.id|stringformat:"s" %}selected{% endif %}>
+                            {{ member.get_full_name|default:member.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        {% for status_code, status_name in statuses %}
+                        <option value="{{ status_code }}" {% if request.GET.status == status_code %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for type_code, type_name in leave_types %}
+                        <option value="{{ type_code }}" {% if request.GET.type == type_code %}selected{% endif %}>
+                            {{ type_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Leave Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Staff</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leaves %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ leave.staff_name|default:leave.staff.get_full_name|default:leave.staff.username }}</div>
+                            </td>
+                            <td>{{ leave.get_leave_type_display|default:leave.leave_type|title }}</td>
+                            <td>{{ leave.start_date|date:"Y-m-d" }}</td>
+                            <td>{{ leave.end_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ leave.days }}</span>
+                            </td>
+                            <td>{{ leave.reason|truncatechars:30 }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if leave.status == 'approved' %}bg-success
+                                    {% elif leave.status == 'rejected' %}bg-danger
+                                    {% elif leave.status == 'pending' %}bg-warning text-dark
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ leave.get_status_display|default:leave.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if leave.status == 'pending' and leave.id %}
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'tech_master:staff_leave_approve' leave.id %}" 
+                                       class="btn btn-success" title="Approve"
+                                       onclick="return confirm('Approve this leave request?')">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    <button class="btn btn-danger" title="Reject"
+                                            onclick="rejectLeave('{{ leave.id }}', '{{ leave.staff_name|default:leave.staff.get_full_name|default:leave.staff.username }}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="fas fa-calendar fa-3x d-block mb-3 opacity-50"></i>
+                                No leave requests found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Showing {{ leaves.start_index }} to {{ leaves.end_index }} of {{ leaves.paginator.count }} requests
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if leaves.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ leaves.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">{{ leaves.number }}</span>
+                        </li>
+
+                        {% if leaves.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ leaves.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ leaves.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject Leave Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="rejectForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Reject leave request for <strong id="rejectStaffName"></strong>?</p>
+                    <div class="mb-3">
+                        <label class="form-label">Reason for rejection</label>
+                        <textarea name="reason" class="form-control" rows="3" 
+                                  placeholder="Enter reason for rejection..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Reject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function rejectLeave(leaveId, staffName) {
+    document.getElementById('rejectStaffName').textContent = staffName;
+    document.getElementById('rejectForm').action = `/tech/staff/leave/${leaveId}/reject/`;
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+</script>
+{% endblock %}

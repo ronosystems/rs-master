@@ -1,0 +1,123 @@
+<!-- apps/rental_master/templates/rental_master/record_payment.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Record Payment - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #28a745;"></i>Record Payment</h4>
+        <a href="{% url 'rental_master:payments' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Payments
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-credit-card me-2" style="color: #28a745;"></i>
+            Payment Details
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="unit" class="form-label">
+                            <i class="fas fa-door-open me-1" style="color: #28a745;"></i>
+                            Unit <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="unit" name="unit" required>
+                            <option value="">-- Select Unit --</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.id }}">
+                                    {{ unit.unit_number }} - {{ unit.property.name }}
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>No units available</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="tenant" class="form-label">
+                            <i class="fas fa-user me-1" style="color: #28a745;"></i>
+                            Tenant <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="tenant" name="tenant" required>
+                            <option value="">-- Select Tenant --</option>
+                            {% for tenant_profile in tenants %}
+                                <option value="{{ tenant_profile.id }}">
+                                    {{ tenant_profile.full_name }}
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>No tenants registered</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="amount_paid" class="form-label">
+                            <i class="fas fa-money-bill-wave me-1" style="color: #28a745;"></i>
+                            Amount Paid (KES) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="amount_paid" name="amount_paid" 
+                               step="0.01" placeholder="0.00" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="payment_date" class="form-label">
+                            <i class="fas fa-calendar-alt me-1" style="color: #28a745;"></i>
+                            Payment Date <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="payment_date" name="payment_date" 
+                               value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="payment_method" class="form-label">
+                            <i class="fas fa-credit-card me-1" style="color: #28a745;"></i>
+                            Payment Method
+                        </label>
+                        <select class="form-select" id="payment_method" name="payment_method">
+                            <option value="cash">Cash</option>
+                            <option value="mpesa">M-Pesa</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="cheque">Cheque</option>
+                            <option value="credit_card">Credit Card</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="receipt_number" class="form-label">
+                            <i class="fas fa-receipt me-1" style="color: #28a745;"></i>
+                            Receipt Number
+                        </label>
+                        <input type="text" class="form-control" id="receipt_number" name="receipt_number" 
+                               placeholder="Optional receipt number">
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                  placeholder="Payment notes..."></textarea>
+                    </div>
+                    
+                    <div class="col-12 mt-4">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn" style="background-color: #28a745; color: white; padding: 10px 30px;">
+                                <i class="fas fa-save me-2"></i> Record Payment
+                            </button>
+                            <a href="{% url 'rental_master:payments' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

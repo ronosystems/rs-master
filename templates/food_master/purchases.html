@@ -1,0 +1,482 @@
+<!-- templates/food_master/purchases.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Purchases - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --purple-primary: #6f42c1;
+        --purple-dark: #5a32a3;
+        --purple-light: #f4eefb;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, var(--purple-primary), var(--purple-dark));
+        color: white;
+        border-radius: 12px;
+        padding: 20px 25px;
+        height: 100%;
+        min-height: 100px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .summary-card .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    
+    .summary-card .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.85;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .summary-card.color-green {
+        background: linear-gradient(135deg, #28a745, #20c997);
+    }
+    
+    .summary-card.color-blue {
+        background: linear-gradient(135deg, #17a2b8, #0dcaf0);
+    }
+    
+    .summary-card.color-orange {
+        background: linear-gradient(135deg, #fd7e14, #ffc107);
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+    }
+    
+    .btn-purple {
+        background-color: var(--purple-primary);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        transition: all 0.2s;
+    }
+    
+    .btn-purple:hover {
+        background-color: var(--purple-dark);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+    }
+    
+    .btn-purple-outline {
+        color: var(--purple-primary);
+        border: 2px solid var(--purple-primary);
+        background: transparent;
+        padding: 8px 20px;
+        transition: all 0.2s;
+    }
+    
+    .btn-purple-outline:hover {
+        background: var(--purple-primary);
+        color: white;
+    }
+    
+    .text-purple {
+        color: var(--purple-primary);
+    }
+    
+    .table-purchases {
+        font-size: 0.9rem;
+    }
+    
+    .table-purchases th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #2d2d2d;
+        border-bottom: 2px solid var(--purple-primary);
+        padding: 12px 10px;
+    }
+    
+    .table-purchases td {
+        padding: 10px;
+        vertical-align: middle;
+    }
+    
+    .table-purchases tbody tr {
+        transition: background 0.2s;
+    }
+    
+    .table-purchases tbody tr:hover {
+        background: var(--purple-light);
+    }
+    
+    .badge-payment-paid {
+        background: #28a745;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+    }
+    
+    .badge-payment-pending {
+        background: #ffc107;
+        color: #212529;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+    }
+    
+    .badge-payment-partial {
+        background: #17a2b8;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+    }
+    
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+    
+    .action-btn {
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-1px);
+    }
+    
+    .table-responsive {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .summary-card {
+            background: #f8f9fa !important;
+            color: #2d2d2d !important;
+            border: 1px solid #ddd !important;
+        }
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h4 class="mb-2 mb-md-0">
+            <i class="fas fa-shopping-bag me-2 text-purple"></i>
+            Purchase List
+        </h4>
+        <div class="d-flex gap-2 flex-wrap no-print">
+            <a href="{% url 'food_master:add_purchase' %}" class="btn btn-purple">
+                <i class="fas fa-plus me-1"></i> Record Purchase
+            </a>
+            <a href="{% url 'food_master:reports' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Reports
+            </a>
+            <button class="btn btn-outline-secondary" onclick="window.print()">
+                <i class="fas fa-print me-1"></i> Print
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="summary-card">
+                <div class="stat-label">Total Items</div>
+                <div class="stat-number">{{ total_items|default:0 }}</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="summary-card color-green">
+                <div class="stat-label">Total Cost</div>
+                <div class="stat-number">KES {{ total_cost|default:0|floatformat:0|intcomma }}</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="summary-card color-blue">
+                <div class="stat-label">Total Quantity</div>
+                <div class="stat-number">{{ total_quantity|default:0|floatformat:0 }}</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="summary-card color-orange">
+                <div class="stat-label">Period</div>
+                <div class="stat-number" style="font-size: 1.1rem;">
+                    {{ date_from|date:"M d" }} - {{ date_to|date:"M d, Y" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4 no-print">
+        <div class="card-body filter-section">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label for="date_from" class="form-label fw-semibold">Date From</label>
+                    <input type="date" class="form-control" id="date_from" name="date_from" 
+                           value="{{ date_from|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="date_to" class="form-label fw-semibold">Date To</label>
+                    <input type="date" class="form-control" id="date_to" name="date_to" 
+                           value="{{ date_to|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="category" class="form-label fw-semibold">Category</label>
+                    <select class="form-select" id="category" name="category">
+                        <option value="">All Categories</option>
+                        {% for key, value in categories %}
+                            <option value="{{ key }}" {% if request.GET.category == key %}selected{% endif %}>
+                                {{ value }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label fw-semibold">Search</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           placeholder="Search by item or supplier..." 
+                           value="{{ request.GET.search|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="payment_status" class="form-label fw-semibold">Payment Status</label>
+                    <select class="form-select" id="payment_status" name="payment_status">
+                        <option value="">All Status</option>
+                        <option value="paid" {% if request.GET.payment_status == 'paid' %}selected{% endif %}>Paid</option>
+                        <option value="pending" {% if request.GET.payment_status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="partial" {% if request.GET.payment_status == 'partial' %}selected{% endif %}>Partial</option>
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <button type="submit" class="btn btn-purple">
+                        <i class="fas fa-search me-1"></i> Apply Filters
+                    </button>
+                    <a href="{% url 'food_master:purchases' %}" class="btn btn-purple-outline ms-2">
+                        <i class="fas fa-undo me-1"></i> Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Purchases Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-purchases mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">Date</th>
+                            <th style="width: 35%;">Description</th>
+                            <th style="width: 18%;">Amount Used</th>
+                            <th style="width: 18%;">Recorded By</th>
+                            <th style="width: 17%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if purchases_by_date %}
+                            {% for date_key, date_data in purchases_by_date.items %}
+                                {% for item in date_data.items %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">{{ date_key|date:"M d, Y" }}</div>
+                                            <small class="text-muted">{{ item.created_at|time:"H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">{{ item.item_name }}</div>
+                                            <div class="text-muted small">
+                                                <span class="badge bg-secondary me-1">{{ item.category }}</span>
+                                                {% if item.supplier %}
+                                                    <i class="fas fa-truck me-1"></i>{{ item.supplier }}
+                                                {% endif %}
+                                                {% if item.unit %}
+                                                    <span class="ms-2"><i class="fas fa-ruler me-1"></i>{{ item.quantity }} {{ item.unit }}</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="mt-1">
+                                                <span class="badge {% if item.payment_status == 'paid' %}badge-payment-paid{% elif item.payment_status == 'pending' %}badge-payment-pending{% else %}badge-payment-partial{% endif %}">
+                                                    {{ item.payment_status|title }}
+                                                </span>
+                                                {% if item.payment_method %}
+                                                    <span class="badge bg-secondary ms-1">{{ item.payment_method|title }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold text-success">KES {{ item.total_cost|floatformat:0|intcomma }}</div>
+                                            <div class="text-muted small">
+                                                <i class="fas fa-tag me-1"></i>KES {{ item.unit_price|floatformat:0 }} per {{ item.unit|default:"unit" }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <i class="fas fa-user me-1 text-muted"></i>
+                                                {{ item.recorded_by|default:"N/A" }}
+                                            </div>
+                                            {% if item.notes %}
+                                                <div class="text-muted small">
+                                                    <i class="fas fa-comment me-1"></i>{{ item.notes|truncatechars:30 }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'food_master:purchase_detail' item.id %}" 
+                                               class="btn btn-outline-primary action-btn">
+                                                <i class="fas fa-eye me-1"></i> Details
+                                            </a>
+                                            <a href="{% url 'food_master:edit_purchase' item.id %}" 
+                                               class="btn btn-outline-secondary action-btn">
+                                                <i class="fas fa-edit me-1"></i> Edit
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                
+                                <!-- Daily Total Row -->
+                                <tr class="table-active">
+                                    <td colspan="5" class="py-2">
+                                        <div class="d-flex justify-content-end align-items-center gap-4">
+                                            <span class="fw-semibold">
+                                                <i class="fas fa-calendar-day me-1"></i>
+                                                {{ date_key|date:"l, M d, Y" }}
+                                            </span>
+                                            <span>
+                                                <i class="fas fa-boxes me-1"></i>
+                                                <strong>Items:</strong> {{ date_data.total_items }}
+                                            </span>
+                                            <span class="text-success fw-bold">
+                                                <i class="fas fa-coins me-1"></i>
+                                                Total: KES {{ date_data.total_cost|floatformat:0|intcomma }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Empty State -->
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state">
+                                        <i class="fas fa-shopping-bag"></i>
+                                        <h4 class="mb-2">No Purchases Found</h4>
+                                        <p class="text-muted mb-4">
+                                            No purchase records found for the selected period and filters.
+                                        </p>
+                                        <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                            <a href="{% url 'food_master:add_purchase' %}" class="btn btn-purple">
+                                                <i class="fas fa-plus me-1"></i> Record Purchase
+                                            </a>
+                                            <a href="{% url 'food_master:purchases' %}" class="btn btn-outline-secondary">
+                                                <i class="fas fa-undo me-1"></i> Reset Filters
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                    
+                    <!-- Grand Total Footer -->
+                    {% if purchases_by_date %}
+                        <tfoot>
+                            <tr class="table-dark">
+                                <td colspan="2" class="fw-bold">
+                                    <i class="fas fa-calculator me-2"></i> GRAND TOTAL
+                                </td>
+                                <td class="fw-bold text-success">
+                                    KES {{ total_cost|default:0|floatformat:0|intcomma }}
+                                </td>
+                                <td colspan="2">
+                                    <span class="badge bg-light text-dark">
+                                        <i class="fas fa-box me-1"></i>
+                                        {{ total_items|default:0 }} Items
+                                    </span>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

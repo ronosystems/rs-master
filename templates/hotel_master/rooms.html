@@ -1,0 +1,661 @@
+<!-- templates/hotel_master/rooms.html -->
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="fas fa-bed text-warning me-2"></i>Room Management
+        </h4>
+        <div class="d-flex gap-2">
+            <a href="{% url 'hotel_master:add_room' %}" class="btn btn-warning">
+                <i class="fas fa-plus-circle me-2"></i>Add Room
+            </a>
+        </div>
+    </div>
+
+    <!-- Room Filters -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Search Room</label>
+                    <input type="text" id="searchRoom" class="form-control form-control-sm" placeholder="Room number or type...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Room Type</label>
+                    <select id="filterType" class="form-select form-select-sm">
+                        <option value="">All Types</option>
+                        <option value="standard">Standard</option>
+                        <option value="deluxe">Deluxe</option>
+                        <option value="suite">Suite</option>
+                        <option value="executive">Executive</option>
+                        <option value="presidential">Presidential</option>
+                        <option value="family">Family</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Status</label>
+                    <select id="filterStatus" class="form-select form-select-sm">
+                        <option value="">All Status</option>
+                        <option value="available">Available</option>
+                        <option value="occupied">Occupied</option>
+                        <option value="reserved">Reserved</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="cleaning">Cleaning</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary btn-sm w-100" onclick="filterRooms()">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Total Rooms</h6>
+                <h3 class="fw-bold">{{ total_rooms|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Available</h6>
+                <h3 class="fw-bold text-success">{{ available_rooms|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Occupied</h6>
+                <h3 class="fw-bold text-danger">{{ occupied_rooms|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Reserved</h6>
+                <h3 class="fw-bold text-warning">{{ reserved_rooms|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Maintenance</h6>
+                <h3 class="fw-bold text-secondary">{{ maintenance_rooms|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Occupancy</h6>
+                <h3 class="fw-bold text-info">{{ occupancy_rate|default:0 }}%</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room List -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="roomTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Room Number</th>
+                            <th>Type</th>
+                            <th>Floor</th>
+                            <th>Capacity</th>
+                            <th>Price (KES)</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for room in rooms %}
+                        <tr data-type="{{ room.room_type }}" data-status="{{ room.status }}" data-id="{{ room.id }}">
+                            <td>{{ forloop.counter }}</td>
+                            <td><strong>{{ room.room_number }}</strong></td>
+                            <td>{{ room.get_room_type_display }}</td>
+                            <td>{{ room.floor }}</td>
+                            <td>{{ room.capacity }}</td>
+                            <td>KES {{ room.price|floatformat:0 }}</td>
+                            <td>
+                                {% if room.status == 'available' %}
+                                    <span class="badge bg-success">Available</span>
+                                {% elif room.status == 'occupied' %}
+                                    <span class="badge bg-danger">Occupied</span>
+                                {% elif room.status == 'reserved' %}
+                                    <span class="badge bg-warning">Reserved</span>
+                                {% elif room.status == 'maintenance' %}
+                                    <span class="badge bg-secondary">Maintenance</span>
+                                {% elif room.status == 'cleaning' %}
+                                    <span class="badge bg-info">Cleaning</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ room.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="viewRoom({{ room.id }})" title="View Room">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="editRoom({{ room.id }})" title="Edit Room">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="confirmDelete({{ room.id }}, '{{ room.room_number }}')" title="Delete Room">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-bed fa-3x text-muted opacity-25 d-block mb-3"></i>
+                                <h5>No Rooms Added Yet</h5>
+                                <p class="text-muted">Start by adding your first room.</p>
+                                <a href="{% url 'hotel_master:add_room' %}" class="btn btn-warning mt-2">
+                                    <i class="fas fa-plus-circle me-2"></i>Add Room
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Room Modal -->
+<div class="modal fade" id="viewRoomModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-bed me-2"></i>Room Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="viewRoomContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Room Modal -->
+<div class="modal fade" id="editRoomModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Room</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editRoomForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body" id="editRoomContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// ============================================
+// FILTER ROOMS
+// ============================================
+function filterRooms() {
+    const search = document.getElementById('searchRoom').value.toLowerCase();
+    const type = document.getElementById('filterType').value;
+    const status = document.getElementById('filterStatus').value;
+    const rows = document.querySelectorAll('#roomTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const rowType = row.getAttribute('data-type');
+        const rowStatus = row.getAttribute('data-status');
+        
+        let show = true;
+        
+        if (search && !text.includes(search)) show = false;
+        if (type && rowType !== type) show = false;
+        if (status && rowStatus !== status) show = false;
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+// ============================================
+// VIEW ROOM
+// ============================================
+function viewRoom(roomId) {
+    const modal = new bootstrap.Modal(document.getElementById('viewRoomModal'));
+    const content = document.getElementById('viewRoomContent');
+    
+    // Show loading
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch room details
+    fetch(`/hotel/api/room/${roomId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const room = data.room;
+                content.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Room Number</label>
+                                <h5 class="fw-bold">${room.room_number}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Room Type</label>
+                                <h5>${room.room_type_display}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Floor</label>
+                                <h5>${room.floor}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Capacity</label>
+                                <h5>${room.capacity} guests</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Price per Night</label>
+                                <h5 class="text-success">KES ${room.price.toLocaleString()}</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Status</label>
+                                <h5>
+                                    <span class="badge bg-${room.status === 'available' ? 'success' : room.status === 'occupied' ? 'danger' : room.status === 'reserved' ? 'warning' : 'secondary'}">
+                                        ${room.status_display}
+                                    </span>
+                                </h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Features</label>
+                                <div class="row g-1 mt-1">
+                                    ${room.features.length > 0 ? room.features.map(f => `
+                                        <div class="col-6">
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="fas fa-check-circle text-success me-1"></i>
+                                                ${f}
+                                            </span>
+                                        </div>
+                                    `).join('') : `
+                                        <div class="col-12">
+                                            <span class="text-muted">No features listed</span>
+                                        </div>
+                                    `}
+                                </div>
+                            </div>
+                            ${room.description ? `
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Description</label>
+                                <p class="mb-0">${room.description}</p>
+                            </div>
+                            ` : ''}
+                            ${room.current_booking ? `
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Current Booking</label>
+                                <div class="alert alert-info py-2 mb-0">
+                                    <strong>${room.current_booking.guest_name}</strong><br>
+                                    <small>Check-in: ${room.current_booking.check_in} | Check-out: ${room.current_booking.check_out}</small>
+                                </div>
+                            </div>
+                            ` : `
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Current Booking</label>
+                                <p class="text-muted">No active booking</p>
+                            </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        ${data.error || 'Failed to load room details'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Error loading room details. Please try again.
+                </div>
+            `;
+            console.error('View error:', error);
+        });
+}
+
+// ============================================
+// EDIT ROOM
+// ============================================
+function editRoom(roomId) {
+    const modal = new bootstrap.Modal(document.getElementById('editRoomModal'));
+    const content = document.getElementById('editRoomContent');
+    const form = document.getElementById('editRoomForm');
+    
+    // Set form action to API endpoint
+    form.action = `/hotel/api/room/${roomId}/edit/`;
+    form.method = 'POST';
+    
+    // Show loading
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch room details for editing
+    fetch(`/hotel/api/room/${roomId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const room = data.room;
+                content.innerHTML = `
+                    <input type="hidden" name="room_id" value="${room.id}">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Room Number <span class="text-danger">*</span></label>
+                                <input type="text" name="room_number" class="form-control" value="${room.room_number}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Room Type <span class="text-danger">*</span></label>
+                                <select name="room_type" class="form-select" required>
+                                    <option value="standard" ${room.room_type === 'standard' ? 'selected' : ''}>Standard</option>
+                                    <option value="deluxe" ${room.room_type === 'deluxe' ? 'selected' : ''}>Deluxe</option>
+                                    <option value="suite" ${room.room_type === 'suite' ? 'selected' : ''}>Suite</option>
+                                    <option value="executive" ${room.room_type === 'executive' ? 'selected' : ''}>Executive</option>
+                                    <option value="presidential" ${room.room_type === 'presidential' ? 'selected' : ''}>Presidential</option>
+                                    <option value="family" ${room.room_type === 'family' ? 'selected' : ''}>Family</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Floor</label>
+                                <input type="number" name="floor" class="form-control" value="${room.floor}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Capacity</label>
+                                <input type="number" name="capacity" class="form-control" value="${room.capacity}" min="1">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Price (KES) <span class="text-danger">*</span></label>
+                                <input type="number" name="price" class="form-control" value="${room.price}" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Status</label>
+                                <select name="status" class="form-select">
+                                    <option value="available" ${room.status === 'available' ? 'selected' : ''}>Available</option>
+                                    <option value="occupied" ${room.status === 'occupied' ? 'selected' : ''}>Occupied</option>
+                                    <option value="reserved" ${room.status === 'reserved' ? 'selected' : ''}>Reserved</option>
+                                    <option value="maintenance" ${room.status === 'maintenance' ? 'selected' : ''}>Maintenance</option>
+                                    <option value="cleaning" ${room.status === 'cleaning' ? 'selected' : ''}>Cleaning</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Features</label>
+                                <div class="row g-2">
+                                    ${[
+                                        {id: 'has_ac', label: 'AC', checked: room.has_ac},
+                                        {id: 'has_tv', label: 'TV', checked: room.has_tv},
+                                        {id: 'has_wifi', label: 'WiFi', checked: room.has_wifi},
+                                        {id: 'has_minibar', label: 'Minibar', checked: room.has_minibar},
+                                        {id: 'has_bathroom', label: 'Bathroom', checked: room.has_bathroom},
+                                        {id: 'has_balcony', label: 'Balcony', checked: room.has_balcony},
+                                        {id: 'has_kitchenette', label: 'Kitchenette', checked: room.has_kitchenette},
+                                        {id: 'has_safe', label: 'Safe', checked: room.has_safe},
+                                        {id: 'has_iron', label: 'Iron', checked: room.has_iron},
+                                        {id: 'has_hairdryer', label: 'Hairdryer', checked: room.has_hairdryer},
+                                        {id: 'has_phone', label: 'Phone', checked: room.has_phone},
+                                        {id: 'has_smoking', label: 'Smoking', checked: room.has_smoking},
+                                    ].map(f => `
+                                        <div class="col-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="${f.id}" id="${f.id}" ${f.checked ? 'checked' : ''}>
+                                                <label class="form-check-label small" for="${f.id}">${f.label}</label>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Description</label>
+                                <textarea name="description" class="form-control" rows="3">${room.description || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        ${data.error || 'Failed to load room details'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Error loading room details. Please try again.
+                </div>
+            `;
+            console.error('Edit error:', error);
+        });
+}
+
+// ============================================
+// EDIT FORM SUBMIT
+// ============================================
+document.getElementById('editRoomForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const formData = new FormData(form);
+    
+    // Show loading
+    Swal.fire({
+        title: 'Saving...',
+        text: 'Please wait',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Submit via fetch
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            throw new Error('Server returned non-JSON response');
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'Success!',
+                text: 'Room updated successfully',
+                icon: 'success'
+            }).then(() => {
+                window.location.reload();
+            });
+        } else {
+            Swal.fire({
+                title: 'Error',
+                text: data.error || 'Failed to update room',
+                icon: 'error'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            title: 'Error',
+            text: 'An error occurred while updating the room. Please try again.',
+            icon: 'error'
+        });
+        console.error('Submit error:', error);
+    });
+});
+
+// ============================================
+// DELETE ROOM
+// ============================================
+function confirmDelete(roomId, roomNumber) {
+    Swal.fire({
+        title: 'Delete Room?',
+        html: `
+            <p>Are you sure you want to delete <strong>Room ${roomNumber}</strong>?</p>
+            <p class="text-danger small">This action cannot be undone.</p>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Delete Room',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading
+            Swal.fire({
+                title: 'Deleting...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Delete via AJAX
+            fetch(`/hotel/api/room/${roomId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                } else {
+                    throw new Error('Server returned non-JSON response');
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: `Room ${roomNumber} has been deleted.`,
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.error || 'Failed to delete room',
+                        icon: 'error'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An error occurred while deleting the room',
+                    icon: 'error'
+                });
+                console.error('Delete error:', error);
+            });
+        }
+    });
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1];
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Live search
+    document.getElementById('searchRoom').addEventListener('keyup', filterRooms);
+    document.getElementById('filterType').addEventListener('change', filterRooms);
+    document.getElementById('filterStatus').addEventListener('change', filterRooms);
+});
+</script>
+{% endblock %}

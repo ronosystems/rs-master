@@ -1,0 +1,136 @@
+<!-- templates/fashion_master/receipt.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Receipt - {{ sale.invoice_no }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" id="receipt">
+                <div class="card-body p-4">
+                    <div class="text-center mb-3">
+                        <h5 class="fw-bold">{{ company_settings.company_name|default:tenant.company_name }}</h5>
+                        <p class="text-muted small mb-0">Fashion Store</p>
+                        <p class="text-muted small">Phone: {{ company_settings.phone|default:"N/A" }}</p>
+                        <hr>
+                        <h6 class="fw-bold">SALE RECEIPT</h6>
+                        <p class="mb-0"><strong>Invoice:</strong> {{ sale.invoice_no }}</p>
+                        <p class="mb-0"><strong>Date:</strong> {{ sale.sale_date|date:"d/m/Y H:i" }}</p>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-2">
+                        <p class="mb-0"><strong>Customer:</strong> {{ sale.customer_name|default:"Walk-in Customer" }}</p>
+                        <p class="mb-0"><strong>Phone:</strong> {{ sale.customer_phone|default:"-" }}</p>
+                    </div>
+                    
+                    <hr>
+                    
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Price</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    {{ item.product_name }}
+                                    {% if item.product_size %}<br><small class="text-muted">Size: {{ item.product_size }}</small>{% endif %}
+                                    {% if item.product_color %}<small class="text-muted">Color: {{ item.product_color }}</small>{% endif %}
+                                </td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">KES {{ item.price|floatformat:2 }}</td>
+                                <td class="text-end">KES {{ item.subtotal|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                <td class="text-end">KES {{ sale.subtotal|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Tax (16%):</strong></td>
+                                <td class="text-end">KES {{ sale.tax|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Discount:</strong></td>
+                                <td class="text-end">KES {{ sale.discount|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end fw-bold"><strong>Total:</strong></td>
+                                <td class="text-end fw-bold text-success">KES {{ sale.total|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Amount Paid:</strong></td>
+                                <td class="text-end text-primary">KES {{ sale.amount_paid|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Change:</strong></td>
+                                <td class="text-end text-info">KES {{ sale.change_given|floatformat:2 }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Payment:</strong></td>
+                                <td class="text-end">{{ sale.get_payment_method_display }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    
+                    <hr>
+                    
+                    <div class="text-center text-muted small">
+                        <p>{{ company_settings.footer_message|default:"Thank you for shopping with us!" }}</p>
+                        <p class="mb-0">Items: {{ items|length }} | Total Quantity: {{ total_quantity|default:0 }}</p>
+                        <p class="mb-0">Cashier: {{ sale.cashier.get_full_name|default:sale.cashier.username }}</p>
+                        <p class="mb-0">Branch: {{ sale.branch.name|default:"Main Store" }}</p>
+                        <hr>
+                        <p>Generated: {% now "d/m/Y H:i:s" %}</p>
+                    </div>
+                </div>
+                <div class="card-footer bg-white text-center">
+                    <button class="btn btn-primary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Receipt
+                    </button>
+                    <a href="{% url 'fashion_master:sale_detail' sale.id %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Sale
+                    </a>
+                    <a href="{% url 'fashion_master:sale_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-2"></i>All Sales
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .btn-group, .card-footer, .navbar, .sidebar, .fixed-footer, .fixed-top-navbar {
+        display: none !important;
+    }
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    body {
+        background: white !important;
+    }
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    #receipt {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}
+</style>
+{% endblock %}

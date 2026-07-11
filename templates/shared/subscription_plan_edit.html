@@ -19,66 +19,66 @@
                         {% csrf_token %}
                         
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <div class="mb-3">
                                     <label class="form-label">Plan Name *</label>
                                     <input type="text" name="name" id="planName" class="form-control" value="{{ plan.name }}" required oninput="updatePreview()">
                                     <small class="text-muted">Display name of the plan</small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <div class="mb-3">
                                     <label class="form-label">Plan Code *</label>
                                     <input type="text" name="code" id="planCode" class="form-control" value="{{ plan.code }}" required oninput="updatePreview()">
-                                    <small class="text-muted">Unique identifier (will be auto-uppercased)</small>
+                                    <small class="text-muted">Unique identifier</small>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <div class="mb-3">
                                     <label class="form-label">Monthly Price (KES) *</label>
                                     <input type="number" name="price_monthly" id="monthlyPrice" class="form-control" value="{{ plan.price_monthly }}" step="0.01" required oninput="updatePreview()">
+                                    <small class="text-muted">Amount to Pay Monthly</small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <div class="mb-3">
                                     <label class="form-label">Yearly Price (KES) *</label>
                                     <input type="number" name="price_yearly" id="yearlyPrice" class="form-control" value="{{ plan.price_yearly }}" step="0.01" required oninput="updatePreview()">
+                                    <small class="text-muted">Amount to Pay Yearly</small>
                                 </div>
                             </div>
                         </div>
                         
+
+
+
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <div class="mb-3">
                                     <label class="form-label">Max Users</label>
                                     <input type="number" name="max_users" id="maxUsers" class="form-control" value="{{ plan.max_users }}" oninput="updatePreview()">
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <div class="mb-3">
                                     <label class="form-label">Max Products</label>
                                     <input type="number" name="max_products" id="maxProducts" class="form-control" value="{{ plan.max_products }}" oninput="updatePreview()">
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <div class="mb-3">
                                     <label class="form-label">Max Branches</label>
                                     <input type="number" name="max_branches" id="maxBranches" class="form-control" value="{{ plan.max_branches }}" oninput="updatePreview()">
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-4">
+
+                            <div class="col-md-2">
                                 <div class="mb-3">
                                     <label class="form-label">Max Storage (GB)</label>
                                     <input type="number" name="max_storage_gb" id="maxStorage" class="form-control" value="{{ plan.max_storage_gb }}" oninput="updatePreview()">
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <div class="mb-3">
                                     <label class="form-label">Icon</label>
                                     <select name="icon" id="planIcon" class="form-select" onchange="updatePreview()">
@@ -93,7 +93,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <div class="mb-3">
                                     <label class="form-label">Color</label>
                                     <select name="color" id="planColor" class="form-select" onchange="updatePreview()">
@@ -114,26 +114,32 @@
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-1">
                                 <div class="mb-3 form-check">
                                     <input type="checkbox" name="is_active" id="isActive" class="form-check-input" {% if plan.is_active %}checked{% endif %} onchange="updatePreview()">
                                     <label class="form-check-label" for="isActive">Active</label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-1">
                                 <div class="mb-3 form-check">
                                     <input type="checkbox" name="feature_reports" id="featureReports" class="form-check-input" {% if plan.features.reports %}checked{% endif %} onchange="updatePreview()">
-                                    <label class="form-check-label" for="featureReports">📊 Reports</label>
-                                </div>
-                                <div class="mb-3 form-check">
+                                    <label class="form-check-label" for="featureReports">📊 Reports</label> 
+                                </div>                              
+                            </div>
+                            <div class="col-md-1">   
+                                <div class="mb-3 form-check">                            
                                     <input type="checkbox" name="feature_api" id="featureApi" class="form-check-input" {% if plan.features.api %}checked{% endif %} onchange="updatePreview()">
                                     <label class="form-check-label" for="featureApi">🔌 API Access</label>
                                 </div>
-                                <div class="mb-3 form-check">
+                            </div>
+                            <div class="col-md-1"> 
+                                <div class="mb-3 form-check">                           
                                     <input type="checkbox" name="feature_advanced_reports" id="featureAdvancedReports" class="form-check-input" {% if plan.features.advanced_reports %}checked{% endif %} onchange="updatePreview()">
                                     <label class="form-check-label" for="featureAdvancedReports">📈 Advanced Reports</label>
                                 </div>
-                                <div class="mb-3 form-check">
+                            </div>
+                            <div class="col-md-1">   
+                                <div class="mb-3 form-check">                                                         
                                     <input type="checkbox" name="feature_support" id="featureSupport" class="form-check-input" {% if plan.features.support %}checked{% endif %} onchange="updatePreview()">
                                     <label class="form-check-label" for="featureSupport">🛡️ Priority Support</label>
                                 </div>

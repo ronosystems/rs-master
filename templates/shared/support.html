@@ -1,0 +1,548 @@
+{% extends "shared/base_shared.html" %}
+{% load static %}
+
+{% block title %}Support - {{ platform_name|default:"RS Master Africa" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .left-column {
+        padding-right: 30px;
+        border-right: 2px solid #f0f0f0;
+    }
+    .right-column {
+        padding-left: 30px;
+    }
+    
+    .welcome-banner {
+        background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+        border-radius: 16px;
+        padding: 30px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+    }
+    .welcome-banner .icon-large {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+    
+    .info-card {
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    .info-card:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 4px 15px rgba(13, 110, 253, 0.1);
+        transform: translateY(-2px);
+    }
+    .info-card .icon-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    .info-card .icon-circle.primary { background: #e3f2fd; color: #0d6efd; }
+    .info-card .icon-circle.success { background: #d4edda; color: #198754; }
+    .info-card .icon-circle.info { background: #d1ecf1; color: #17a2b8; }
+    .info-card .icon-circle.warning { background: #fff3cd; color: #ffc107; }
+    .info-card .icon-circle.danger { background: #f8d7da; color: #dc3545; }
+    
+    .stat-box {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+    .stat-box:hover {
+        border-color: #0d6efd;
+        background: white;
+        box-shadow: 0 4px 15px rgba(13, 110, 253, 0.08);
+    }
+    .stat-box .stat-number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #0d6efd;
+    }
+    .stat-box .stat-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+    
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+    .feature-item:hover {
+        background: #f8f9fa;
+        border-color: #e9ecef;
+        transform: translateX(5px);
+    }
+    .feature-item .feature-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    .feature-item .feature-icon.blue { background: #e3f2fd; color: #0d6efd; }
+    .feature-item .feature-icon.green { background: #d4edda; color: #198754; }
+    .feature-item .feature-icon.orange { background: #fff3cd; color: #ffc107; }
+    .feature-item .feature-icon.red { background: #f8d7da; color: #dc3545; }
+    .feature-item .feature-icon.purple { background: #e8d5f5; color: #6f42c1; }
+    .feature-item .feature-icon.teal { background: #d1ecf1; color: #17a2b8; }
+    
+    .support-option {
+        padding: 15px;
+        border-radius: 12px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+        background: white;
+    }
+    .support-option:hover {
+        border-color: #0d6efd;
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(13, 110, 253, 0.08);
+    }
+    .support-option .support-icon {
+        font-size: 2rem;
+        margin-bottom: 8px;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    .section-title i {
+        color: #0d6efd;
+        margin-right: 8px;
+    }
+    
+    .social-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        color: white;
+        text-decoration: none;
+        margin: 2px;
+    }
+    .social-link:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .social-link.facebook { background: #1877f2; }
+    .social-link.twitter { background: #1da1f2; }
+    .social-link.linkedin { background: #0a66c2; }
+    .social-link.youtube { background: #ff0000; }
+    .social-link.instagram { background: #e4405f; }
+    .social-link.whatsapp { background: #25d366; }
+    
+    .contact-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    .contact-item:last-child {
+        border-bottom: none;
+    }
+    .contact-item .contact-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        color: #0d6efd;
+        flex-shrink: 0;
+    }
+    
+    @media (max-width: 992px) {
+        .left-column {
+            padding-right: 15px;
+            border-right: none;
+        }
+        .right-column {
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- ============================================ -->
+        <!-- LEFT COLUMN -->
+        <!-- ============================================ -->
+        <div class="col-lg-6 left-column">
+            
+            <!-- WELCOME BANNER -->
+            <div class="welcome-banner mb-4">
+                <div class="icon-large">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h2 class="fw-bold mb-2">Welcome to {{ platform_name|default:"RS Master Africa" }}</h2>
+                <p class="mb-2 opacity-75">Your All-in-One Business Management Platform</p>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <span class="badge bg-primary bg-opacity-50 px-3 py-2">
+                        <i class="fas fa-check-circle me-1"></i> {{ total_users|default:"0" }}+ Users
+                    </span>
+                    <span class="badge bg-success bg-opacity-50 px-3 py-2">
+                        <i class="fas fa-building me-1"></i> {{ total_tenants|default:"0" }}+ Businesses
+                    </span>
+                    <span class="badge bg-info bg-opacity-50 px-3 py-2">
+                        <i class="fas fa-trophy me-1"></i> {{ total_sales|default:"0" }}+ Sales
+                    </span>
+                </div>
+            </div>
+
+            <!-- CONTACT INFO -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="section-title"><i class="fas fa-address-card"></i> Contact Information</h6>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <div class="fw-semibold">Address</div>
+                            <div class="text-muted small">{{ company_address|default:"Nairobi, Kenya" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon"><i class="fas fa-envelope"></i></div>
+                        <div>
+                            <div class="fw-semibold">Email</div>
+                            <div class="text-muted small">
+                                <a href="mailto:{{ support_email|default:'support@rsmaster.com' }}" class="text-decoration-none">
+                                    {{ support_email|default:"support@rsmaster.com" }}
+                                </a>
+                                <span class="text-muted">(Support)</span>
+                            </div>
+                            <div class="text-muted small">
+                                <a href="mailto:{{ sales_email|default:'sales@rsmaster.com' }}" class="text-decoration-none">
+                                    {{ sales_email|default:"sales@rsmaster.com" }}
+                                </a>
+                                <span class="text-muted">(Sales)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon"><i class="fas fa-phone-alt"></i></div>
+                        <div>
+                            <div class="fw-semibold">Phone</div>
+                            <div class="text-muted small">
+                                <a href="tel:{{ support_phone|default:'+254722527955' }}" class="text-decoration-none">
+                                    {{ support_phone|default:"+254 722 527 955" }}
+                                </a>
+                            </div>
+                            <div class="text-muted small">{{ support_hours|default:"Mon-Fri: 8:00 AM - 6:00 PM EAT" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon"><i class="fab fa-whatsapp"></i></div>
+                        <div>
+                            <div class="fw-semibold">WhatsApp</div>
+                            <div class="text-muted small">
+                                <a href="https://wa.me/{{ whatsapp_number|default:'254722527955' }}" target="_blank" class="text-decoration-none">
+                                    {{ whatsapp_number|default:"+254 722 527 955" }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABOUT -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="section-title"><i class="fas fa-info-circle"></i> About {{ platform_name|default:"RS Master Africa" }}</h6>
+                    <p class="text-muted small mb-3">
+                        {{ platform_description|default:"RS Master Africa is a comprehensive business management platform designed to help businesses streamline their operations, manage inventory, process sales, and grow their customer base." }}
+                    </p>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <div class="text-center p-2 bg-light rounded-3">
+                                <i class="fas fa-rocket text-primary"></i>
+                                <div class="fw-semibold small">Mission</div>
+                                <div class="text-muted small">Empower businesses</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-2 bg-light rounded-3">
+                                <i class="fas fa-eye text-success"></i>
+                                <div class="fw-semibold small">Vision</div>
+                                <div class="text-muted small">Leading in Africa</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-2 bg-light rounded-3">
+                                <i class="fas fa-heart text-danger"></i>
+                                <div class="fw-semibold small">Values</div>
+                                <div class="text-muted small">Innovation & Integrity</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HELP -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="section-title"><i class="fas fa-life-ring"></i> Help Center</h6>
+                    <div class="row g-2">
+                        <div class="col-3">
+                            <a href="{{ docs_url|default:'/docs/' }}" class="text-decoration-none">
+                                <div class="support-option">
+                                    <div class="support-icon text-primary"><i class="fas fa-book"></i></div>
+                                    <div class="fw-semibold small">Documentation</div>
+                                    <div class="text-muted small">Guides & Tutorials</div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-3">
+                            <a href="{{ tutorials_url|default:'/tutorials/' }}" class="text-decoration-none">
+                                <div class="support-option">
+                                    <div class="support-icon text-success"><i class="fas fa-video"></i></div>
+                                    <div class="fw-semibold small">Video Tutorials</div>
+                                    <div class="text-muted small">Step-by-step guides</div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-3">
+                            <a href="{{ tickets_url|default:'/support/tickets/' }}" class="text-decoration-none">
+                                <div class="support-option">
+                                    <div class="support-icon text-warning"><i class="fas fa-ticket-alt"></i></div>
+                                    <div class="fw-semibold small">Ticket System</div>
+                                    <div class="text-muted small">Submit a ticket</div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-3">
+                            <a href="{% url 'chats:client_chat' %}" class="text-decoration-none">
+                                <div class="support-option">
+                                    <div class="support-icon text-info"><i class="fas fa-comment-dots"></i></div>
+                                    <div class="fw-semibold small">Live Chat</div>
+                                    <div class="text-muted small">Chat with us</div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- RIGHT COLUMN -->
+        <!-- ============================================ -->
+        <div class="col-lg-6 right-column">
+
+            <!-- CONNECT WITH US -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="section-title"><i class="fas fa-share-alt"></i> Connect With Us</h6>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <a href="{{ social_facebook|default:'#' }}" class="social-link facebook" target="_blank">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="{{ social_twitter|default:'#' }}" class="social-link twitter" target="_blank">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="{{ social_linkedin|default:'#' }}" class="social-link linkedin" target="_blank">
+                            <i class="fab fa-linkedin-in"></i>
+                        </a>
+                        <a href="{{ social_youtube|default:'#' }}" class="social-link youtube" target="_blank">
+                            <i class="fab fa-youtube"></i>
+                        </a>
+                        <a href="{{ social_instagram|default:'#' }}" class="social-link instagram" target="_blank">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="{{ social_whatsapp|default:'#' }}" class="social-link whatsapp" target="_blank">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </div>
+                    <div class="text-center mt-2">
+                        <small class="text-muted">Follow us for updates and news</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FEATURES -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="section-title"><i class="fas fa-star"></i> Platform Features</h6>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon blue"><i class="fas fa-shopping-cart"></i></div>
+                        <div>
+                            <div class="fw-semibold small">Point of Sale</div>
+                            <div class="text-muted small">Fast and intuitive POS system</div>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon green"><i class="fas fa-boxes"></i></div>
+                        <div>
+                            <div class="fw-semibold small">Inventory Management</div>
+                            <div class="text-muted small">Real-time inventory tracking</div>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-icon green"><i class="fas fa-boxes"></i></div>
+                        <div>
+                            <div class="fw-semibold small">Sales Management</div>
+                            <div class="text-muted small">Real-time sales tracking</div>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon orange"><i class="fas fa-users"></i></div>
+                        <div>
+                            <div class="fw-semibold small">Customer Management</div>
+                            <div class="text-muted small">Comprehensive CRM system</div>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon purple"><i class="fas fa-chart-line"></i></div>
+                        <div>
+                            <div class="fw-semibold small">Analytics & Reports</div>
+                            <div class="text-muted small">Data-driven insights</div>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon red"><i class="fas fa-credit-card"></i></div>
+                        <div>
+                            <div class="fw-semibold small">Payment Processing</div>
+                            <div class="text-muted small">Multiple payment methods</div>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon teal"><i class="fas fa-shield-alt"></i></div>
+                        <div>
+                            <div class="fw-semibold small">Security</div>
+                            <div class="text-muted small">Enterprise-grade security</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATISTICS -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="section-title"><i class="fas fa-chart-bar"></i> Platform Statistics</h6>
+                    <div class="row g-2">
+                        <div class="col-3">
+                            <div class="stat-box">
+                                <div class="stat-number">{{ total_tenants|default:"0" }}</div>
+                                <div class="stat-label">Businesses</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="stat-box">
+                                <div class="stat-number text-success">{{ total_users|default:"0" }}</div>
+                                <div class="stat-label">Users</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="stat-box">
+                                <div class="stat-number text-info">{{ total_products|default:"0" }}</div>
+                                <div class="stat-label">Products</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="stat-box">
+                                <div class="stat-number text-warning">{{ total_sales|default:"0" }}</div>
+                                <div class="stat-label">Sales</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUPPORT -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="section-title"><i class="fas fa-headset"></i> Need Help?</h6>
+                    <div class="text-center p-3 bg-light rounded-3">
+                        <i class="fas fa-comment-dots display-6 text-primary mb-2"></i>
+                        <h6 class="fw-bold">We're here to help!</h6>
+                        <p class="text-muted small">Our support team is available to assist you.</p>
+                        <a href="{% url 'chats:client_chat' %}" class="btn btn-primary btn-sm px-4">
+                            <i class="fas fa-comment me-1"></i> Start Chat
+                            <span>------</span>
+                            <span class="badge bg-success ms-2">🟢 Online Now</span>
+                            <span>------</span>
+                            <span class="badge bg-info text-dark ms-1">⚡ Avg Response: ~5 min</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add some animation on scroll
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.card, .welcome-banner');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100 * (index + 1));
+    });
+});
+</script>
+{% endblock %}

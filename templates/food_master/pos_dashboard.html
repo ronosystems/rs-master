@@ -1,0 +1,631 @@
+<!-- templates/food_master/menu_order.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Place Order - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<style>
+    .menu-item-card {
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 12px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        height: 100%;
+        background: white;
+    }
+    .menu-item-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border-color: #e67e22;
+    }
+    .menu-item-card .item-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 3px;
+    }
+    .menu-item-card .item-price {
+        color: #e67e22;
+        font-weight: bold;
+        font-size: 1rem;
+    }
+    .menu-item-card .add-btn {
+        margin-top: 8px;
+        width: 100%;
+        font-size: 0.8rem;
+        padding: 4px;
+    }
+    
+    .cart-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .cart-item .item-info { flex: 1; }
+    .cart-item .item-name { font-weight: 500; font-size: 0.85rem; }
+    .cart-item .qty-control {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .cart-item .qty-control button {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+    .cart-item .qty-control button:hover {
+        background: #e67e22;
+        color: white;
+        border-color: #e67e22;
+    }
+    .cart-item .qty-control .qty {
+        font-weight: 600;
+        min-width: 18px;
+        text-align: center;
+        font-size: 0.85rem;
+    }
+    .cart-item .item-total {
+        font-weight: 600;
+        color: #e67e22;
+        min-width: 70px;
+        text-align: right;
+        font-size: 0.85rem;
+    }
+    .cart-item .remove-btn {
+        color: #dc3545;
+        cursor: pointer;
+        padding: 0 5px;
+        font-size: 1rem;
+    }
+    
+    .cart-sidebar {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        height: 100%;
+        position: sticky;
+        top: 20px;
+    }
+    .cart-sidebar .cart-header {
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+    }
+    .cart-sidebar .cart-items {
+        max-height: 350px;
+        overflow-y: auto;
+    }
+    
+    .category-filter {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 8px 0;
+        flex-wrap: nowrap;
+    }
+    .category-filter .btn {
+        white-space: nowrap;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        padding: 4px 14px;
+    }
+    .category-filter .btn.active {
+        background-color: #e67e22;
+        color: white;
+        border-color: #e67e22;
+    }
+    
+    .waiter-info {
+        background: linear-gradient(135deg, #2d1b0e, #1a1a2e);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    /* Receipt Styles */
+    .receipt-container {
+        max-width: 320px;
+        margin: 0 auto;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        padding: 15px;
+        background: white;
+    }
+    .receipt-container .receipt-header {
+        text-align: center;
+        border-bottom: 2px dashed #333;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+    }
+    .receipt-container .receipt-header h5 {
+        font-weight: bold;
+        margin-bottom: 3px;
+        font-size: 1.1rem;
+    }
+    .receipt-container .receipt-header p {
+        margin-bottom: 2px;
+        font-size: 10px;
+    }
+    .receipt-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 0;
+        font-size: 10px;
+    }
+    .receipt-totals {
+        border-top: 2px solid #333;
+        padding-top: 8px;
+        margin-top: 8px;
+    }
+    .receipt-totals .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 0;
+        font-size: 10px;
+    }
+    .receipt-totals .total {
+        font-weight: bold;
+        font-size: 1.2em;
+        border-top: 1px solid #333;
+        padding-top: 5px;
+        margin-top: 5px;
+    }
+    .receipt-footer {
+        text-align: center;
+        border-top: 2px dashed #333;
+        padding-top: 8px;
+        margin-top: 8px;
+        font-size: 9px;
+    }
+    .receipt-payment {
+        border-top: 1px solid #333;
+        padding-top: 5px;
+        margin-top: 5px;
+    }
+</style>
+
+<!-- Waiter Info Bar -->
+<div class="waiter-info">
+    <div>
+        <i class="fas fa-user-circle fa-2x me-2"></i>
+        <span><strong>Waiter:</strong> {{ waiter_name|default:"Not Logged In" }}</span>
+        <span class="badge bg-success ms-2">Online</span>
+    </div>
+    <div>
+        <span class="badge bg-light text-dark">
+            <i class="fas fa-clock me-1"></i> {{ today|date:"H:i" }}
+        </span>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="fas fa-utensils me-2" style="color: #e67e22;"></i>Place Order</h4>
+    <div>
+        <span class="badge bg-warning text-dark me-2">
+            <i class="fas fa-shopping-cart me-1"></i> <span id="cartCount">0</span> items
+        </span>
+        <button class="btn btn-danger btn-sm" onclick="clearCart()">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Menu Items -->
+    <div class="col-md-8">
+        <div class="category-filter">
+            <button class="btn btn-outline-secondary active" data-category="all" onclick="filterCategory('all')">All</button>
+            {% for category in categories %}
+                <button class="btn btn-outline-secondary" data-category="{{ category.id }}" onclick="filterCategory('{{ category.id }}')">
+                    {% if category.icon %}<i class="{{ category.icon }} me-1"></i>{% endif %}
+                    {{ category.name }}
+                </button>
+            {% endfor %}
+        </div>
+
+        <div class="row g-2" id="menuGrid">
+            {% for item in menu_items %}
+                <div class="col-md-4 col-lg-3 menu-item" data-category="{{ item.category_id }}">
+                    <div class="menu-item-card" onclick="addToCart({{ item.id }}, '{{ item.name|escapejs }}', {{ item.price }})">
+                        <div class="item-name">{{ item.name }}</div>
+                        <div class="item-price">KES {{ item.price|floatformat:0 }}</div>
+                        <button class="btn btn-sm btn-warning add-btn" onclick="event.stopPropagation(); addToCart({{ item.id }}, '{{ item.name|escapejs }}', {{ item.price }})">
+                            <i class="fas fa-plus me-1"></i> Add
+                        </button>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                    <p>No menu items available</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Cart -->
+    <div class="col-md-4">
+        <div class="cart-sidebar">
+            <div class="cart-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-shopping-cart me-2" style="color: #e67e22;"></i>
+                    Order Cart
+                    <span class="badge bg-warning ms-2" id="cartCountBadge">0</span>
+                </h6>
+                <small class="text-muted">Table: <span id="tableDisplay">N/A</span></small>
+            </div>
+            
+            <div class="cart-items" id="cartItems">
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-cart-plus fa-2x mb-2"></i>
+                    <p class="small">Cart is empty</p>
+                </div>
+            </div>
+            
+            <div class="mt-2">
+                <div class="row g-1">
+                    <div class="col-8">
+                        <label class="small">Table No.</label>
+                        <input type="text" id="tableNumber" class="form-control form-control-sm" placeholder="e.g., 5">
+                    </div>
+                    <div class="col-4">
+                        <label class="small">Guests</label>
+                        <input type="number" id="guestCount" class="form-control form-control-sm" value="1" min="1">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="cart-summary mt-2">
+                <div class="row"><span>Subtotal:</span> <span id="cartSubtotal">KES 0.00</span></div>
+                <div class="row"><span>Tax (16%):</span> <span id="cartTax">KES 0.00</span></div>
+                <div class="row total"><span>TOTAL:</span> <span id="cartTotal">KES 0.00</span></div>
+                
+                <button class="btn btn-success w-100 mt-3" onclick="submitOrder()" id="submitOrderBtn" disabled>
+                    <i class="fas fa-check-circle me-1"></i> Submit Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal fade" id="receiptModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body p-0">
+                <div class="receipt-container" id="receiptContent">
+                    <div class="receipt-header">
+                        <h5>{{ company_settings.company_name|default:tenant.company_name }}</h5>
+                        <p>{{ company_settings.address|default:"Restaurant" }}</p>
+                        <p>Tel: {{ company_settings.phone|default:"N/A" }}</p>
+                        <p>Email: {{ company_settings.email|default:"N/A" }}</p>
+                        <hr>
+                        <p><strong>ORDER #: <span id="receiptOrderNumber">---</span></strong></p>
+                        <p><small id="receiptDate"></small></p>
+                        <p><small>Waiter: {{ waiter_name|default:"N/A" }}</small></p>
+                        <p><small>Table: <span id="receiptTable">N/A</span></small></p>
+                    </div>
+                    
+                    <div id="receiptItems"></div>
+                    
+                    <div class="receipt-totals">
+                        <div class="row"><span>Subtotal:</span> <span id="receiptSubtotal">KES 0.00</span></div>
+                        <div class="row"><span>Tax (16%):</span> <span id="receiptTax">KES 0.00</span></div>
+                        <div class="row total"><span>TOTAL:</span> <span id="receiptTotal">KES 0.00</span></div>
+                        <div class="receipt-payment">
+                            <div class="row"><span>Payment Method:</span> <span id="receiptPaymentMethod">Cash</span></div>
+                            <div class="row"><span>Amount Paid:</span> <span id="receiptPaid">KES 0.00</span></div>
+                            <div class="row"><span>Change:</span> <span id="receiptChange">KES 0.00</span></div>
+                        </div>
+                        <div class="receipt-payment" style="border-top: none; margin-top: 3px; padding-top: 3px;">
+                            <div class="row"><span>Till No:</span> <span id="receiptTillNo">{{ company_settings.till_number|default:"N/A" }}</span></div>
+                            <div class="row"><span>Paybill:</span> <span id="receiptPaybill">{{ company_settings.paybill|default:"N/A" }}</span></div>
+                            <div class="row"><span>Account:</span> <span id="receiptAccount">{{ company_settings.account_number|default:"N/A" }}</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="receipt-footer">
+                        <p>Thank you for dining with us!</p>
+                        <p>Please come again</p>
+                        <p><small>{{ today|date:"Y-m-d H:i" }}</small></p>
+                        <p style="font-size: 8px;">This is a system generated receipt</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-primary btn-sm" onclick="printReceiptContent()">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// ============================================
+// GLOBALS
+// ============================================
+let cart = [];
+let currentCategory = 'all';
+let currentOrderNumber = '';
+
+// ============================================
+// CATEGORY FILTER
+// ============================================
+function filterCategory(categoryId) {
+    currentCategory = categoryId;
+    document.querySelectorAll('.category-filter .btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.category-filter .btn[data-category="${categoryId}"]`).classList.add('active');
+    
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.style.display = (categoryId === 'all' || item.dataset.category === categoryId) ? '' : 'none';
+    });
+}
+
+// ============================================
+// CART FUNCTIONS
+// ============================================
+function addToCart(id, name, price) {
+    const existing = cart.find(item => item.id === id);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        cart.push({ id, name, price: parseFloat(price), quantity: 1 });
+    }
+    renderCart();
+    showToast(`${name} added`, 'success');
+}
+
+function renderCart() {
+    const container = document.getElementById('cartItems');
+    const countBadge = document.getElementById('cartCountBadge');
+    const count = document.getElementById('cartCount');
+    const submitBtn = document.getElementById('submitOrderBtn');
+    
+    if (!cart.length) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-cart-plus fa-2x mb-2"></i>
+                <p class="small">Cart is empty</p>
+            </div>
+        `;
+        countBadge.textContent = '0';
+        count.textContent = '0';
+        submitBtn.disabled = true;
+        updateTotals();
+        return;
+    }
+    
+    let html = '';
+    cart.forEach((item, index) => {
+        const total = item.price * item.quantity;
+        html += `
+            <div class="cart-item">
+                <div class="item-info">
+                    <div class="item-name">${item.name}</div>
+                </div>
+                <div class="qty-control">
+                    <button onclick="updateQty(${index}, -1)">−</button>
+                    <span class="qty">${item.quantity}</span>
+                    <button onclick="updateQty(${index}, 1)">+</button>
+                </div>
+                <div class="item-total">KES ${total.toFixed(2)}</div>
+                <span class="remove-btn" onclick="removeFromCart(${index})">×</span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    countBadge.textContent = totalItems;
+    count.textContent = totalItems;
+    submitBtn.disabled = false;
+    updateTotals();
+}
+
+function updateQty(index, delta) {
+    if (cart[index]) {
+        cart[index].quantity += delta;
+        if (cart[index].quantity <= 0) cart.splice(index, 1);
+        renderCart();
+    }
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    renderCart();
+}
+
+function clearCart() {
+    if (!cart.length) return;
+    Swal.fire({
+        title: 'Clear Cart?',
+        text: 'Remove all items?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Yes'
+    }).then(result => {
+        if (result.isConfirmed) { cart = []; renderCart(); }
+    });
+}
+
+// ============================================
+// TOTALS
+// ============================================
+function updateTotals() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = subtotal * 0.16;
+    const total = subtotal + tax;
+    
+    document.getElementById('cartSubtotal').textContent = `KES ${subtotal.toFixed(2)}`;
+    document.getElementById('cartTax').textContent = `KES ${tax.toFixed(2)}`;
+    document.getElementById('cartTotal').textContent = `KES ${total.toFixed(2)}`;
+}
+
+// ============================================
+// SUBMIT ORDER
+// ============================================
+function submitOrder() {
+    if (!cart.length) {
+        showToast('Cart is empty', 'error');
+        return;
+    }
+    
+    const tableNumber = document.getElementById('tableNumber').value.trim() || 'N/A';
+    const guestCount = parseInt(document.getElementById('guestCount').value) || 1;
+    const total = parseFloat(document.getElementById('cartTotal').textContent.replace(/[^0-9.]/g, '')) || 0;
+    
+    const btn = document.getElementById('submitOrderBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+    
+    const orderData = {
+        items: cart,
+        table_number: tableNumber,
+        guest_count: guestCount,
+        total: total
+    };
+    
+    fetch('/food/api/pos/place-order/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(orderData)
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Submit Order';
+        
+        if (data.success) {
+            currentOrderNumber = data.order_number;
+            showReceipt(data);
+            cart = [];
+            renderCart();
+            document.getElementById('tableNumber').value = '';
+            document.getElementById('guestCount').value = '1';
+            showToast('Order submitted!', 'success');
+        } else {
+            showToast(data.message || 'Error', 'error');
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Submit Order';
+        showToast('Network error', 'error');
+    });
+}
+
+// ============================================
+// RECEIPT
+// ============================================
+function showReceipt(data) {
+    const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+    
+    document.getElementById('receiptOrderNumber').textContent = data.order_number;
+    document.getElementById('receiptDate').textContent = new Date().toLocaleString();
+    document.getElementById('receiptTable').textContent = data.table_number || 'N/A';
+    document.getElementById('receiptPaymentMethod').textContent = 'Pending Payment';
+    document.getElementById('receiptPaid').textContent = 'KES 0.00';
+    document.getElementById('receiptChange').textContent = 'KES 0.00';
+    
+    let itemsHtml = '<div class="receipt-items">';
+    data.items.forEach(item => {
+        itemsHtml += `
+            <div class="receipt-item">
+                <span>${item.quantity}x ${item.name}</span>
+                <span>KES ${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+        `;
+    });
+    itemsHtml += '</div>';
+    document.getElementById('receiptItems').innerHTML = itemsHtml;
+    
+    document.getElementById('receiptSubtotal').textContent = `KES ${data.subtotal.toFixed(2)}`;
+    document.getElementById('receiptTax').textContent = `KES ${data.tax.toFixed(2)}`;
+    document.getElementById('receiptTotal').textContent = `KES ${data.total.toFixed(2)}`;
+    
+    modal.show();
+}
+
+function printReceiptContent() {
+    const content = document.getElementById('receiptContent').innerHTML;
+    const win = window.open('', '', 'width=400,height=600');
+    win.document.write(`
+        <html>
+            <head>
+                <title>Receipt #${document.getElementById('receiptOrderNumber').textContent}</title>
+                <style>
+                    body { font-family: 'Courier New', monospace; font-size: 11px; padding: 20px; margin: 0; }
+                    .receipt-container { max-width: 320px; margin: 0 auto; }
+                    .receipt-header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 8px; margin-bottom: 8px; }
+                    .receipt-header h5 { font-weight: bold; margin-bottom: 3px; font-size: 1.1rem; }
+                    .receipt-header p { margin-bottom: 2px; font-size: 10px; }
+                    .receipt-item { display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px; }
+                    .receipt-totals { border-top: 2px solid #333; padding-top: 8px; margin-top: 8px; }
+                    .receipt-totals .row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px; }
+                    .receipt-totals .total { font-weight: bold; font-size: 1.2em; border-top: 1px solid #333; padding-top: 5px; margin-top: 5px; }
+                    .receipt-footer { text-align: center; border-top: 2px dashed #333; padding-top: 8px; margin-top: 8px; font-size: 9px; }
+                    .receipt-payment { border-top: 1px solid #333; padding-top: 5px; margin-top: 5px; }
+                </style>
+            </head>
+            <body>
+                <div class="receipt-container">${content}</div>
+                <script>
+                    window.onload = function() { 
+                        window.print(); 
+                        setTimeout(function() { window.close(); }, 500);
+                    }
+                <\/script>
+            </body>
+        </html>
+    `);
+    win.document.close();
+}
+
+// ============================================
+// UTILITY
+// ============================================
+function getCsrfToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    return token ? token.value : '';
+}
+
+function showToast(msg, type) {
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 1500,
+        icon: type || 'info',
+        title: msg
+    });
+}
+
+// Keyboard shortcut: Ctrl+Enter to submit
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        submitOrder();
+    }
+});
+</script>
+{% endblock %}

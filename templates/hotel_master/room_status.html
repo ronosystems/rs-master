@@ -1,0 +1,146 @@
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}Room Status | Hotel{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2 col-sm-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-1">Total Rooms</h6>
+                    <h3 class="mb-0">{{ total_rooms }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="card border-0 shadow-sm bg-success bg-opacity-50">
+                <div class="card-body text-center">
+                    <h6 class="text-success mb-1">Available</h6>
+                    <h3 class="mb-0 text-dark">{{ available_rooms }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="card border-0 shadow-sm bg-danger bg-opacity-50">
+                <div class="card-body text-center">
+                    <h6 class="text-danger mb-1">Occupied</h6>
+                    <h3 class="mb-0 text-dark">{{ occupied_rooms }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="card border-0 shadow-sm bg-warning bg-opacity-50">
+                <div class="card-body text-center">
+                    <h6 class="text-warning mb-1">Reserved</h6>
+                    <h3 class="mb-0 text-dark">{{ reserved_rooms }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="card border-0 shadow-sm bg-secondary bg-opacity-50">
+                <div class="card-body text-center">
+                    <h6 class="text-secondary mb-1">Maintenance</h6>
+                    <h3 class="mb-0 text-dark">{{ maintenance_rooms }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="card border-0 shadow-sm bg-primary bg-opacity-50">
+                <div class="card-body text-center">
+                    <h6 class="text-primary mb-1">Occupancy</h6>
+                    <h3 class="mb-0 text-dark">{{ occupancy_rate }}%</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Status Grid -->
+    <div class="card border-0 shadow-lg">
+        <div class="card-header bg-primary text-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-door-open me-2"></i>Room Status
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                {% for room in rooms %}
+                    <div class="col-md-2 col-sm-6">
+                        <div class="card h-100 border-2 
+                            {% if room.status == 'available' %}border-success
+                            {% elif room.status == 'occupied' %}border-danger
+                            {% elif room.status == 'reserved' %}border-warning
+                            {% elif room.status == 'maintenance' %}border-secondary
+                            {% endif %} shadow-sm">
+                            
+                            <div class="card-body text-center">
+                                <div class="mb-2">
+                                    <span class="badge 
+                                        {% if room.status == 'available' %}bg-success
+                                        {% elif room.status == 'occupied' %}bg-danger
+                                        {% elif room.status == 'reserved' %}bg-warning
+                                        {% elif room.status == 'maintenance' %}bg-secondary
+                                        {% endif %} fs-6 px-3 py-2">
+                                        {{ room.get_status_display }}
+                                    </span>
+                                </div>
+                                
+                                <h4 class="mb-1 fw-bold">{{ room.room_number }}</h4>
+                                <p class="text-muted mb-2 small">{{ room.get_room_type_display }}</p>
+                                
+                                <div class="small mb-2">
+                                    <span class="text-muted">Floor:</span> {{ room.floor }}
+                                    <span class="mx-1">|</span>
+                                    <span class="text-muted">Capacity:</span> {{ room.capacity }}
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <span class="fw-bold">KES {{ room.price|floatformat:2 }}</span>
+                                    <span class="text-muted small">/ night</span>
+                                </div>
+                                
+                                {% if room.status == 'occupied' or room.status == 'reserved' %}
+                                    {% for booking_id, booking in current_bookings.items %}
+                                        {% if booking %}
+                                            <hr>
+                                            <div class="small text-start">
+                                                <div><strong>Guest:</strong> {{ booking.guest_name }}</div>
+                                                <div><strong>Check-in:</strong> {{ booking.check_in|date:"d M Y" }}</div>
+                                                <div><strong>Check-out:</strong> {{ booking.check_out|date:"d M Y" }}</div>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                
+                                <!-- Room Features -->
+                                <div class="mt-2">
+                                    {% if room.has_ac %}<i class="fas fa-snowflake text-info" title="AC"></i>{% endif %}
+                                    {% if room.has_tv %}<i class="fas fa-tv text-primary" title="TV"></i>{% endif %}
+                                    {% if room.has_wifi %}<i class="fas fa-wifi text-success" title="WiFi"></i>{% endif %}
+                                    {% if room.has_bathroom %}<i class="fas fa-bath text-info" title="Bathroom"></i>{% endif %}
+                                    {% if room.has_balcony %}<i class="fas fa-umbrella text-warning" title="Balcony"></i>{% endif %}
+                                    {% if room.has_minibar %}<i class="fas fa-wine-bottle text-danger" title="Minibar"></i>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <div class="text-center py-5">
+                            <i class="fas fa-door-open fa-3x text-muted mb-3"></i>
+                            <h5>No rooms found</h5>
+                            <p class="text-muted">Add rooms to start managing your hotel</p>
+                            <a href="{% url 'hotel_master:add_room' %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Add Room
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

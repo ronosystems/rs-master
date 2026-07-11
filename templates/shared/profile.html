@@ -1,6 +1,6 @@
-{% extends "shared/base_main.html" %}
+{% extends "shared/base_shared.html" %}
 
-{% block title %}My Profile{% endblock %}
+{% block title %}   {{ user.get_full_name|default:user.username }} {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -9,7 +9,7 @@
             <div class="card border-0 shadow-lg">
                 <div class="card-header bg-primary text-white py-3">
                     <h5 class="mb-0">
-                        <i class="fas fa-user-circle me-2"></i>My Profile
+                        <i class="fas fa-user-circle me-2"></i>{{ user.get_full_name|default:user.username }}
                     </h5>
                 </div>
                 <div class="card-body p-4">
@@ -43,7 +43,7 @@
                                 <input type="text" name="phone_number" class="form-control" value="{{ user.phone_number }}">
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label fw-semibold">Tenant / Company</label>
+                                <label class="form-label fw-semibold">Company</label>
                                 <input type="text" class="form-control" value="{{ tenant.company_name|default:'System' }}" disabled>
                             </div>
                         </div>
@@ -53,7 +53,7 @@
                             <button type="submit" class="btn btn-primary px-4">
                                 <i class="fas fa-save me-2"></i>Save Changes
                             </button>
-                            <a href="{% url 'dashboard' %}" class="btn btn-secondary px-4">
+                            <a href="{% url 'tech_master:dashboard' %}" class="btn btn-secondary px-4">
                                 <i class="fas fa-times me-2"></i>Cancel
                             </a>
                         </div>

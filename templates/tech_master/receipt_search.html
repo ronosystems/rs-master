@@ -1,0 +1,282 @@
+<!-- templates/tech_master/receipt_search.html -->
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Receipt Search{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-file-invoice text-primary me-2"></i>Receipt Search
+            </h4>
+            <p class="text-muted mb-0">Search and view receipts by invoice number or customer</p>
+        </div>
+        <div>
+            <a href="{% url 'tech_master:sales_history' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Sales
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="q" class="form-control" 
+                               placeholder="Search by invoice, customer name, or phone..." 
+                               value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" name="date_from" class="form-control" 
+                           value="{{ date_from }}" placeholder="Date From">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" name="date_to" class="form-control" 
+                           value="{{ date_to }}" placeholder="Date To">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+                <div class="col-12">
+                    <a href="{% url 'tech_master:receipt_search' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-2"></i>Clear Search
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-list me-2"></i>Receipts
+                    <span class="badge bg-secondary ms-2">{{ sales.paginator.count }}</span>
+                </h6>
+                {% if search_query %}
+                <span class="text-muted">
+                    <i class="fas fa-filter me-1"></i>Showing results for: "{{ search_query }}"
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Items</th>
+                            <th>Total (KES)</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales %}
+                        <tr>
+                            <td>
+                                <span class="fw-bold text-primary">{{ sale.invoice_no }}</span>
+                            </td>
+                            <td>
+                                <div>{{ sale.created_at|date:"Y-m-d" }}</div>
+                                <small class="text-muted">{{ sale.created_at|time:"H:i" }}</small>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ sale.customer_name|default:"Walk-in" }}</div>
+                                {% if sale.customer %}
+                                <small class="text-muted">ID: {{ sale.customer.id }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ sale.customer_phone|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ sale.items_count|default:0 }}</span>
+                            </td>
+                            <td>
+                                <span class="fw-bold">KES {{ sale.total|floatformat:0 }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ sale.get_payment_method_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if sale.status == 'completed' %}bg-success
+                                    {% elif sale.status == 'pending' %}bg-warning text-dark
+                                    {% elif sale.status == 'cancelled' %}bg-danger
+                                    {% elif sale.status == 'refunded' %}bg-secondary
+                                    {% else %}bg-light text-dark{% endif %}">
+                                    {{ sale.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'tech_master:receipt' sale.id %}" 
+                                       class="btn btn-outline-primary" title="View Receipt" target="_blank">
+                                        <i class="fas fa-receipt"></i>
+                                    </a>
+                                    <a href="{% url 'tech_master:sale_detail' sale.id %}" 
+                                       class="btn btn-outline-secondary" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-3x d-block mb-3 opacity-50"></i>
+                                {% if search_query %}
+                                No receipts found matching "{{ search_query }}"
+                                {% else %}
+                                Enter search criteria to find receipts
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Showing {{ sales.start_index }} to {{ sales.end_index }} of {{ sales.paginator.count }} receipts
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if sales.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ sales.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">{{ sales.number }}</span>
+                        </li>
+
+                        {% if sales.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ sales.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ sales.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    {% if sales %}
+    <div class="row g-3 mt-2">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Sales</h6>
+                            <h5 class="fw-bold mb-0">{{ total_sales|floatformat:0 }}</h5>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-2">
+                            <i class="fas fa-money-bill-wave text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Items</h6>
+                            <h5 class="fw-bold mb-0">{{ total_items|default:0 }}</h5>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-2">
+                            <i class="fas fa-box text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Unique Customers</h6>
+                            <h5 class="fw-bold mb-0">{{ unique_customers|default:0 }}</h5>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded p-2">
+                            <i class="fas fa-users text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit search on Enter key
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.closest('form').submit();
+            }
+        });
+    }
+    
+    // Date range validation
+    const dateFrom = document.querySelector('input[name="date_from"]');
+    const dateTo = document.querySelector('input[name="date_to"]');
+    
+    if (dateFrom && dateTo) {
+        dateFrom.addEventListener('change', function() {
+            if (this.value) {
+                dateTo.min = this.value;
+            }
+        });
+        
+        dateTo.addEventListener('change', function() {
+            if (this.value && dateFrom.value && this.value < dateFrom.value) {
+                alert('End date cannot be before start date');
+                this.value = '';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -56,7 +56,7 @@
         .sidebar-footer .footer-btn.help-btn:hover { background: linear-gradient(135deg, #0084ff, #0011ff); transform: translateX(5px); }
         .fixed-left-sidebar.collapsed .sidebar-footer .footer-btn span { display: none; }
         .fixed-left-sidebar.collapsed .sidebar-footer .footer-btn { justify-content: center; padding: 12px 0; }
-        .main-content { margin-top: 80px; margin-left: 280px; min-height: calc(100vh - 130px); padding: 25px 30px; transition: all 0.3s ease; background: var(--bs-body-bg); }
+        .main-content { margin-top: 80px; margin-left: 280px; min-height: calc(100vh - 130px); padding: 25px 30px; transition: all 0.3s ease; background: #888; }
         .main-content.sidebar-collapsed { margin-left: 80px; }
         .fixed-footer { position: fixed; bottom: 0; left: 280px; right: 0; height: 50px; background: var(--footer-bg); border-top: 1px solid var(--sidebar-border); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; font-size: 0.8rem; color: var(--sidebar-text); z-index: 998; transition: all 0.3s ease; }
         .fixed-footer.sidebar-collapsed { left: 80px; }
@@ -65,7 +65,276 @@
         .sidebar-menu-wrapper::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
         .card { background: var(--card-bg); border: none; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: all 0.3s; }
         .card:hover { box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
-        @media (max-width: 768px) { .fixed-top-navbar { height: 70px; padding: 0 15px; } .mobile-menu-btn { display: flex !important; } .navbar-left { gap: 10px; } .fixed-left-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; top: 70px; } .fixed-left-sidebar.mobile-open { transform: translateX(0); } .main-content { margin-left: 0; padding: 15px; margin-top: 70px; } .fixed-footer { left: 0; } .company-name { display: none; } .user-info { display: none; } }
+
+        /* ============================================ */
+        /* NOTIFICATION BUTTON */
+        /* ============================================ */
+        .notification-btn {
+            position: relative;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .notification-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.05);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.6rem;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            border: 2px solid #1a1a2e;
+            animation: badgePulse 2s infinite;
+        }
+
+        .notification-badge.zero {
+            display: none;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Notification Dropdown */
+        .notification-dropdown {
+            position: absolute;
+            top: 60px;
+            right: 0;
+            width: 380px;
+            max-height: 500px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 1px solid var(--sidebar-border);
+            display: none;
+            overflow: hidden;
+            z-index: 1001;
+            animation: slideDown 0.3s ease;
+        }
+
+        .notification-dropdown.active {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .notification-dropdown-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--sidebar-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-dropdown-header h6 {
+            margin: 0;
+            font-weight: 600;
+            color: var(--sidebar-text);
+        }
+
+        .notification-dropdown-header .mark-all-read {
+            font-size: 0.75rem;
+            color: #0f67b3;
+            cursor: pointer;
+            background: none;
+            border: none;
+            text-decoration: none;
+        }
+
+        .notification-dropdown-header .mark-all-read:hover {
+            text-decoration: underline;
+        }
+
+        .notification-list {
+            max-height: 350px;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .notification-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .notification-list::-webkit-scrollbar-track {
+            background: var(--sidebar-border);
+        }
+
+        .notification-list::-webkit-scrollbar-thumb {
+            background: #0f67b3;
+            border-radius: 10px;
+        }
+
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: var(--sidebar-text);
+        }
+
+        .notification-item:hover {
+            background: var(--sidebar-hover);
+        }
+
+        .notification-item.unread {
+            background: rgba(15, 103, 179, 0.05);
+            border-left: 3px solid #0f67b3;
+        }
+
+        .notification-item .icon-wrapper {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .notification-item .icon-wrapper.chat {
+            background: rgba(99, 102, 241, 0.15);
+            color: #6366f1;
+        }
+
+        .notification-item .icon-wrapper.system {
+            background: rgba(251, 191, 36, 0.15);
+            color: #f59e0b;
+        }
+
+        .notification-item .icon-wrapper.alert {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .notification-item .icon-wrapper.success {
+            background: rgba(52, 211, 153, 0.15);
+            color: #34d399;
+        }
+
+        .notification-item .content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notification-item .content .title {
+            font-weight: 500;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+
+        .notification-item .content .message {
+            font-size: 0.78rem;
+            color: rgba(0,0,0,0.6);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .notification-item .content .time {
+            font-size: 0.65rem;
+            color: rgba(0,0,0,0.4);
+            margin-top: 2px;
+        }
+
+        .notification-item .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+
+        .notification-item .status-dot.unread {
+            background: #0f67b3;
+        }
+
+        .notification-item .status-dot.read {
+            background: #cbd5e1;
+        }
+
+        .notification-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: rgba(0,0,0,0.4);
+        }
+
+        .notification-empty i {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        .notification-empty p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        [data-bs-theme="dark"] .notification-item .content .message {
+            color: rgba(255,255,255,0.5);
+        }
+
+        [data-bs-theme="dark"] .notification-item .content .time {
+            color: rgba(255,255,255,0.3);
+        }
+
+        [data-bs-theme="dark"] .notification-item {
+            border-bottom-color: rgba(255,255,255,0.05);
+        }
+
+        [data-bs-theme="dark"] .notification-item.unread {
+            background: rgba(15, 103, 179, 0.1);
+        }
+
+        [data-bs-theme="dark"] .notification-empty {
+            color: rgba(255,255,255,0.4);
+        }
+
+        @media (max-width: 768px) {
+            .fixed-top-navbar { height: 70px; padding: 0 15px; }
+            .mobile-menu-btn { display: flex !important; }
+            .navbar-left { gap: 10px; }
+            .fixed-left-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; top: 70px; }
+            .fixed-left-sidebar.mobile-open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 15px; margin-top: 70px; }
+            .fixed-footer { left: 0; }
+            .company-name { display: none; }
+            .user-info { display: none; }
+            .notification-dropdown { width: 320px; right: -80px; }
+        }
+
+        @media (max-width: 400px) {
+            .notification-dropdown { width: 290px; right: -100px; }
+        }
     </style>
 </head>
 <body>
@@ -82,6 +351,30 @@
             <div class="company-name">RS MASTER PLATFORM</div>
         </div>
         <div class="navbar-right">
+            <!-- ============================================ -->
+            <!-- NOTIFICATION BUTTON WITH DROPDOWN -->
+            <!-- ============================================ -->
+            <div style="position: relative;">
+                <button class="notification-btn" id="notificationBtn" onclick="toggleNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationBadge">0</span>
+                </button>
+                
+                <!-- Notification Dropdown -->
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-dropdown-header">
+                        <h6><i class="fas fa-bell me-2"></i>Notifications</h6>
+                        <button class="mark-all-read" onclick="markAllRead()">Mark all as read</button>
+                    </div>
+                    <div class="notification-list" id="notificationList">
+                        <div class="notification-empty">
+                            <i class="fas fa-inbox"></i>
+                            <p>No notifications yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
                 <i class="fas fa-moon"></i>
             </button>
@@ -96,6 +389,8 @@
                 <ul class="dropdown-menu dropdown-menu-profile">
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{% url 'portal:profile' %}"><i class="fas fa-user me-2"></i> My Profile</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'settings:profile_settings' %}"><i class="fas fa-user me-2"></i>Profile Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{% url 'portal:change_password' %}"><i class="fas fa-key me-2"></i> Change Password</a></li>
                     <li><hr class="dropdown-divider"></li>
@@ -114,7 +409,7 @@
         </div>
         <div class="sidebar-menu-wrapper">
             <div class="sidebar-menu">
-                <div class="menu-title">PLATFORM MANAGEMENT</div>
+                <div class="menu-title">RS MANAGEMENT</div>
                 <a href="{% url 'portal:super_admin_dashboard' %}" class="menu-item">
                     <i class="fas fa-tachometer-alt"></i><span>Platform Dashboard</span>
                 </a>
@@ -131,7 +426,7 @@
                     <i class="fas fa-building"></i><span>Manage Tenants</span>
                 </a>
                 <div class="menu-divider"></div>
-                <div class="menu-title">PLATFORM SETTINGS</div>
+                <div class="menu-title">RS SETTINGS</div>
                 <a href="{% url 'portal:platform_settings' %}" class="menu-item">
                     <i class="fas fa-cog"></i><span>Platform Settings</span>
                 </a>
@@ -141,13 +436,12 @@
             </div>
         </div>
 
-        
-        <!-- Sidebar Footer -->
+        <!-- Sidebar Footer - Live Chat Link -->
         <div class="sidebar-footer">
-            <a href="#" class="footer-btn help-btn">
-                <span> help line ? </span>
-                <span> 📞 </span>
-                <span> 0722 527 955 </span>
+            <a href="{% url 'chats:admin_chat' %}" class="footer-btn help-btn">
+                <i class="fas fa-comment-dots"></i>
+                <span>Support Centre</span>
+                <span class="badge bg-danger ms-1" id="chatBadge" style="display: none;">0</span>
             </a>
         </div>
     </div>
@@ -174,7 +468,207 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
+        // ============================================
+        // NOTIFICATIONS
+        // ============================================
+        let notifications = [];
+        let unreadCount = 0;
+
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('active');
+                if (dropdown.classList.contains('active')) {
+                    loadNotifications();
+                }
+            }
+        }
+
+        function loadNotifications() {
+            // First check unread count from server
+            fetch('/chats/api/unread/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update unread count from server
+                        unreadCount = data.unread_count || 0;
+                        updateNotificationBadge();
+                    }
+                })
+                .catch(error => {
+                    // Silent fail
+                });
+            
+            // Load notifications from server
+            fetch('/chats/api/conversations/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const list = document.getElementById('notificationList');
+                        
+                        if (data.conversations.length === 0) {
+                            list.innerHTML = `
+                                <div class="notification-empty">
+                                    <i class="fas fa-inbox"></i>
+                                    <p>No conversations yet</p>
+                                </div>
+                            `;
+                            return;
+                        }
+                        
+                        // Convert conversations to notifications
+                        list.innerHTML = data.conversations.map(conv => `
+                            <div class="notification-item ${conv.unread > 0 ? 'unread' : ''}" onclick="window.location.href='/chats/'">
+                                <div class="icon-wrapper chat">
+                                    <i class="fas fa-comment-dots"></i>
+                                </div>
+                                <div class="content">
+                                    <div class="title">${conv.name}</div>
+                                    <div class="message">${conv.last_message || 'No messages'}</div>
+                                    <div class="time">${conv.time || 'Just now'}</div>
+                                </div>
+                                ${conv.unread > 0 ? `<span class="badge bg-danger ms-auto">${conv.unread}</span>` : ''}
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading notifications:', error);
+                });
+        }
+
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount;
+                    badge.classList.remove('zero');
+                } else {
+                    badge.textContent = '0';
+                    badge.classList.add('zero');
+                }
+            }
+            
+            // Update chat badge in sidebar
+            const chatBadge = document.getElementById('chatBadge');
+            if (chatBadge) {
+                if (unreadCount > 0) {
+                    chatBadge.textContent = unreadCount;
+                    chatBadge.style.display = 'inline';
+                } else {
+                    chatBadge.style.display = 'none';
+                }
+            }
+        }
+
+        function markAllRead() {
+            // Mark all as read - can implement API call if needed
+            unreadCount = 0;
+            updateNotificationBadge();
+            
+            // Close dropdown
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown) {
+                dropdown.classList.remove('active');
+            }
+            
+            // Show toast notification
+            showToast('All notifications marked as read', 'success');
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} alert-dismissible fade show`;
+            toast.style.cssText = 'position: fixed; top: 90px; right: 30px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // ============================================
+        // LIVE CHAT NOTIFICATION POLLING
+        // ============================================
+        
+        let chatPollingInterval = null;
+
+        function startChatPolling() {
+            if (chatPollingInterval) {
+                clearInterval(chatPollingInterval);
+            }
+            
+            // Check every 10 seconds
+            chatPollingInterval = setInterval(function() {
+                checkUnreadMessages();
+            }, 10000);
+        }
+
+        function checkUnreadMessages() {
+            // Only check if user is super admin
+            const roleElement = document.querySelector('.user-role');
+            if (roleElement && roleElement.textContent.trim() !== 'Super Admin') {
+                return;
+            }
+            
+            fetch('/chats/api/unread/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const count = data.unread_count || 0;
+                        
+                        // Update unread count
+                        unreadCount = count;
+                        updateNotificationBadge();
+                        
+                        // Show browser notification if new messages
+                        if (count > 0 && !document.hasFocus()) {
+                            showBrowserNotification(count);
+                        }
+                        
+                        // Update notification dropdown if it's open
+                        const dropdown = document.getElementById('notificationDropdown');
+                        if (dropdown && dropdown.classList.contains('active')) {
+                            loadNotifications();
+                        }
+                    }
+                })
+                .catch(error => {
+                    // Silent fail
+                });
+        }
+
+        function showBrowserNotification(count) {
+            if (!('Notification' in window)) return;
+            
+            if (Notification.permission === 'granted') {
+                const notification = new Notification('💬 New Chat Messages', {
+                    body: `You have ${count} new message${count > 1 ? 's' : ''} from visitors.`,
+                    icon: '/static/images/favicon.png',
+                    tag: 'chat-notification',
+                    requireInteraction: true,
+                });
+                
+                notification.onclick = function() {
+                    window.focus();
+                    window.location.href = '/chats/';
+                    notification.close();
+                };
+            } else if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        // ============================================
+        // THEME FUNCTIONS
+        // ============================================
         function toggleTheme() {
             const html = document.documentElement;
             const currentTheme = html.getAttribute('data-bs-theme');
@@ -190,6 +684,7 @@
                 themeIcon.classList.add('fa-moon');
             }
         }
+
         function loadTheme() {
             const savedTheme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-bs-theme', savedTheme);
@@ -202,7 +697,12 @@
                 themeIcon.classList.add('fa-moon');
             }
         }
+
+        // ============================================
+        // SIDEBAR FUNCTIONS
+        // ============================================
         document.getElementById('currentYear').innerText = new Date().getFullYear();
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
@@ -212,6 +712,7 @@
             footer.classList.toggle('sidebar-collapsed');
             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
+
         function toggleMobileSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
@@ -219,6 +720,7 @@
             overlay.classList.add('active');
             document.body.style.overflow = 'hidden';
         }
+
         function closeMobileSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
@@ -226,6 +728,7 @@
             overlay.classList.remove('active');
             document.body.style.overflow = '';
         }
+
         function loadSidebarState() {
             if (window.innerWidth > 768) {
                 const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
@@ -239,6 +742,7 @@
                 }
             }
         }
+
         function setActiveMenuItem() {
             const currentPath = window.location.pathname;
             document.querySelectorAll('.menu-item').forEach(item => {
@@ -250,6 +754,10 @@
                 }
             });
         }
+
+        // ============================================
+        // WINDOW EVENTS
+        // ============================================
         window.addEventListener('resize', function() {
             if (window.innerWidth > 768) {
                 closeMobileSidebar();
@@ -259,6 +767,7 @@
                 sidebar.classList.remove('collapsed');
             }
         });
+
         document.querySelectorAll('.menu-item').forEach(item => {
             item.addEventListener('click', function() {
                 if (window.innerWidth <= 768) {
@@ -266,11 +775,10 @@
                 }
             });
         });
-        document.addEventListener('DOMContentLoaded', function() {
-            loadTheme();
-            loadSidebarState();
-            setActiveMenuItem();
-        });
+
+        // ============================================
+        // CSRF TOKEN SETUP
+        // ============================================
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -285,6 +793,7 @@
             }
             return cookieValue;
         }
+
         const csrftoken = getCookie('csrftoken');
         $.ajaxSetup({
             beforeSend: function(xhr, settings) {
@@ -293,6 +802,46 @@
                 }
             }
         });
+
+        // ============================================
+        // DOCUMENT READY
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTheme();
+            loadSidebarState();
+            setActiveMenuItem();
+            
+            // Load notifications
+            loadNotifications();
+            
+            // Start chat polling
+            startChatPolling();
+            
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        });
+
+        // Click outside to close notification dropdown
+        document.addEventListener('click', function(e) {
+            const btn = document.getElementById('notificationBtn');
+            const dropdown = document.getElementById('notificationDropdown');
+            if (btn && dropdown) {
+                if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                }
+            }
+        });
+
+        // Clean up polling on page unload
+        window.addEventListener('beforeunload', function() {
+            if (chatPollingInterval) {
+                clearInterval(chatPollingInterval);
+            }
+        });
+
+        // Auto-dismiss alerts after 5 seconds
         setTimeout(function() {
             document.querySelectorAll('.alert').forEach(function(alert) {
                 alert.style.transition = 'opacity 0.5s ease';

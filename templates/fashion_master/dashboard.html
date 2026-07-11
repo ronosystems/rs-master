@@ -1,0 +1,612 @@
+<!-- templates/fashion_master/dashboard.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %} {{ company_settings.company_name|default:tenant.company_name }} {% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    
+    <!-- ============================================ -->
+    <!-- FULL SCREEN SLIDESHOW - FASHION COLLECTIONS -->
+    <!-- ============================================ -->
+    <div id="heroSlideshow" class="position-relative" style="height: 100vh; overflow: hidden;">
+        <!-- Slides -->
+        <div class="slide active" style="background-image: url('https://images.unsplash.com/photo-1445205170230-053b83016050?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Welcome to {{ company_settings.company_name|default:tenant.company_name }}</h1>
+                    <p class="lead fs-2 mb-4">Premium Fashion & Lifestyle</p>
+                    <p class="fs-4">Discover the Latest Trends</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Elegant Collections</h1>
+                    <p class="lead fs-2 mb-4">Curated for Every Occasion</p>
+                    <p class="fs-4">Sophisticated & Timeless</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Boutique Experience</h1>
+                    <p class="lead fs-2 mb-4">Unique Pieces, Personal Service</p>
+                    <p class="fs-4">Discover Your Style</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Luxury Fashion</h1>
+                    <p class="lead fs-2 mb-4">Premium Quality, Affordable Prices</p>
+                    <p class="fs-4">Shop the Best Brands</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">New Arrivals</h1>
+                    <p class="lead fs-2 mb-4">Stay Ahead of the Trends</p>
+                    <p class="fs-4">Season's Hottest Styles</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Shop With Confidence</h1>
+                    <p class="lead fs-2 mb-4">Quality Guaranteed</p>
+                    <p class="fs-4">Hassle-Free Returns</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Arrows -->
+        <button class="slide-arrow prev-arrow" onclick="changeSlide(-1)">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="slide-arrow next-arrow" onclick="changeSlide(1)">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <!-- Dots Navigation -->
+        <div class="slide-dots">
+            <span class="dot active" onclick="currentSlide(0)"></span>
+            <span class="dot" onclick="currentSlide(1)"></span>
+            <span class="dot" onclick="currentSlide(2)"></span>
+            <span class="dot" onclick="currentSlide(3)"></span>
+            <span class="dot" onclick="currentSlide(4)"></span>
+            <span class="dot" onclick="currentSlide(5)"></span>
+        </div>
+
+        <!-- Scroll Down Indicator -->
+        <div class="scroll-indicator">
+            <span class="mouse">
+                <span class="mouse-wheel"></span>
+            </span>
+            <span class="scroll-text">Scroll Down</span>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- DASHBOARD STATS - ONLY FOR AUTHENTICATED USERS -->
+    <!-- ============================================ -->
+    {% if user.is_super_admin or user.is_tenant_admin %}
+    <div class="container-fluid mt-4" id="statsSection">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2"><i class="fas fa-tshirt text-primary me-2"></i>Fashion Dashboard</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <span class="badge bg-primary text-white me-2"><i class="fas fa-building me-1"></i> {{ company_settings.company_name|default:tenant.company_name }}</span>
+                <span class="badge bg-primary text-white"><i class="fas fa-project-diagram me-1"></i> FASHION MASTER</span>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card card-fashion">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Total Products</h6>
+                                <h3 class="mb-0">{{ total_products|default:0 }}</h3>
+                            </div>
+                            <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-boxes fa-2x text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-fashion">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Categories</h6>
+                                <h3 class="mb-0">{{ total_categories|default:0 }}</h3>
+                            </div>
+                            <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-tags fa-2x text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-fashion">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Today's Sales</h6>
+                                <h3 class="mb-0">{{ today_sales|default:0 }}</h3>
+                            </div>
+                            <div class="bg-info bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-shopping-cart fa-2x text-info"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-fashion">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Revenue</h6>
+                                <h3 class="mb-0">KES {{ today_revenue|default:0|floatformat:0 }}</h3>
+                            </div>
+                            <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-money-bill-wave fa-2x text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats Row -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card card-fashion">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Low Stock Items</h6>
+                                <h4 class="mb-0 text-danger">{{ low_stock|default:0 }}</h4>
+                            </div>
+                            <div class="bg-danger bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-fashion">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Out of Stock</h6>
+                                <h4 class="mb-0 text-danger">{{ out_of_stock|default:0 }}</h4>
+                            </div>
+                            <div class="bg-danger bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-times-circle fa-2x text-danger"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-fashion">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Staff Members</h6>
+                                <h4 class="mb-0">{{ total_staff|default:0 }}</h4>
+                            </div>
+                            <div class="bg-secondary bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-users fa-2x text-secondary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <div class="card card-fashion">
+                    <div class="card-header bg-transparent">
+                        <h6 class="mb-0"><i class="fas fa-bolt text-primary me-2"></i>Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{% url 'fashion_master:product_create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle me-2"></i>Add Product
+                            </a>
+                            <a href="{% url 'fashion_master:category_create' %}" class="btn btn-success">
+                                <i class="fas fa-tag me-2"></i>Add Category
+                            </a>
+                            <a href="{% url 'fashion_master:sale_create' %}" class="btn btn-info text-white">
+                                <i class="fas fa-cash-register me-2"></i>New Sale
+                            </a>
+                            <a href="{% url 'fashion_master:staff_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-user-plus me-2"></i>Manage Staff
+                            </a>
+                            <a href="{% url 'fashion_master:inventory_list' %}" class="btn btn-warning text-dark">
+                                <i class="fas fa-clipboard-list me-2"></i>Inventory
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coming Soon Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-fashion bg-light">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-tshirt fa-4x text-primary mb-3"></i>
+                        <h4>FASHION MASTER - Full Features Coming Soon!</h4>
+                        <p class="text-muted">Complete fashion management including product catalog, inventory, sales, and more.</p>
+                        <div class="progress" style="height: 10px; max-width: 400px; margin: 0 auto;">
+                            <div class="progress-bar bg-primary" style="width: 40%;"></div>
+                        </div>
+                        <p class="text-muted small mt-2">40% complete</p>
+                        <div class="mt-3">
+                            <span class="badge bg-primary me-1">Clothing</span>
+                            <span class="badge bg-success me-1">Shoes</span>
+                            <span class="badge bg-info me-1">Beddings</span>
+                            <span class="badge bg-warning text-dark me-1">Cosmetics</span>
+                            <span class="badge bg-danger me-1">Boutique</span>
+                            <span class="badge bg-secondary">Baby Shop</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    /* ============================================ */
+    /* SLIDESHOW STYLES */
+    /* ============================================ */
+    #heroSlideshow {
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        background: #000;
+    }
+
+    .slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out;
+        z-index: 1;
+    }
+
+    .slide.active {
+        opacity: 1;
+        z-index: 2;
+    }
+
+    .slide-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .slide-content {
+        max-width: 800px;
+        padding: 20px;
+        animation: fadeInUp 1.5s ease;
+    }
+
+    .slide-content h1 {
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        font-size: 4rem;
+    }
+
+    .slide-content p {
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Navigation Arrows */
+    .slide-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: none;
+        padding: 15px 20px;
+        cursor: pointer;
+        font-size: 1.5rem;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        z-index: 10;
+        backdrop-filter: blur(5px);
+    }
+
+    .slide-arrow:hover {
+        background: rgba(255, 255, 255, 0.4);
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    .prev-arrow {
+        left: 20px;
+    }
+
+    .next-arrow {
+        right: 20px;
+    }
+
+    /* Dots Navigation */
+    .slide-dots {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
+        z-index: 10;
+    }
+
+    .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .dot.active {
+        background: #6a1b9a;
+        transform: scale(1.2);
+    }
+
+    .dot:hover {
+        background: rgba(255, 255, 255, 0.8);
+        transform: scale(1.1);
+    }
+
+    /* Scroll Indicator */
+    .scroll-indicator {
+        position: absolute;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        text-align: center;
+        z-index: 10;
+        animation: bounce 2s infinite;
+        cursor: pointer;
+    }
+
+    .scroll-indicator .mouse {
+        display: block;
+        width: 25px;
+        height: 40px;
+        border: 2px solid white;
+        border-radius: 15px;
+        margin: 0 auto 8px;
+        position: relative;
+    }
+
+    .scroll-indicator .mouse-wheel {
+        display: block;
+        width: 4px;
+        height: 8px;
+        background: white;
+        border-radius: 2px;
+        margin: 6px auto 0;
+        animation: scrollWheel 1.5s infinite;
+    }
+
+    .scroll-indicator .scroll-text {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        letter-spacing: 1px;
+    }
+
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+        40% { transform: translateX(-50%) translateY(-10px); }
+        60% { transform: translateX(-50%) translateY(-5px); }
+    }
+
+    @keyframes scrollWheel {
+        0% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(10px); }
+    }
+
+    /* Stats Section */
+    #statsSection {
+        padding: 30px 20px;
+        background: #faf0f5;
+    }
+
+    .card-fashion {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border-left: 4px solid #6a1b9a;
+    }
+    .card-fashion:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(106, 27, 154, 0.15) !important;
+    }
+    .card-fashion.bg-light {
+        border-left-color: #e83e8c;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .slide-content h1 {
+            font-size: 2.5rem !important;
+        }
+        .slide-content p {
+            font-size: 1rem !important;
+        }
+        .slide-arrow {
+            padding: 10px 15px;
+            font-size: 1rem;
+        }
+        .prev-arrow {
+            left: 10px;
+        }
+        .next-arrow {
+            right: 10px;
+        }
+        #statsSection {
+            padding: 15px 10px;
+        }
+        .card-fashion .d-flex {
+            flex-direction: column;
+            text-align: center;
+        }
+        .card-fashion .rounded-circle {
+            margin-top: 10px;
+        }
+    }
+</style>
+
+<script>
+// ============================================
+// SLIDESHOW FUNCTIONALITY
+// ============================================
+let currentSlideIndex = 0;
+const slides = document.querySelectorAll('.slide');
+const dots = document.querySelectorAll('.dot');
+let slideInterval;
+
+function showSlide(index) {
+    // Remove active class from all slides
+    slides.forEach(slide => slide.classList.remove('active'));
+    dots.forEach(dot => dot.classList.remove('active'));
+    
+    // Add active class to current slide
+    slides[index].classList.add('active');
+    dots[index].classList.add('active');
+    
+    // Reset animation by removing and re-adding the content
+    const content = slides[index].querySelector('.slide-content');
+    if (content) {
+        content.style.animation = 'none';
+        setTimeout(() => {
+            content.style.animation = 'fadeInUp 1.5s ease';
+        }, 10);
+    }
+}
+
+function changeSlide(direction) {
+    currentSlideIndex += direction;
+    if (currentSlideIndex >= slides.length) {
+        currentSlideIndex = 0;
+    } else if (currentSlideIndex < 0) {
+        currentSlideIndex = slides.length - 1;
+    }
+    showSlide(currentSlideIndex);
+    resetInterval();
+}
+
+function currentSlide(index) {
+    currentSlideIndex = index;
+    showSlide(currentSlideIndex);
+    resetInterval();
+}
+
+function resetInterval() {
+    clearInterval(slideInterval);
+    slideInterval = setInterval(() => {
+        changeSlide(1);
+    }, 5000);
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft') {
+        changeSlide(-1);
+    } else if (e.key === 'ArrowRight') {
+        changeSlide(1);
+    }
+});
+
+// Touch support for mobile
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.getElementById('heroSlideshow').addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+}, {passive: true});
+
+document.getElementById('heroSlideshow').addEventListener('touchend', function(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 50) {
+        if (diff > 0) {
+            changeSlide(1);
+        } else {
+            changeSlide(-1);
+        }
+    }
+}, {passive: true});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    showSlide(0);
+    slideInterval = setInterval(() => {
+        changeSlide(1);
+    }, 5000);
+});
+
+// Scroll to stats section when clicking scroll indicator
+document.querySelector('.scroll-indicator')?.addEventListener('click', function() {
+    const statsSection = document.getElementById('statsSection');
+    if (statsSection) {
+        statsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+});
+</script>
+{% endblock %}

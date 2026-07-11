@@ -1,0 +1,150 @@
+<!-- templates/food_master/branches.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Branches - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-store me-2" style="color: #e67e22;"></i>Restaurant Branches</h4>
+        <div>
+            <a href="{% url 'food_master:add_branch' %}" class="btn" style="background-color: #e67e22; color: white;">
+                <i class="fas fa-plus me-1"></i> Add Branch
+            </a>
+        </div>
+    </div>
+
+    {% if branches %}
+        <div class="row g-4">
+            {% for branch in branches %}
+                <div class="col-md-6 col-xl-4">
+                    <div class="card shadow-sm h-100" style="border-left: 4px solid #e67e22;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-store me-2" style="color: #e67e22;"></i>
+                                    {{ branch.name }}
+                                </h5>
+                                <span class="badge {% if branch.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ branch.is_active|yesno:"Active,Inactive" }}
+                                </span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <p class="card-text text-muted mb-1">
+                                    <i class="fas fa-map-marker-alt me-2" style="color: #e67e22;"></i>
+                                    {{ branch.location }}
+                                </p>
+                                {% if branch.city %}
+                                    <p class="card-text text-muted mb-1">
+                                        <i class="fas fa-city me-2" style="color: #e67e22;"></i>
+                                        {{ branch.city }}
+                                    </p>
+                                {% endif %}
+                                {% if branch.contact_person %}
+                                    <p class="card-text text-muted mb-1">
+                                        <i class="fas fa-user me-2" style="color: #e67e22;"></i>
+                                        {{ branch.contact_person }}
+                                    </p>
+                                {% endif %}
+                                {% if branch.contact_phone %}
+                                    <p class="card-text text-muted mb-1">
+                                        <i class="fas fa-phone me-2" style="color: #e67e22;"></i>
+                                        {{ branch.contact_phone }}
+                                    </p>
+                                {% endif %}
+                                {% if branch.email %}
+                                    <p class="card-text text-muted mb-1">
+                                        <i class="fas fa-envelope me-2" style="color: #e67e22;"></i>
+                                        {{ branch.email }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <h6 class="mb-0">{{ branch.tables.count }}</h6>
+                                    <small class="text-muted">Tables</small>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="mb-0">{{ branch.menu_items.count }}</h6>
+                                    <small class="text-muted">Menu Items</small>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="mb-0">{{ branch.orders.count }}</h6>
+                                    <small class="text-muted">Orders</small>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewBranch({{ branch.id }})">
+                                        <i class="fas fa-eye me-1"></i> View
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="editBranch({{ branch.id }})">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="toggleBranch({{ branch.id }})">
+                                        <i class="fas fa-toggle-{{ branch.is_active|yesno:'on,off' }} me-1"></i>
+                                        {{ branch.is_active|yesno:"Deactivate,Activate" }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-store fa-4x text-muted mb-3" style="color: #e67e22;"></i>
+                <h4>No Branches Found</h4>
+                <p class="text-muted">Start by adding your first restaurant branch.</p>
+                <a href="{% url 'food_master:add_branch' %}" class="btn" style="background-color: #e67e22; color: white;">
+                    <i class="fas fa-plus me-1"></i> Add Branch
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function viewBranch(branchId) {
+    window.location.href = "{% url 'food_master:branches' %}" + branchId + '/';
+}
+
+function editBranch(branchId) {
+    window.location.href = "{% url 'food_master:branches' %}" + branchId + '/edit/';
+}
+
+function toggleBranch(branchId) {
+    if (confirm('Toggle branch status?')) {
+        // AJAX call to toggle branch status
+        fetch('/food/branches/' + branchId + '/toggle/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to toggle branch status. Please try again.');
+        });
+    }
+}
+</script>
+{% endblock %}

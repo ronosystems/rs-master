@@ -1,0 +1,274 @@
+<!-- templates/tech_master/damaged_units_report.html -->
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Damaged Units Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-exclamation-triangle text-danger me-2"></i>Damaged Units Report
+            </h4>
+            <p class="text-muted mb-0">View all damaged, stolen, lost, and written-off units</p>
+        </div>
+        <div>
+            <a href="{% url 'tech_master:stock_report' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Damaged</h6>
+                            <h3 class="fw-bold mb-0 text-danger">{{ total_damaged }}</h3>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 rounded p-3">
+                            <i class="fas fa-times-circle text-danger fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Value Lost</h6>
+                            <h3 class="fw-bold mb-0 text-warning">KES {{ total_value|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded p-3">
+                            <i class="fas fa-money-bill-wave text-warning fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Stolen Units</h6>
+                            <h3 class="fw-bold mb-0 text-dark">{{ stolen_count|default:0 }}</h3>
+                        </div>
+                        <div class="bg-dark bg-opacity-10 rounded p-3">
+                            <i class="fas fa-user-secret text-dark fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Lost Units</h6>
+                            <h3 class="fw-bold mb-0 text-secondary">{{ lost_count|default:0 }}</h3>
+                        </div>
+                        <div class="bg-secondary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-question-circle text-secondary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="q" class="form-control" 
+                               placeholder="Search by product, IMEI, serial..." 
+                               value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="damaged" {% if status_filter == 'damaged' %}selected{% endif %}>Damaged</option>
+                        <option value="stolen" {% if status_filter == 'stolen' %}selected{% endif %}>Stolen</option>
+                        <option value="lost" {% if status_filter == 'lost' %}selected{% endif %}>Lost</option>
+                        <option value="writeoff" {% if status_filter == 'writeoff' %}selected{% endif %}>Written Off</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="branch" class="form-select">
+                        <option value="">All Branches</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.id }}" {% if branch_filter == branch.id|stringformat:"s" %}selected{% endif %}>
+                            {{ branch.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+                <div class="col-12">
+                    <a href="{% url 'tech_master:damaged_units_report' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-2"></i>Reset Filters
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Damaged Units Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold">
+                <i class="fas fa-list me-2"></i>Damaged/Problem Units
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Product</th>
+                            <th>IMEI/Serial</th>
+                            <th>Status</th>
+                            <th>Condition</th>
+                            <th>Branch</th>
+                            <th>Supplier</th>
+                            <th>Buying Price</th>
+                            <th>Notes</th>
+                            <th>Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unit in damaged_units %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <div class="fw-semibold">{{ unit.product.name }}</div>
+                                <small class="text-muted">{{ unit.product.sku_code }}</small>
+                            </td>
+                            <td>
+                                {% if unit.imei_number %}
+                                <span class="badge bg-info">IMEI: {{ unit.imei_number }}</span>
+                                {% elif unit.serial_number %}
+                                <span class="badge bg-secondary">S/N: {{ unit.serial_number }}</span>
+                                {% else %}
+                                <span class="text-muted">No ID</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if unit.status == 'damaged' %}bg-danger
+                                    {% elif unit.status == 'stolen' %}bg-dark
+                                    {% elif unit.status == 'lost' %}bg-warning text-dark
+                                    {% elif unit.status == 'writeoff' %}bg-secondary
+                                    {% else %}bg-light text-dark{% endif %}">
+                                    {{ unit.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if unit.condition == 'new' %}bg-success
+                                    {% elif unit.condition == 'refurbished' %}bg-info
+                                    {% elif unit.condition == 'damaged' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ unit.get_condition_display }}
+                                </span>
+                            </td>
+                            <td>{{ unit.branch.name|default:"-" }}</td>
+                            <td>{{ unit.supplier.name|default:"-" }}</td>
+                            <td>
+                                KES {{ unit.unit_buying_price|default:unit.product.buying_price|floatformat:0 }}
+                            </td>
+                            <td>
+                                {% if unit.notes %}
+                                <span class="text-muted small" title="{{ unit.notes }}">
+                                    {{ unit.notes|truncatechars:30 }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ unit.updated_at|date:"Y-m-d" }}</small>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-4 text-muted">
+                                <i class="fas fa-check-circle fa-3x d-block mb-3 text-success opacity-50"></i>
+                                <h5>No damaged units found</h5>
+                                <p>All units are in good condition.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="7" class="fw-bold text-end">Total Value:</td>
+                            <td class="fw-bold">KES {{ total_value|floatformat:0 }}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Showing {{ damaged_units.start_index }} to {{ damaged_units.end_index }} of {{ damaged_units.paginator.count }} units
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if damaged_units.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ damaged_units.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">{{ damaged_units.number }}</span>
+                        </li>
+
+                        {% if damaged_units.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ damaged_units.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ damaged_units.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

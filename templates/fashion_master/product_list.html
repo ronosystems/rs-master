@@ -1,0 +1,157 @@
+<!-- templates/fashion_master/product_list.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Fashion Products{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-boxes text-primary me-2"></i>Fashion Products
+            </h4>
+            <p class="text-muted mb-0">Manage your fashion product catalog</p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:product_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i>Add Product
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="q" class="form-control" placeholder="Search products..." value="{{ search|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search me-2"></i>Filter
+                        </button>
+                        <a href="{% url 'fashion_master:product_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row g-4">
+        {% for product in products %}
+        <div class="col-md-3">
+            <div class="card card-fashion h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <span class="badge bg-info">{{ product.category.name|default:"Uncategorized" }}</span>
+                        {% if product.is_featured %}
+                        <span class="badge bg-warning text-dark">Featured</span>
+                        {% endif %}
+                        {% if product.is_new_arrival %}
+                        <span class="badge bg-success">New</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-center my-3">
+                        <i class="fas fa-tshirt fa-3x text-secondary"></i>
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid" style="max-height: 120px; object-fit: cover;">
+                        {% endif %}
+                    </div>
+                    <h6 class="fw-bold mb-1">{{ product.name }}</h6>
+                    <p class="text-muted small mb-2">
+                        {% if product.brand %}{{ product.brand }}{% endif %}
+                        {% if product.size %} | Size: {{ product.size }}{% endif %}
+                        {% if product.color %} | {{ product.color }}{% endif %}
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="fw-bold text-success">KES {{ product.selling_price|floatformat:0 }}</span>
+                            {% if product.best_price %}
+                            <br>
+                            <small class="text-muted text-decoration-line-through">KES {{ product.best_price|floatformat:0 }}</small>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if product.available_quantity > 0 %}
+                            <span class="badge bg-success">In Stock</span>
+                            {% else %}
+                            <span class="badge bg-danger">Out of Stock</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Qty: {{ product.quantity_in_stock }}</small>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'fashion_master:product_detail' product.id %}" class="btn btn-sm btn-outline-primary flex-fill">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{% url 'fashion_master:product_edit' product.id %}" class="btn btn-sm btn-outline-info flex-fill">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger flex-fill">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-boxes fa-3x text-muted mb-3 d-block"></i>
+                    <h5 class="text-muted">No products found</h5>
+                    <p class="text-muted small">Add your first fashion product</p>
+                    <a href="{% url 'fashion_master:product_create' %}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus-circle me-2"></i>Add Product
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if products.has_other_pages %}
+    <div class="mt-4">
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if products.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ products.previous_page_number }}{% if search %}&q={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">&laquo;</a>
+                </li>
+                {% endif %}
+                {% for num in products.paginator.page_range %}
+                <li class="page-item {% if products.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}{% if search %}&q={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endfor %}
+                {% if products.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ products.next_page_number }}{% if search %}&q={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">&raquo;</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,226 @@
+<!-- apps/rental_master/templates/rental_master/add_unit.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Add Unit - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #28a745;"></i>Add New Rental Unit</h4>
+        <a href="{% url 'rental_master:units' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Units
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-door-open me-2" style="color: #28a745;"></i>
+            Unit Details
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <!-- Property -->
+                    <div class="col-md-6">
+                        <label for="property" class="form-label">
+                            <i class="fas fa-building me-1" style="color: #28a745;"></i>
+                            Property <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="property" name="property" required>
+                            <option value="">-- Select Property --</option>
+                            {% for prop in properties %}
+                                <option value="{{ prop.id }}" 
+                                        {% if request.GET.property == prop.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ prop.name }} ({{ prop.branch.name }})
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>No properties available. Please add a property first.</option>
+                            {% endfor %}
+                        </select>
+                        {% if not properties %}
+                            <div class="mt-2">
+                                <a href="{% url 'rental_master:add_property' %}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-plus me-1"></i> Add Property First
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Unit Number -->
+                    <div class="col-md-6">
+                        <label for="unit_number" class="form-label">
+                            <i class="fas fa-hashtag me-1" style="color: #28a745;"></i>
+                            Unit Number <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="unit_number" name="unit_number" 
+                               placeholder="e.g., A101, Shop-01, R001" required>
+                        <small class="text-muted">Unique identifier for this unit</small>
+                    </div>
+                    
+                    <!-- Unit Type - Text Input -->
+                    <div class="col-md-6">
+                        <label for="unit_type" class="form-label">
+                            <i class="fas fa-tag me-1" style="color: #28a745;"></i>
+                            Unit Type
+                        </label>
+                        <input type="text" class="form-control" id="unit_type" name="unit_type" 
+                               placeholder="e.g., Room, Apartment, Shop, Office" value="room">
+                        <small class="text-muted">Enter the type of unit</small>
+                        <div class="mt-2" id="commonUnitTypes">
+                            <small class="text-muted">Common types:</small>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="setUnitType('room')">Room</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="setUnitType('apartment')">Apartment</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="setUnitType('shop')">Shop</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="setUnitType('office')">Office</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="setUnitType('warehouse')">Warehouse</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="col-md-6">
+                        <label for="status" class="form-label">
+                            <i class="fas fa-circle me-1" style="color: #28a745;"></i>
+                            Status
+                        </label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="available">Available</option>
+                            <option value="occupied">Occupied</option>
+                            <option value="reserved">Reserved</option>
+                            <option value="maintenance">Under Maintenance</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Monthly Rent -->
+                    <div class="col-md-6">
+                        <label for="monthly_rent" class="form-label">
+                            <i class="fas fa-money-bill-wave me-1" style="color: #28a745;"></i>
+                            Monthly Rent (KES) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="monthly_rent" name="monthly_rent" 
+                               step="0.01" placeholder="0.00" required>
+                    </div>
+                    
+                    <!-- Deposit Amount -->
+                    <div class="col-md-6">
+                        <label for="deposit_amount" class="form-label">
+                            <i class="fas fa-hand-holding-usd me-1" style="color: #28a745;"></i>
+                            Deposit Amount (KES)
+                        </label>
+                        <input type="number" class="form-control" id="deposit_amount" name="deposit_amount" 
+                               step="0.01" placeholder="0.00">
+                        <small class="text-muted">Deposit required before moving in</small>
+                    </div>
+                    
+                    <!-- Submit -->
+                    <div class="col-12 mt-4">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn" style="background-color: #28a745; color: white; padding: 10px 30px;">
+                                <i class="fas fa-save me-2"></i> Save Unit
+                            </button>
+                            <a href="{% url 'rental_master:units' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Help -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle fa-2x me-2" style="color: #17a2b8;"></i>
+                        <div>
+                            <h6 class="mb-1">What is a Unit?</h6>
+                            <small class="text-muted">A rental unit is a specific room, apartment, or shop within a property.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-lightbulb fa-2x me-2" style="color: #ffc107;"></i>
+                        <div>
+                            <h6 class="mb-1">Example</h6>
+                            <small class="text-muted">"A101" - A 1-bedroom apartment in Riverside Apartments, renting for KES 25,000/month.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-link fa-2x me-2" style="color: #28a745;"></i>
+                        <div>
+                            <h6 class="mb-1">Next Step</h6>
+                            <small class="text-muted">After adding a unit, you can <a href="{% url 'rental_master:tenants' %}">add tenants</a> and create leases.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setUnitType(type) {
+    document.getElementById('unit_type').value = type;
+    document.getElementById('unit_type').focus();
+}
+
+// Auto-fill property if passed in URL
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const propertyId = urlParams.get('property');
+    if (propertyId) {
+        const select = document.getElementById('property');
+        if (select) {
+            select.value = propertyId;
+        }
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const property = document.getElementById('property').value;
+    const unitNumber = document.getElementById('unit_number').value.trim();
+    const monthlyRent = document.getElementById('monthly_rent').value;
+    
+    if (!property) {
+        e.preventDefault();
+        alert('Please select a property.');
+        document.getElementById('property').focus();
+        return false;
+    }
+    
+    if (!unitNumber) {
+        e.preventDefault();
+        alert('Please enter the unit number.');
+        document.getElementById('unit_number').focus();
+        return false;
+    }
+    
+    if (!monthlyRent || parseFloat(monthlyRent) <= 0) {
+        e.preventDefault();
+        alert('Please enter a valid monthly rent.');
+        document.getElementById('monthly_rent').focus();
+        return false;
+    }
+    
+    return true;
+});
+</script>
+
+<style>
+.btn-outline-secondary:hover {
+    background-color: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+</style>
+{% endblock %}

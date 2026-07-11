@@ -1,0 +1,175 @@
+<!-- templates/tech_master/reports/inventory_report.html -->
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Inventory Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-boxes text-primary me-2"></i>Inventory Report
+            </h4>
+            <p class="text-muted mb-0">Detailed inventory report with stock values and categories</p>
+        </div>
+        <div>
+            <a href="{% url 'tech_master:export_reports' %}?type=inventory" class="btn btn-success">
+                <i class="fas fa-file-export me-2"></i>Export Report
+            </a>
+            <a href="{% url 'tech_master:report_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Products</h6>
+                            <h3 class="fw-bold mb-0">{{ total_products }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-box text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Stock Value</h6>
+                            <h3 class="fw-bold mb-0">KES {{ total_value|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-3">
+                            <i class="fas fa-money-bill-wave text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Categories</h6>
+                            <h3 class="fw-bold mb-0">{{ products_by_category|length }}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded p-3">
+                            <i class="fas fa-tags text-info fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold">Stock by Category</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Products</th>
+                            <th>Total Value</th>
+                            <th>% of Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in products_by_category %}
+                        <tr>
+                            <td>
+                                <span class="fw-semibold">{{ category.category__name|default:"Uncategorized" }}</span>
+                            </td>
+                            <td>{{ category.count }}</td>
+                            <td>KES {{ category.total_value|floatformat:0 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" 
+                                             style="width: {{ category.percentage|floatformat:1 }}%;"
+                                             aria-valuenow="{{ category.percentage|floatformat:1 }}" 
+                                             aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    <span class="small">{{ category.percentage|floatformat:1 }}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No categories found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product List -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold">All Products</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>SKU</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Buying Price</th>
+                            <th>Selling Price</th>
+                            <th>Stock</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-secondary">{{ product.sku_code }}</span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ product.name }}</div>
+                                <small class="text-muted">{{ product.brand }} {{ product.model }}</small>
+                            </td>
+                            <td>{{ product.category.name|default:"-" }}</td>
+                            <td>KES {{ product.buying_price|floatformat:0 }}</td>
+                            <td>KES {{ product.selling_price|floatformat:0 }}</td>
+                            <td>{{ product.available_quantity }}</td>
+                            <td>
+                                <span class="fw-bold">
+                                    KES {{ product.stock_value|floatformat:0 }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                No products found
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

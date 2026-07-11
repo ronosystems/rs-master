@@ -1,0 +1,675 @@
+<!-- templates/hotel_master/bookings.html -->
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="fas fa-calendar-check text-warning me-2"></i>Booking Management
+        </h4>
+        <a href="{% url 'hotel_master:new_booking' %}" class="btn btn-success">
+            <i class="fas fa-plus-circle me-2"></i>New Booking
+        </a>
+    </div>
+
+    <!-- Booking Filters -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Search</label>
+                    <input type="text" id="searchBooking" class="form-control form-control-sm" placeholder="Guest name or booking #...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Status</label>
+                    <select id="filterStatus" class="form-select form-select-sm">
+                        <option value="">All Status</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="pending">Pending</option>
+                        <option value="checked_in">Checked In</option>
+                        <option value="checked_out">Checked Out</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="no_show">No Show</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Date Range</label>
+                    <input type="date" id="filterDate" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary btn-sm w-100" onclick="filterBookings()">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Total Bookings</h6>
+                <h3 class="fw-bold">{{ total_bookings|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Confirmed</h6>
+                <h3 class="fw-bold text-success">{{ confirmed_bookings|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Checked In</h6>
+                <h3 class="fw-bold text-info">{{ checked_in_bookings|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Revenue</h6>
+                <h3 class="fw-bold text-primary">KES {{ total_revenue|default:0|floatformat:0 }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bookings Table -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="bookingTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Booking #</th>
+                            <th>Guest</th>
+                            <th>Room</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in bookings %}
+                        <tr data-status="{{ booking.status }}" data-id="{{ booking.id }}">
+                            <td>{{ forloop.counter }}</td>
+                            <td><code>{{ booking.booking_number }}</code></td>
+                            <td>
+                                <div class="fw-bold">{{ booking.guest_name }}</div>
+                                <small class="text-muted">{{ booking.guest_phone }}</small>
+                            </td>
+                            <td>{{ booking.room.room_number }}</td>
+                            <td>{{ booking.check_in|date:"M d, Y" }}</td>
+                            <td>{{ booking.check_out|date:"M d, Y" }}</td>
+                            <td>KES {{ booking.total_amount|floatformat:0 }}</td>
+                            <td>
+                                {% if booking.status == 'confirmed' %}
+                                    <span class="badge bg-success">Confirmed</span>
+                                {% elif booking.status == 'pending' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% elif booking.status == 'checked_in' %}
+                                    <span class="badge bg-info">Checked In</span>
+                                {% elif booking.status == 'checked_out' %}
+                                    <span class="badge bg-secondary">Checked Out</span>
+                                {% elif booking.status == 'cancelled' %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                {% elif booking.status == 'no_show' %}
+                                    <span class="badge bg-dark">No Show</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ booking.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="viewBooking({{ booking.id }})" title="View Booking">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="editBooking({{ booking.id }})" title="Edit Booking">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    {% if booking.status != 'cancelled' and booking.status != 'checked_out' %}
+                                    <button class="btn btn-outline-danger" onclick="cancelBooking({{ booking.id }}, '{{ booking.booking_number }}')" title="Cancel Booking">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-calendar fa-3x text-muted opacity-25 d-block mb-3"></i>
+                                <h5>No Bookings Yet</h5>
+                                <p class="text-muted">Start by creating your first booking.</p>
+                                <a href="{% url 'hotel_master:new_booking' %}" class="btn btn-success mt-2">
+                                    <i class="fas fa-plus-circle me-2"></i>New Booking
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Booking Modal -->
+<div class="modal fade" id="viewBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-calendar-check me-2"></i>Booking Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="viewBookingContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printBooking()">
+                    <i class="fas fa-print me-2"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Booking Modal -->
+<div class="modal fade" id="editBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Booking</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editBookingForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body" id="editBookingContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// ============================================
+// FILTER BOOKINGS
+// ============================================
+function filterBookings() {
+    const search = document.getElementById('searchBooking').value.toLowerCase();
+    const status = document.getElementById('filterStatus').value;
+    const date = document.getElementById('filterDate').value;
+    const rows = document.querySelectorAll('#bookingTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const rowStatus = row.getAttribute('data-status');
+        
+        let show = true;
+        
+        if (search && !text.includes(search)) show = false;
+        if (status && rowStatus !== status) show = false;
+        if (date && !text.includes(date)) show = false;
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+// ============================================
+// VIEW BOOKING - Improved with better error handling
+// ============================================
+function viewBooking(bookingId) {
+    const modal = new bootstrap.Modal(document.getElementById('viewBookingModal'));
+    const content = document.getElementById('viewBookingContent');
+    
+    // Show loading
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch booking details
+    fetch(`/hotel/api/booking/${bookingId}/`)
+        .then(response => {
+            if (!response.ok) {
+                // Try to get error message from response
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.error || `HTTP error! status: ${response.status}`);
+                    } catch {
+                        throw new Error(`Server error (${response.status}). Please try again.`);
+                    }
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const booking = data.booking;
+                const statusColors = {
+                    'confirmed': 'success',
+                    'pending': 'warning',
+                    'checked_in': 'info',
+                    'checked_out': 'secondary',
+                    'cancelled': 'danger',
+                    'no_show': 'dark'
+                };
+                
+                const statusDisplay = booking.status_display || booking.status.charAt(0).toUpperCase() + booking.status.slice(1);
+                
+                content.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Booking Number</label>
+                                <h5><code>${booking.booking_number}</code></h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Guest Name</label>
+                                <h5>${booking.guest_name}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Phone</label>
+                                <h5>${booking.guest_phone}</h5>
+                            </div>
+                            ${booking.guest_email ? `
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Email</label>
+                                <h5>${booking.guest_email}</h5>
+                            </div>
+                            ` : ''}
+                            ${booking.guest_id ? `
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">ID Number</label>
+                                <h5>${booking.guest_id}</h5>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Room</label>
+                                <h5>${booking.room_number}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Check In</label>
+                                <h5>${booking.check_in}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Check Out</label>
+                                <h5>${booking.check_out}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Status</label>
+                                <h5>
+                                    <span class="badge bg-${statusColors[booking.status] || 'secondary'}">
+                                        ${statusDisplay}
+                                    </span>
+                                </h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Payment Status</label>
+                                <h5>
+                                    <span class="badge bg-${booking.payment_status === 'paid' ? 'success' : 'warning'}">
+                                        ${(booking.payment_status || 'Pending').charAt(0).toUpperCase() + (booking.payment_status || 'pending').slice(1)}
+                                    </span>
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">Total Amount:</span>
+                                <span class="fw-bold text-success">KES ${(booking.total_amount || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span>Amount Paid:</span>
+                                <span>KES ${(booking.paid_amount || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span>Balance:</span>
+                                <span class="text-danger">KES ${((booking.total_amount || 0) - (booking.paid_amount || 0)).toLocaleString()}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span>Nights:</span>
+                                <span>${booking.nights || 1} night(s)</span>
+                            </div>
+                        </div>
+                    </div>
+                    ${booking.special_requests ? `
+                    <hr>
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold">Special Requests</label>
+                        <p class="mb-0">${booking.special_requests}</p>
+                    </div>
+                    ` : ''}
+                    ${booking.notes ? `
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold">Notes</label>
+                        <p class="mb-0">${booking.notes}</p>
+                    </div>
+                    ` : ''}
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        ${data.error || 'Failed to load booking details'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('View error:', error);
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    ${error.message || 'Error loading booking details. Please try again.'}
+                    <br><br>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewBooking(${bookingId})">
+                        <i class="fas fa-sync-alt me-1"></i>Retry
+                    </button>
+                </div>
+            `;
+        });
+}
+
+// ============================================
+// EDIT BOOKING
+// ============================================
+function editBooking(bookingId) {
+    const modal = new bootstrap.Modal(document.getElementById('editBookingModal'));
+    const content = document.getElementById('editBookingContent');
+    const form = document.getElementById('editBookingForm');
+    
+    // Set form action
+    form.action = `/hotel/api/booking/${bookingId}/edit/`;
+    form.method = 'POST';
+    
+    // Show loading
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch booking details for editing
+    fetch(`/hotel/api/booking/${bookingId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const booking = data.booking;
+                content.innerHTML = `
+                    <input type="hidden" name="booking_id" value="${booking.id}">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Guest Name <span class="text-danger">*</span></label>
+                                <input type="text" name="guest_name" class="form-control" value="${booking.guest_name}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Phone <span class="text-danger">*</span></label>
+                                <input type="text" name="guest_phone" class="form-control" value="${booking.guest_phone}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Email</label>
+                                <input type="email" name="guest_email" class="form-control" value="${booking.guest_email || ''}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">ID Number</label>
+                                <input type="text" name="guest_id" class="form-control" value="${booking.guest_id || ''}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Check In <span class="text-danger">*</span></label>
+                                <input type="date" name="check_in" class="form-control" value="${booking.check_in}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Check Out <span class="text-danger">*</span></label>
+                                <input type="date" name="check_out" class="form-control" value="${booking.check_out}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Status</label>
+                                <select name="status" class="form-select">
+                                    <option value="confirmed" ${booking.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
+                                    <option value="pending" ${booking.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="checked_in" ${booking.status === 'checked_in' ? 'selected' : ''}>Checked In</option>
+                                    <option value="checked_out" ${booking.status === 'checked_out' ? 'selected' : ''}>Checked Out</option>
+                                    <option value="cancelled" ${booking.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                    <option value="no_show" ${booking.status === 'no_show' ? 'selected' : ''}>No Show</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Total Amount</label>
+                                <input type="number" name="total_amount" class="form-control" value="${booking.total_amount}" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Special Requests</label>
+                                <textarea name="special_requests" class="form-control" rows="2">${booking.special_requests || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        ${data.error || 'Failed to load booking details'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Error loading booking details. Please try again.
+                </div>
+            `;
+            console.error('Edit error:', error);
+        });
+}
+
+// ============================================
+// EDIT FORM SUBMIT
+// ============================================
+document.getElementById('editBookingForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const formData = new FormData(form);
+    
+    // Show loading
+    Swal.fire({
+        title: 'Saving...',
+        text: 'Please wait',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            throw new Error('Server returned non-JSON response');
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'Success!',
+                text: 'Booking updated successfully',
+                icon: 'success'
+            }).then(() => {
+                window.location.reload();
+            });
+        } else {
+            Swal.fire({
+                title: 'Error',
+                text: data.error || 'Failed to update booking',
+                icon: 'error'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            title: 'Error',
+            text: 'An error occurred while updating the booking. Please try again.',
+            icon: 'error'
+        });
+        console.error('Submit error:', error);
+    });
+});
+
+// ============================================
+// CANCEL BOOKING
+// ============================================
+function cancelBooking(bookingId, bookingNumber) {
+    Swal.fire({
+        title: 'Cancel Booking?',
+        html: `
+            <p>Are you sure you want to cancel <strong>Booking ${bookingNumber}</strong>?</p>
+            <p class="text-danger small">This will make the room available again.</p>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Cancel Booking',
+        cancelButtonText: 'No, Keep It'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading
+            Swal.fire({
+                title: 'Cancelling...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Cancel via AJAX
+            fetch(`/hotel/api/booking/${bookingId}/cancel/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                } else {
+                    throw new Error('Server returned non-JSON response');
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Cancelled!',
+                        text: `Booking ${bookingNumber} has been cancelled.`,
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.error || 'Failed to cancel booking',
+                        icon: 'error'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An error occurred while cancelling the booking',
+                    icon: 'error'
+                });
+                console.error('Cancel error:', error);
+            });
+        }
+    });
+}
+
+// ============================================
+// PRINT BOOKING
+// ============================================
+function printBooking() {
+    window.print();
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1];
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('searchBooking').addEventListener('keyup', filterBookings);
+    document.getElementById('filterStatus').addEventListener('change', filterBookings);
+    document.getElementById('filterDate').addEventListener('change', filterBookings);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,194 @@
+<!-- templates/fashion_master/product_form.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}{% if product %}Edit{% else %}Add{% endif %} Fashion Product{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-tshirt me-2"></i>
+                        {% if product %}Edit{% else %}Add{% endif %} Fashion Product
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <!-- Basic Info -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" 
+                                       value="{{ product.name|default:'' }}" required
+                                       placeholder="e.g., Summer Dress">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                                <select name="category" class="form-select" required>
+                                    <option value="">Select Category</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.id }}" {% if product.category.id == cat.id %}selected{% endif %}>
+                                        {{ cat.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Brand</label>
+                                <input type="text" name="brand" class="form-control" 
+                                       value="{{ product.brand|default:'' }}"
+                                       placeholder="e.g., Zara">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Material</label>
+                                <input type="text" name="material" class="form-control" 
+                                       value="{{ product.material|default:'' }}"
+                                       placeholder="e.g., Cotton, Polyester">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Size</label>
+                                <input type="text" name="size" class="form-control" 
+                                       value="{{ product.size|default:'' }}"
+                                       placeholder="e.g., S, M, L, 38">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Color</label>
+                                <input type="text" name="color" class="form-control" 
+                                       value="{{ product.color|default:'' }}"
+                                       placeholder="e.g., Red, Blue">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Season</label>
+                                <input type="text" name="season" class="form-control" 
+                                       value="{{ product.season|default:'' }}"
+                                       placeholder="e.g., Summer, Winter">
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <hr>
+                                <h6 class="fw-bold">Pricing</h6>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Buying Price</label>
+                                <input type="number" name="buying_price" class="form-control" 
+                                       value="{{ product.buying_price|default:0 }}" step="0.01">
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Selling Price <span class="text-danger">*</span></label>
+                                <input type="number" name="selling_price" class="form-control" 
+                                       value="{{ product.selling_price|default:0 }}" step="0.01" required>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Wholesale Price</label>
+                                <input type="number" name="wholesale_price" class="form-control" 
+                                       value="{{ product.wholesale_price|default:0 }}" step="0.01">
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <hr>
+                                <h6 class="fw-bold">Stock Management</h6>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Quantity in Stock</label>
+                                <input type="number" name="quantity" class="form-control" 
+                                       value="{{ product.quantity_in_stock|default:0 }}">
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Reorder Level</label>
+                                <input type="number" name="reorder_level" class="form-control" 
+                                       value="{{ product.reorder_level|default:10 }}">
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Branch</label>
+                                <select name="branch" class="form-select">
+                                    <option value="">Select Branch</option>
+                                    {% for branch in branches %}
+                                    <option value="{{ branch.id }}" {% if product.branch.id == branch.id %}selected{% endif %}>
+                                        {{ branch.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <hr>
+                                <h6 class="fw-bold">Product Status</h6>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="is_active" class="form-check-input" id="isActive"
+                                           {% if product.is_active or not product %}checked{% endif %}>
+                                    <label class="form-check-label" for="isActive">Active</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="is_featured" class="form-check-input" id="isFeatured"
+                                           {% if product.is_featured %}checked{% endif %}>
+                                    <label class="form-check-label" for="isFeatured">Featured</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="is_new_arrival" class="form-check-input" id="isNewArrival"
+                                           {% if product.is_new_arrival %}checked{% endif %}>
+                                    <label class="form-check-label" for="isNewArrival">New Arrival</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <hr>
+                                <h6 class="fw-bold">Product Image</h6>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <input type="file" name="image" class="form-control" accept="image/*">
+                                {% if product.image %}
+                                <div class="mt-2">
+                                    <img src="{{ product.image.url }}" alt="{{ product.name }}" style="max-height: 100px;">
+                                    <br>
+                                    <small class="text-muted">Current image</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-12 mt-4">
+                                <hr>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>
+                                        {% if product %}Update{% else %}Create{% endif %} Product
+                                    </button>
+                                    <a href="{% url 'fashion_master:product_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

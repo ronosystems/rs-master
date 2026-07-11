@@ -1,35 +1,170 @@
 # apps/shared/middleware.py
-from django.utils.deprecation import MiddlewareMixin
-from django.conf import settings
+
 import logging
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
-class OfflineSyncMiddleware(MiddlewareMixin):
-    """Handle offline/online mode switching and sync"""
+class TenantMiddleware:
+    """
+    Middleware to set tenant on request.
+    """
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+        logger.info("✅ TenantMiddleware initialized")
+    
+    def __call__(self, request):
+        # ✅ Skip tenant detection for certain paths
+        skip_paths = [
+            '/admin/',
+            '/login/',
+            '/logout/',
+            '/static/',
+            '/media/',
+            '/favicon.ico',
+            '/robots.txt',
+            '/chats/api/',
+            '/api/',
+            '/select-tenant/',
+            '/no-tenant/',
+            '/super-admin/', 
+            '/profile/',       
+        ]
+        
+        path = request.path
+        for skip_path in skip_paths:
+            if path.startswith(skip_path):
+                response = self.get_response(request)
+                return response
+        
+        # ✅ Also skip if user is super admin (they don't need tenant)
+        if request.user.is_authenticated and request.user.is_superuser:
+            # Super admins don't need tenant, but we still set request.tenant = None
+            request.tenant = None
+            response = self.get_response(request)
+            return response
+        
+        # Get tenant from request
+        tenant = self.get_tenant_from_request(request)
+        
+        if tenant:
+            request.tenant = tenant
+            if hasattr(request, 'session'):
+                request.session['tenant_id'] = tenant.id
+            logger.debug(f"✅ Tenant set: {tenant.company_name} (ID: {tenant.id})")
+        else:
+            # ✅ Only log warning for non-API paths and non-super-admin paths
+            if not path.startswith('/chats/') and not path.startswith('/api/') and not request.user.is_superuser:
+                logger.warning(f"⚠️ No tenant found for request: {path}")
+        
+        response = self.get_response(request)
+        return response
+    
+    def get_tenant_from_request(self, request):
+        """Extract tenant from request using multiple methods"""
+        try:
+            from apps.shared.tenants.models import Tenant
+        except ImportError:
+            try:
+                from .tenants.models import Tenant
+            except ImportError:
+                logger.error("❌ Could not import Tenant model")
+                return None
+        
+        # Method 1: From subdomain (e.g., tenant1.localhost:8000)
+        host = request.get_host()
+        parts = host.split('.')
+        if len(parts) >= 3:
+            subdomain = parts[0]
+            try:
+                tenant = Tenant.objects.get(code=subdomain)
+                logger.debug(f"✅ Found tenant by subdomain: {subdomain}")
+                return tenant
+            except Tenant.DoesNotExist:
+                pass
+            except Exception as e:
+                logger.error(f"❌ Error finding tenant by subdomain: {e}")
+        
+        # Method 2: From header (X-Tenant-ID)
+        tenant_header = request.headers.get('X-Tenant-ID')
+        if tenant_header:
+            try:
+                tenant = Tenant.objects.get(id=tenant_header)
+                logger.debug(f"✅ Found tenant by header: {tenant_header}")
+                return tenant
+            except (Tenant.DoesNotExist, ValueError):
+                pass
+            except Exception as e:
+                logger.error(f"❌ Error finding tenant by header: {e}")
+        
+        # Method 3: From session
+        if hasattr(request, 'session'):
+            tenant_id = request.session.get('tenant_id')
+            if tenant_id:
+                try:
+                    tenant = Tenant.objects.get(id=tenant_id)
+                    logger.debug(f"✅ Found tenant by session: {tenant_id}")
+                    return tenant
+                except (Tenant.DoesNotExist, ValueError):
+                    pass
+                except Exception as e:
+                    logger.error(f"❌ Error finding tenant by session: {e}")
+        
+        # Method 4: From URL parameter (for testing)
+        tenant_param = request.GET.get('tenant_id')
+        if tenant_param:
+            try:
+                tenant = Tenant.objects.get(id=tenant_param)
+                logger.debug(f"✅ Found tenant by URL param: {tenant_param}")
+                return tenant
+            except (Tenant.DoesNotExist, ValueError):
+                pass
+            except Exception as e:
+                logger.error(f"❌ Error finding tenant by URL param: {e}")
+        
+        # Method 5: From user's tenant (skip for super admins)
+        if request.user.is_authenticated and not request.user.is_superuser:
+            if hasattr(request.user, 'tenant'):
+                tenant = request.user.tenant
+                if tenant:
+                    logger.debug(f"✅ Found tenant from user: {tenant.company_name}")
+                    return tenant
+        
+        return None
+
+
+class OfflineSyncMiddleware:
+    """
+    Middleware to handle offline/online mode switching.
+    Simple middleware without MiddlewareMixin.
+    """
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+        logger.info("✅ OfflineSyncMiddleware initialized")
+    
+    def __call__(self, request):
+        # Add offline mode to request
+        request.offline_mode = getattr(settings, 'OFFLINE_MODE', False)
+        
+        response = self.get_response(request)
+        return response
     
     def process_request(self, request):
-        # Check if we're online by pinging the database
+        """Process request - check connection status"""
+        # Check if we're online
         is_online = self.check_connection()
         
         # Update offline mode based on connection status
         if is_online and getattr(settings, 'OFFLINE_MODE', False):
-            # We just came online
             settings.OFFLINE_MODE = False
             logger.info("🔄 Connection restored - switching to online mode")
             
-            # Trigger sync if we were offline
-            if hasattr(request, 'session') and request.session.get('was_offline', False):
-                self.trigger_sync(request)
-                request.session['was_offline'] = False
-                
         elif not is_online and not getattr(settings, 'OFFLINE_MODE', False):
-            # We just went offline
             settings.OFFLINE_MODE = True
             logger.warning("📴 Connection lost - switching to offline mode")
-            if hasattr(request, 'session'):
-                request.session['was_offline'] = True
         
         # Add offline mode to request
         request.offline_mode = getattr(settings, 'OFFLINE_MODE', False)
@@ -44,78 +179,7 @@ class OfflineSyncMiddleware(MiddlewareMixin):
         except Exception as e:
             logger.debug(f"Connection check failed: {e}")
             return False
-    
-    def trigger_sync(self, request):
-        """Trigger PowerSync sync when coming online"""
-        try:
-            import requests
-        except ImportError:
-            logger.warning("⚠️ requests library not installed. Install with: pip install requests")
-            return
-        
-        try:
-            logger.info("🔄 Triggering sync...")
-            
-            tenant_id = None
-            if hasattr(request, 'tenant'):
-                tenant_id = request.tenant.id
-            
-            powersync_url = getattr(settings, 'POWERSYNC_URL', None)
-            powersync_api_key = getattr(settings, 'POWERSYNC_API_KEY', None)
-            
-            if not powersync_url or not powersync_api_key:
-                logger.warning("⚠️ PowerSync URL or API key not configured")
-                return
-            
-            response = requests.post(
-                f"{powersync_url}/sync",
-                headers={
-                    'Authorization': f'Bearer {powersync_api_key}',
-                    'Content-Type': 'application/json'
-                },
-                json={'tenant_id': tenant_id} if tenant_id else {},
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                logger.info("✅ PowerSync sync triggered successfully")
-                self.process_sync_queue(request)
-            else:
-                logger.error(f"❌ PowerSync sync failed: {response.status_code}")
-                
-        except Exception as e:
-            logger.error(f"❌ Sync error: {e}")
-    
-    def process_sync_queue(self, request):
-        """Process queued sync operations"""
-        try:
-            from apps.shared.models import SyncQueue
-            from django.utils import timezone
-            
-            tenant_id = None
-            if hasattr(request, 'tenant'):
-                tenant_id = request.tenant.id
-            
-            if not tenant_id:
-                return
-            
-            items = SyncQueue.objects.filter(
-                tenant_id=tenant_id,
-                synced=False
-            ).order_by('created_at')[:getattr(settings, 'SYNC_BATCH_SIZE', 100)]
-            
-            for item in items:
-                try:
-                    item.process()
-                    item.synced = True
-                    item.synced_at = timezone.now()
-                    item.save()
-                except Exception as e:
-                    item.error = str(e)
-                    item.retry_count += 1
-                    item.save()
-            
-            logger.info(f"✅ Processed sync queue")
-            
-        except Exception as e:
-            logger.error(f"❌ Error processing sync queue: {e}")
+
+
+# Alias for backward compatibility
+OfflineMiddleware = OfflineSyncMiddleware

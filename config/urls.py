@@ -27,6 +27,12 @@ urlpatterns = [
     # USERS (Separate app for user management)
     # ============================================
     path('users/', include('apps.shared.users.urls', namespace='users')),
+    path('permissions/', include('apps.shared.permissions.urls', namespace='permissions')),
+
+    # ============================================
+    # CHAT
+    # ============================================
+    path('chats/', include('apps.shared.chats.urls', namespace='chats')),
     
     # ============================================
     # SETTINGS
@@ -34,10 +40,16 @@ urlpatterns = [
     path('settings/', include('apps.shared.settings.urls', namespace='settings')),
     
     # ============================================
-    # TECH MASTER (Main app for Tech Master)
+    # PROJECTS
     # ============================================
     path('tech/', include('apps.tech_master.urls', namespace='tech_master')),
-    
+    path('hotel/', include('apps.hotel_master.urls', namespace='hotel_master')),
+    path('food/', include('apps.food_master.urls', namespace='food_master')),
+    path('retail/', include('apps.retail_master.urls', namespace='retail_master')),
+    path('health/', include('apps.health_master.urls', namespace='health_master')),
+    path('fashion/', include('apps.fashion_master.urls', namespace='fashion_master')),
+    path('rental/', include('apps.rental_master.urls', namespace='rental_master')), 
+
     # ============================================
     # FAVICON
     # ============================================

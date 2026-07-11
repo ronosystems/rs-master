@@ -1,0 +1,173 @@
+<!-- templates/hotel_master/report_dashboard.html -->
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-chart-pie me-2 text-info"></i>Reports Dashboard</h4>
+        <div>
+            <button onclick="window.print()" class="btn btn-primary btn-sm">
+                <i class="fas fa-print me-1"></i> Print
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-check fa-2x text-primary mb-2"></i>
+                    <h6 class="text-muted mb-1">Total Bookings</h6>
+                    <h2 class="mb-0">{{ total_bookings|default:0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-check fa-2x text-success mb-2"></i>
+                    <h6 class="text-muted mb-1">Active Bookings</h6>
+                    <h2 class="mb-0">{{ active_bookings|default:0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100 border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-money-bill-wave fa-2x text-warning mb-2"></i>
+                    <h6 class="text-muted mb-1">Total Revenue</h6>
+                    <h2 class="mb-0">KES {{ total_revenue|floatformat:0|default:0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100 border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                    <h6 class="text-muted mb-1">Occupancy Rate</h6>
+                    <h2 class="mb-0">{{ occupancy_rate|default:0 }}%</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Summary -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <i class="fas fa-calendar-alt me-2"></i> {{ month_name|default:"Current" }} Summary
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <h6>Monthly Revenue</h6>
+                    <h3 class="text-success">KES {{ month_revenue|floatformat:0|default:0 }}</h3>
+                </div>
+                <div class="col-md-6">
+                    <h6>Monthly Occupancy</h6>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0 me-3">{{ occupancy_rate|default:0 }}%</h3>
+                        <div class="progress flex-grow-1" style="height: 25px;">
+                            <div class="progress-bar {% if occupancy_rate > 80 %}bg-success{% elif occupancy_rate > 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                 style="width: {{ occupancy_rate|default:0 }}%;">
+                                {{ occupancy_rate|default:0 }}%
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ occupied_rooms|default:0 }} of {{ total_rooms|default:0 }} rooms occupied</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Cards -->
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 report-card" onclick="window.location.href='{% url 'hotel_master:occupancy_report' %}'">
+                <div class="card-body text-center">
+                    <i class="fas fa-bed fa-3x report-icon mb-3" style="color: #0d6efd;"></i>
+                    <h5>Occupancy Report</h5>
+                    <p class="text-muted small">View room occupancy rates and trends</p>
+                    <span class="badge bg-primary">View Report</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 report-card" onclick="window.location.href='{% url 'hotel_master:revenue_report' %}'">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-3x report-icon mb-3" style="color: #28a745;"></i>
+                    <h5>Revenue Report</h5>
+                    <p class="text-muted small">Track revenue and payment statistics</p>
+                    <span class="badge bg-success">View Report</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 report-card" onclick="window.location.href='{% url 'hotel_master:expense_list' %}'">
+                <div class="card-body text-center">
+                    <i class="fas fa-receipt fa-3x report-icon mb-3" style="color: #dc3545;"></i>
+                    <h5>Expense List</h5>
+                    <p class="text-muted small">View and manage hotel expenses</p>
+                    <span class="badge bg-danger">View Report</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header">
+            <i class="fas fa-bolt me-2 text-warning"></i> Quick Actions
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <a href="{% url 'hotel_master:bookings' %}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-calendar-check me-1"></i> View All Bookings
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'hotel_master:rooms' %}" class="btn btn-outline-success w-100">
+                        <i class="fas fa-bed me-1"></i> Manage Rooms
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'hotel_master:checkin' %}" class="btn btn-outline-info w-100">
+                        <i class="fas fa-user-check me-1"></i> Check In Guest
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'hotel_master:checkout' %}" class="btn btn-outline-warning w-100">
+                        <i class="fas fa-user-minus me-1"></i> Check Out Guest
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% block extra_js %}
+<style>
+.report-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+.report-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    border-color: #0d6efd;
+}
+.report-card .report-icon {
+    transition: transform 0.3s ease;
+}
+.report-card:hover .report-icon {
+    transform: scale(1.1);
+}
+</style>
+{% endblock %}
+{% endblock %}

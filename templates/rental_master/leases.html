@@ -1,0 +1,97 @@
+<!-- apps/rental_master/templates/rental_master/leases.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Leases - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-file-signature me-2" style="color: #d4a373;"></i>Leases</h4>
+        <div>
+            <a href="{% url 'rental_master:create_lease' %}" class="btn" style="background-color: #d4a373; color: white;">
+                <i class="fas fa-plus me-1"></i> Create Lease
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Status</option>
+                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>Expired</option>
+                        <option value="terminated" {% if request.GET.status == 'terminated' %}selected{% endif %}>Terminated</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    {% if request.GET.status %}
+                        <a href="{% url 'rental_master:leases' %}" class="btn btn-outline-secondary">Clear Filter</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if leases %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Unit</th>
+                        <th>Tenant</th>
+                        <th>Property</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Monthly Rent</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lease in leases %}
+                        <tr>
+                            <td><strong>{{ lease.rental_unit.unit_number }}</strong></td>
+                            <td>{{ lease.client_tenant.full_name }}</td>
+                            <td>{{ lease.rental_unit.property.name }}</td>
+                            <td>{{ lease.start_date|date:"M d, Y" }}</td>
+                            <td>{{ lease.end_date|date:"M d, Y" }}</td>
+                            <td>KES {{ lease.monthly_rent|floatformat:0 }}</td>
+                            <td>
+                                <span class="badge {% if lease.status == 'active' %}bg-success{% elif lease.status == 'expired' %}bg-warning{% elif lease.status == 'terminated' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ lease.get_status_display }}
+                                </span>
+                                {% if lease.is_expiring_soon %}
+                                    <br><small class="text-danger">Expiring soon!</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-file-signature fa-4x text-muted mb-3" style="color: #d4a373;"></i>
+                <h4>No Leases Found</h4>
+                <p class="text-muted">Create your first lease agreement.</p>
+                <a href="{% url 'rental_master:create_lease' %}" class="btn" style="background-color: #d4a373; color: white;">
+                    <i class="fas fa-plus me-1"></i> Create Lease
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

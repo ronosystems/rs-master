@@ -1,0 +1,697 @@
+<!-- templates/food_master/menu_order.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Place Order - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<style>
+    .menu-item-card {
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 12px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        height: 100%;
+        background: white;
+    }
+    .menu-item-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border-color: #e67e22;
+    }
+    .menu-item-card .item-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 3px;
+    }
+    .menu-item-card .item-price {
+        color: #e67e22;
+        font-weight: bold;
+        font-size: 1rem;
+    }
+    .menu-item-card .add-btn {
+        margin-top: 8px;
+        width: 100%;
+        font-size: 0.8rem;
+        padding: 4px;
+    }
+    
+    .cart-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .cart-item .item-info { flex: 1; }
+    .cart-item .item-name { font-weight: 500; font-size: 0.85rem; }
+    .cart-item .qty-control {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .cart-item .qty-control button {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+    .cart-item .qty-control button:hover {
+        background: #e67e22;
+        color: white;
+        border-color: #e67e22;
+    }
+    .cart-item .qty-control .qty {
+        font-weight: 600;
+        min-width: 18px;
+        text-align: center;
+        font-size: 0.85rem;
+    }
+    .cart-item .item-total {
+        font-weight: 600;
+        color: #e67e22;
+        min-width: 70px;
+        text-align: right;
+        font-size: 0.85rem;
+    }
+    .cart-item .remove-btn {
+        color: #dc3545;
+        cursor: pointer;
+        padding: 0 5px;
+        font-size: 1rem;
+    }
+    
+    .cart-sidebar {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        height: 100%;
+        position: sticky;
+        top: 20px;
+    }
+    .cart-sidebar .cart-header {
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+    }
+    .cart-sidebar .cart-items {
+        max-height: 350px;
+        overflow-y: auto;
+    }
+    
+    .category-filter {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 8px 0;
+        flex-wrap: nowrap;
+    }
+    .category-filter .btn {
+        white-space: nowrap;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        padding: 4px 14px;
+    }
+    .category-filter .btn.active {
+        background-color: #e67e22;
+        color: white;
+        border-color: #e67e22;
+    }
+    
+    .waiter-info {
+        background: linear-gradient(135deg, #2d1b0e, #1a1a2e);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* PIN Verification Modal */
+    .pin-verify-modal .modal-content {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .pin-verify-modal .modal-header {
+        background: linear-gradient(135deg, #2d1b0e, #1a1a2e);
+        color: white;
+        border-radius: 16px 16px 0 0;
+        padding: 20px;
+    }
+    .pin-verify-modal .modal-body {
+        padding: 30px;
+    }
+    .pin-verify-modal .pin-input {
+        letter-spacing: 12px;
+        font-size: 2rem;
+        text-align: center;
+        font-weight: bold;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        width: 200px;
+        margin: 0 auto;
+    }
+    .pin-verify-modal .pin-input:focus {
+        border-color: #e67e22;
+        box-shadow: 0 0 0 0.2rem rgba(230, 126, 34, 0.25);
+    }
+    .pin-verify-modal .waiter-info-display {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    .pin-verify-modal .numpad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        max-width: 250px;
+        margin: 15px auto;
+    }
+    .pin-verify-modal .numpad button {
+        padding: 15px;
+        font-size: 1.2rem;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .pin-verify-modal .numpad button:hover {
+        background: #f0f0f0;
+    }
+    .pin-verify-modal .numpad button.btn-clear {
+        background: #dc3545;
+        color: white;
+    }
+    .pin-verify-modal .numpad button.btn-clear:hover {
+        background: #c82333;
+    }
+    .pin-verify-modal .numpad button.btn-enter {
+        background: #28a745;
+        color: white;
+    }
+    .pin-verify-modal .numpad button.btn-enter:hover {
+        background: #218838;
+    }
+    .pin-verify-modal .pin-error {
+        color: #dc3545;
+        font-size: 0.9rem;
+        margin-top: 10px;
+        display: none;
+    }
+    .pin-verify-modal .waiter-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #e67e22;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        margin: 0 auto 10px;
+    }
+</style>
+
+<!-- Waiter Info Bar -->
+<div class="waiter-info">
+    <div>
+        <i class="fas fa-user-circle fa-2x me-2"></i>
+        <span><strong>Waiter:</strong> {{ waiter_name|default:"Not Logged In" }}</span>
+        <span class="badge bg-success ms-2">Online</span>
+    </div>
+    <div>
+        <span class="badge bg-light text-dark">
+            <i class="fas fa-clock me-1"></i> {{ today|time:"H:i" }}
+        </span>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="fas fa-utensils me-2" style="color: #e67e22;"></i>Place Order</h4>
+    <div>
+        <span class="badge bg-warning text-dark me-2">
+            <i class="fas fa-shopping-cart me-1"></i> <span id="cartCount">0</span> items
+        </span>
+        <button class="btn btn-danger btn-sm" onclick="clearCart()">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Menu Items -->
+    <div class="col-md-8">
+        <div class="category-filter">
+            <button class="btn btn-outline-secondary active" data-category="all" onclick="filterCategory('all')">All</button>
+            {% for category in categories %}
+                <button class="btn btn-outline-secondary" data-category="{{ category.id }}" onclick="filterCategory('{{ category.id }}')">
+                    {% if category.icon %}<i class="{{ category.icon }} me-1"></i>{% endif %}
+                    {{ category.name }}
+                </button>
+            {% endfor %}
+        </div>
+
+        <div class="row g-2" id="menuGrid">
+            {% for item in menu_items %}
+                <div class="col-md-4 col-lg-3 menu-item" data-category="{{ item.category_id }}">
+                    <div class="menu-item-card" onclick="addToCart({{ item.id }}, '{{ item.name|escapejs }}', {{ item.price }})">
+                        <div class="item-name">{{ item.name }}</div>
+                        <div class="item-price">KES {{ item.price|floatformat:0 }}</div>
+                        <button class="btn btn-sm btn-warning add-btn" onclick="event.stopPropagation(); addToCart({{ item.id }}, '{{ item.name|escapejs }}', {{ item.price }})">
+                            <i class="fas fa-plus me-1"></i> Add
+                        </button>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                    <p>No menu items available</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Cart -->
+    <div class="col-md-4">
+        <div class="cart-sidebar">
+            <div class="cart-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-shopping-cart me-2" style="color: #e67e22;"></i>
+                    Order Cart
+                    <span class="badge bg-warning ms-2" id="cartCountBadge">0</span>
+                </h6>
+                <small class="text-muted">Table: <span id="tableDisplay">N/A</span></small>
+            </div>
+            
+            <div class="cart-items" id="cartItems">
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-cart-plus fa-2x mb-2"></i>
+                    <p class="small">Cart is empty</p>
+                </div>
+            </div>
+            
+            <div class="mt-2">
+                <div class="row g-1">
+                    <div class="col-8">
+                        <label class="small">Table No.</label>
+                        <input type="text" id="tableNumber" class="form-control form-control-sm" placeholder="e.g., 5">
+                    </div>
+                    <div class="col-4">
+                        <label class="small">Guests</label>
+                        <input type="number" id="guestCount" class="form-control form-control-sm" value="1" min="1">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="cart-summary mt-2">
+                <div class="row"><span>Subtotal:</span> <span id="cartSubtotal">KES 0.00</span></div>
+                <div class="row"><span>Tax (16%):</span> <span id="cartTax">KES 0.00</span></div>
+                <div class="row total"><span>TOTAL:</span> <span id="cartTotal">KES 0.00</span></div>
+                
+                <button class="btn btn-success w-100 mt-3" onclick="openPinModal()" id="submitOrderBtn" disabled>
+                    <i class="fas fa-check-circle me-1"></i> Submit Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PIN Verification Modal -->
+<div class="modal fade pin-verify-modal" id="pinVerifyModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">
+                    <i class="fas fa-lock me-2"></i>Verify Waiter PIN
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="waiter-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="waiter-info-display">
+                    <strong id="pinWaiterName">{{ waiter_name|default:"Waiter" }}</strong>
+                    <br>
+                    <small class="text-muted">Enter your 4-digit PIN to confirm this order</small>
+                </div>
+                
+                <div>
+                    <input type="password" class="pin-input" id="waiterPinInput" 
+                           placeholder="••••" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+                </div>
+                
+                <div class="numpad">
+                    <button onclick="pinInput('1')">1</button>
+                    <button onclick="pinInput('2')">2</button>
+                    <button onclick="pinInput('3')">3</button>
+                    <button onclick="pinInput('4')">4</button>
+                    <button onclick="pinInput('5')">5</button>
+                    <button onclick="pinInput('6')">6</button>
+                    <button onclick="pinInput('7')">7</button>
+                    <button onclick="pinInput('8')">8</button>
+                    <button onclick="pinInput('9')">9</button>
+                    <button class="btn-clear" onclick="pinClear()"><i class="fas fa-backspace"></i></button>
+                    <button onclick="pinInput('0')">0</button>
+                    <button class="btn-enter" onclick="verifyPin()"><i class="fas fa-check"></i></button>
+                </div>
+                
+                <div class="pin-error" id="pinError">
+                    <i class="fas fa-exclamation-circle me-1"></i>
+                    Invalid PIN. Please try again.
+                </div>
+                
+                <button class="btn btn-link text-muted btn-sm mt-2" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// ============================================
+// GLOBALS
+// ============================================
+let cart = [];
+let currentCategory = 'all';
+let currentOrderNumber = '';
+let pinAttempts = 0;
+const MAX_PIN_ATTEMPTS = 3;
+
+// ============================================
+// CATEGORY FILTER
+// ============================================
+function filterCategory(categoryId) {
+    currentCategory = categoryId;
+    document.querySelectorAll('.category-filter .btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.category-filter .btn[data-category="${categoryId}"]`).classList.add('active');
+    
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.style.display = (categoryId === 'all' || item.dataset.category === categoryId) ? '' : 'none';
+    });
+}
+
+// ============================================
+// CART FUNCTIONS
+// ============================================
+function addToCart(id, name, price) {
+    const existing = cart.find(item => item.id === id);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        cart.push({ id, name, price: parseFloat(price), quantity: 1 });
+    }
+    renderCart();
+    showToast(`${name} added`, 'success');
+}
+
+function renderCart() {
+    const container = document.getElementById('cartItems');
+    const countBadge = document.getElementById('cartCountBadge');
+    const count = document.getElementById('cartCount');
+    const submitBtn = document.getElementById('submitOrderBtn');
+    
+    if (!cart.length) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-cart-plus fa-2x mb-2"></i>
+                <p class="small">Cart is empty</p>
+            </div>
+        `;
+        countBadge.textContent = '0';
+        count.textContent = '0';
+        submitBtn.disabled = true;
+        updateTotals();
+        return;
+    }
+    
+    let html = '';
+    cart.forEach((item, index) => {
+        const total = item.price * item.quantity;
+        html += `
+            <div class="cart-item">
+                <div class="item-info">
+                    <div class="item-name">${item.name}</div>
+                </div>
+                <div class="qty-control">
+                    <button onclick="updateQty(${index}, -1)">−</button>
+                    <span class="qty">${item.quantity}</span>
+                    <button onclick="updateQty(${index}, 1)">+</button>
+                </div>
+                <div class="item-total">KES ${total.toFixed(2)}</div>
+                <span class="remove-btn" onclick="removeFromCart(${index})">×</span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    countBadge.textContent = totalItems;
+    count.textContent = totalItems;
+    submitBtn.disabled = false;
+    updateTotals();
+}
+
+function updateQty(index, delta) {
+    if (cart[index]) {
+        cart[index].quantity += delta;
+        if (cart[index].quantity <= 0) cart.splice(index, 1);
+        renderCart();
+    }
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    renderCart();
+}
+
+function clearCart() {
+    if (!cart.length) return;
+    Swal.fire({
+        title: 'Clear Cart?',
+        text: 'Remove all items?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Yes'
+    }).then(result => {
+        if (result.isConfirmed) { cart = []; renderCart(); }
+    });
+}
+
+// ============================================
+// TOTALS
+// ============================================
+function updateTotals() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = subtotal * 0.16;
+    const total = subtotal + tax;
+    
+    document.getElementById('cartSubtotal').textContent = `KES ${subtotal.toFixed(2)}`;
+    document.getElementById('cartTax').textContent = `KES ${tax.toFixed(2)}`;
+    document.getElementById('cartTotal').textContent = `KES ${total.toFixed(2)}`;
+}
+
+// ============================================
+// PIN VERIFICATION
+// ============================================
+function openPinModal() {
+    if (!cart.length) {
+        showToast('Cart is empty', 'error');
+        return;
+    }
+    
+    // Reset PIN input
+    document.getElementById('waiterPinInput').value = '';
+    document.getElementById('pinError').style.display = 'none';
+    pinAttempts = 0;
+    
+    // Show waiter name
+    const waiterName = '{{ waiter_name|default:"Waiter" }}';
+    document.getElementById('pinWaiterName').textContent = waiterName;
+    
+    // Open modal
+    const modal = new bootstrap.Modal(document.getElementById('pinVerifyModal'));
+    modal.show();
+    
+    // Focus on PIN input
+    setTimeout(() => {
+        document.getElementById('waiterPinInput').focus();
+    }, 500);
+}
+
+function pinInput(value) {
+    const pinInput = document.getElementById('waiterPinInput');
+    if (pinInput.value.length < 4) {
+        pinInput.value += value;
+        document.getElementById('pinError').style.display = 'none';
+    }
+}
+
+function pinClear() {
+    const pinInput = document.getElementById('waiterPinInput');
+    pinInput.value = pinInput.value.slice(0, -1);
+    document.getElementById('pinError').style.display = 'none';
+}
+
+function verifyPin() {
+    const pin = document.getElementById('waiterPinInput').value.trim();
+    
+    if (pin.length !== 4) {
+        document.getElementById('pinError').textContent = 'Please enter a 4-digit PIN.';
+        document.getElementById('pinError').style.display = 'block';
+        return;
+    }
+    
+    // Verify PIN with server
+    fetch('/food/api/pos/verify-pin/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ pin: pin })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // PIN verified - close modal and submit order
+            const modal = bootstrap.Modal.getInstance(document.getElementById('pinVerifyModal'));
+            modal.hide();
+            submitOrder();
+        } else {
+            pinAttempts++;
+            const errorDiv = document.getElementById('pinError');
+            
+            if (pinAttempts >= MAX_PIN_ATTEMPTS) {
+                errorDiv.textContent = `⚠️ Too many failed attempts (${MAX_PIN_ATTEMPTS}). Please try again later.`;
+                errorDiv.style.display = 'block';
+                document.getElementById('waiterPinInput').value = '';
+                document.getElementById('waiterPinInput').disabled = true;
+                
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('pinVerifyModal'));
+                    modal.hide();
+                    showToast('PIN verification failed. Please try again.', 'error');
+                    document.getElementById('waiterPinInput').disabled = false;
+                    pinAttempts = 0;
+                }, 2000);
+            } else {
+                errorDiv.textContent = `❌ Invalid PIN. ${MAX_PIN_ATTEMPTS - pinAttempts} attempts remaining.`;
+                errorDiv.style.display = 'block';
+                document.getElementById('waiterPinInput').value = '';
+                document.getElementById('waiterPinInput').focus();
+            }
+        }
+    })
+    .catch(error => {
+        console.error('PIN verification error:', error);
+        showToast('Error verifying PIN. Please try again.', 'error');
+    });
+}
+
+// Enter key support for PIN input
+document.addEventListener('DOMContentLoaded', function() {
+    const pinInput = document.getElementById('waiterPinInput');
+    if (pinInput) {
+        pinInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                verifyPin();
+            }
+        });
+    }
+});
+
+// ============================================
+// SUBMIT ORDER
+// ============================================
+function submitOrder() {
+    if (!cart.length) {
+        showToast('Cart is empty', 'error');
+        return;
+    }
+    
+    const tableNumber = document.getElementById('tableNumber').value.trim() || 'N/A';
+    const guestCount = parseInt(document.getElementById('guestCount').value) || 1;
+    const total = parseFloat(document.getElementById('cartTotal').textContent.replace(/[^0-9.]/g, '')) || 0;
+    
+    const btn = document.getElementById('submitOrderBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+    
+    const orderData = {
+        items: cart,
+        table_number: tableNumber,
+        guest_count: guestCount,
+        total: total
+    };
+    
+    fetch('/food/api/pos/place-order/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(orderData)
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Submit Order';
+        
+        if (data.success) {
+            // Redirect to receipt page instead of showing modal
+            window.location.href = `/food/order-receipt/${data.order_id}/`;
+        } else {
+            showToast(data.message || 'Error submitting order', 'error');
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Submit Order';
+        showToast('Network error', 'error');
+    });
+}
+
+// ============================================
+// UTILITY
+// ============================================
+function getCsrfToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    return token ? token.value : '';
+}
+
+function showToast(msg, type) {
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 1500,
+        icon: type || 'info',
+        title: msg
+    });
+}
+
+// Keyboard shortcut: Ctrl+Enter to submit
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        if (cart.length > 0) {
+            openPinModal();
+        }
+    }
+});
+</script>
+{% endblock %}

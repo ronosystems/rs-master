@@ -1,0 +1,79 @@
+{% extends "shared/base_shared.html" %}
+{% load static %}
+
+{% block title %}  {{ tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4>
+            <i class="fas fa-user-tag me-2 text-primary"></i>
+            User Roles: {{ target_user.get_full_name|default:target_user.username }}
+        </h4>
+        <a href="{% url 'users:user_list' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Back to Users
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- User Info -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <div class="user-avatar mb-3" style="width: 80px; height: 80px; margin: 0 auto;">
+                        <i class="fas fa-user-circle fa-5x text-primary"></i>
+                    </div>
+                    <h5>{{ target_user.get_full_name|default:target_user.username }}</h5>
+                    <p class="text-muted small">{{ target_user.email }}</p>
+                    <p class="text-muted small">Role: {{ target_user.role_display }}</p>
+                    <p class="text-muted small">Tenant: {{ target_user.tenant.company_name }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role Assignment -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-shield-alt me-2"></i> Role Assignments
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Assign Roles</label>
+                            <div class="row">
+                                {% for role in available_roles %}
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input type="checkbox" name="roles" class="form-check-input" 
+                                               id="role_{{ role.id }}" value="{{ role.id }}"
+                                               {% if role.id in assigned_role_ids %}checked{% endif %}>
+                                        <label class="form-check-label" for="role_{{ role.id }}">
+                                            {{ role.name }}
+                                            <span class="badge {% if role.role_type == 'system' %}bg-info{% else %}bg-secondary{% endif %}">
+                                                {{ role.get_role_type_display }}
+                                            </span>
+                                            {% if role.is_system_role %}
+                                                <span class="badge bg-warning text-dark">System</span>
+                                            {% endif %}
+                                        </label>
+                                        <br>
+                                        <small class="text-muted">{{ role.description|truncatechars:50 }}</small>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save Assignments
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

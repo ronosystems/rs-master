@@ -1,4 +1,6 @@
-{% extends "tech_master/base_tech.html" %}
+<!-- templates/shared/settings/receipt_settings.html -->
+
+{% extends "shared/base_shared.html" %}
 {% load static %}
 
 {% block title %}Receipt Settings{% endblock %}
@@ -12,18 +14,22 @@
         border-radius: 12px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         overflow: hidden;
+        color: #000000;
     }
     .receipt-preview {
-        background: white;
+        background: rgb(3, 194, 252);
+        color: #000000;
         padding: 20px;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         max-width: 80%;
         margin: 0 auto;
-        border: 1px solid #e0e0e0;
+        border: 1px solid #000000;
         border-radius: 8px;
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
     }
     .receipt-preview .text-center {
         text-align: center;
+        color: #000000;
     }
     .receipt-preview .border-bottom {
         border-bottom: 1px solid #dee2e6;
@@ -33,45 +39,68 @@
     }
     .receipt-preview .fw-bold {
         font-weight: 600;
+        color: #000000;
     }
     .receipt-preview .small {
         font-size: 0.8rem;
+        color: #000000;
     }
     .receipt-preview .text-muted {
-        color: #6c757d;
+        color: #000000;
     }
     .receipt-preview .text-success {
         color: #28a745;
     }
     .receipt-preview .table {
-        width: 80%;
+        background: rgb(3, 194, 252);
+        color: #000000;
+        width: 100%;
         font-size: 0.75rem;
         border-collapse: collapse;
     }
     .receipt-preview .table th,
     .receipt-preview .table td {
         padding: 6px;
+        color: #000000;
         border: 1px solid #dee2e6;
+        background: rgb(3, 194, 252);
     }
     .receipt-preview .table th {
-        background-color: #f8f9fa;
+        background: rgb(3, 194, 252);
+        color: #000000;
         font-weight: 600;
     }
     .receipt-preview .text-end {
         text-align: right;
+        color: #000000;
     }
     .receipt-preview .text-center {
         text-align: center;
+        color: #000000;
+    }
+    .receipt-preview .logo-container {
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    .receipt-preview .logo-container img {
+        max-height: 60px;
+        max-width: 200px;
+        border-radius: 4px;
+    }
+    .receipt-preview .logo-container .no-logo {
+        font-size: 2rem;
+        color: #6c757d;
     }
     .form-section {
         background: white;
         border-radius: 12px;
+        color: #000000;
         padding: 20px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
     }
     .form-section h6 {
-        color: #0f67b3;
+        color: #00060a;
         font-weight: 600;
         margin-bottom: 15px;
         padding-bottom: 8px;
@@ -99,6 +128,83 @@
     hr {
         margin: 10px 0;
     }
+    .logo-upload-container {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background: #f8f9fa;
+    }
+    .logo-upload-container:hover {
+        border-color: var(--brand-primary, #0d6efd);
+        background: #e9ecef;
+    }
+    .logo-upload-container .upload-icon {
+        font-size: 2rem;
+        color: #adb5bd;
+        margin-bottom: 8px;
+    }
+    .logo-upload-container .upload-text {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    .vat-row {
+        background: rgb(3, 194, 252);
+        border-top: 2px solid #ffc107 !important;
+    }
+    .vat-row td {
+        background: rgb(3, 194, 252);
+        color: #0f0c00 !important;
+    }
+    .vat-label {
+        color: #030200;
+        font-weight: 600;
+    }
+    .vat-amount {
+        color: #080600;
+        font-weight: 600;
+    }
+    .tax-type-badge {
+        font-size: 0.65rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        display: inline-block;
+    }
+    .tax-type-badge.inclusive {
+        background: #d4edda;
+        color: #000501;
+    }
+    .tax-type-badge.exclusive {
+        background: #fff3cd;
+        color: #0e0a00;
+    }
+    .radio-group {
+        display: flex;
+        gap: 15px;
+        padding: 8px 0;
+    }
+    .radio-group .form-check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .radio-group .form-check label {
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+    .subtotal-row {
+        border-bottom: 1px dashed #dee2e6;
+    }
+    .grand-total-row {
+        border-top: 2px solid #28a745;
+        font-size: 1rem;
+    }
+    .grand-total-row td {
+        font-weight: 550;
+        color: #000702 !important;
+    }
 </style>
 {% endblock %}
 
@@ -115,7 +221,7 @@
                     <p class="mb-0 small text-white-50">Customize what appears on printed sales receipts</p>
                 </div>
                 <div class="card-body p-4" style="max-height: calc(100vh - 200px); overflow-y: auto;">
-                    <form method="post" id="receiptSettingsForm">
+                    <form method="post" id="receiptSettingsForm" enctype="multipart/form-data">
                         {% csrf_token %}
                         
                         <!-- Business Details Section -->
@@ -141,6 +247,41 @@
                                 <div class="col-12">
                                     <label class="form-label fw-semibold">Tax PIN</label>
                                     <input type="text" name="business_tax_pin" id="business_tax_pin" class="form-control" value="{{ settings.business_tax_pin }}" onkeyup="updatePreview()">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- LOGO SECTION -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-image text-primary me-2"></i>Receipt Logo</h6>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_logo_on_receipts" id="show_logo_on_receipts" class="form-check-input" 
+                                               {% if settings.show_logo_on_receipts %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_logo_on_receipts">Show Logo on Receipts</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="logo-upload-container">
+                                        <div class="upload-icon">
+                                            <i class="fas fa-cloud-upload-alt"></i>
+                                        </div>
+                                        <div class="upload-text">
+                                            <label for="logo_upload" class="fw-semibold" style="cursor: pointer; color: var(--brand-primary, #0d6efd);">
+                                                Click to upload logo
+                                            </label>
+                                            <br>
+                                            <small>Recommended: PNG or JPG, max 5MB</small>
+                                        </div>
+                                        <input type="file" name="logo" id="logo_upload" class="form-control" accept="image/*" style="display: none;" onchange="handleLogoUpload(event)">
+                                    </div>
+                                    {% if settings.has_valid_logo %}
+                                    <div class="mt-2">
+                                        <span class="badge bg-success">Current Logo</span>
+                                        <img src="{{ settings.logo.url }}" alt="Current Logo" style="max-height: 40px; max-width: 150px; margin-left: 10px; border: 1px solid #dee2e6; border-radius: 4px; padding: 2px;">
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -178,7 +319,7 @@
                         
                         <!-- Receipt Details Section -->
                         <div class="form-section">
-                            <h6><i class="fas fa-receipt text-primary me-2"></i>Receipt Details</h6>
+                            <h6><i class="fas fa-receipt text-dark me-2"></i>Receipt Details</h6>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="setting-checkbox">
@@ -205,7 +346,7 @@
                         
                         <!-- Buyer Information Section -->
                         <div class="form-section">
-                            <h6><i class="fas fa-user text-primary me-2"></i>Buyer Information</h6>
+                            <h6><i class="fas fa-user text-dark me-2"></i>Buyer Information</h6>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="setting-checkbox">
@@ -236,7 +377,7 @@
                         
                         <!-- Line Items Section -->
                         <div class="form-section">
-                            <h6><i class="fas fa-table text-primary me-2"></i>Line Items</h6>
+                            <h6><i class="fas fa-table text-dark me-2"></i>Line Items</h6>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="setting-checkbox">
@@ -269,9 +410,53 @@
                             </div>
                         </div>
                         
+                        <!-- VAT/TAX SECTION -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-percent text-warning me-2"></i>VAT / Tax Settings</h6>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_vat_on_receipt" id="show_vat_on_receipt" class="form-check-input" 
+                                               {% if settings.show_vat_on_receipt %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_vat_on_receipt">Show VAT / Tax on Receipt</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">VAT Rate (%)</label>
+                                    <input type="number" name="vat_rate" id="vat_rate" class="form-control" 
+                                           value="{{ settings.vat_rate|default:16 }}" step="0.01" min="0" max="100" onchange="updatePreview()">
+                                    <small class="text-muted">Default VAT rate</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">VAT Label</label>
+                                    <input type="text" name="vat_label" id="vat_label" class="form-control" 
+                                           value="{{ settings.vat_label|default:'VAT' }}" onkeyup="updatePreview()">
+                                    <small class="text-muted">e.g., VAT, GST, TAX</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Tax Type</label>
+                                    <div class="radio-group">
+                                        <div class="form-check">
+                                            <input type="radio" name="tax_type" id="tax_exclusive" value="exclusive" 
+                                                   {% if settings.tax_type == 'exclusive' or not settings.tax_type %}checked{% endif %} 
+                                                   onchange="updatePreview()">
+                                            <label for="tax_exclusive">Before Tax</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="radio" name="tax_type" id="tax_inclusive" value="inclusive" 
+                                                   {% if settings.tax_type == 'inclusive' %}checked{% endif %} 
+                                                   onchange="updatePreview()">
+                                            <label for="tax_inclusive">After Tax</label>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Before: Add VAT to total | After: VAT included in total</small>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Footer Section -->
                         <div class="form-section">
-                            <h6><i class="fas fa-pen text-primary me-2"></i>Footer</h6>
+                            <h6><i class="fas fa-pen text-dark me-2"></i>Footer</h6>
                             <div class="mb-3">
                                 <div class="setting-checkbox">
                                     <input type="checkbox" name="show_footer_message" id="show_footer_message" class="form-check-input" {% if settings.show_footer_message %}checked{% endif %} onchange="updatePreview()">
@@ -311,12 +496,12 @@
                         <div id="receiptPreview" class="receipt-preview">
                             <!-- Preview will be dynamically updated -->
                             <div class="text-center py-5">
-                                <i class="fas fa-receipt fa-3x text-muted mb-2"></i>
+                                <i class="fas fa-receipt fa-3x text-dark mb-2"></i>
                                 <p>Loading preview...</p>
                             </div>
                         </div>
                         <div class="mt-3 text-center">
-                            <small class="text-muted">
+                            <small class="text-dark">
                                 <i class="fas fa-info-circle me-1"></i>
                                 This is a live preview - settings update in real-time
                             </small>
@@ -329,10 +514,16 @@
 </div>
 
 <script>
-    // Sample sale data for preview matching your receipt template
+    // ============================================
+    // SAMPLE DATA FOR PREVIEW
+    // ============================================
     const sampleSale = {
         invoice_no: 'INV-2024-001',
-        cashier: 'John Doe',
+        cashier: {
+            get_full_name: 'John Doe',
+            username: 'johndoe',
+            role: 'sales_agent'
+        },
         created_at: new Date(),
         customer_name: 'Jane Wanjiku',
         customer_phone: '0712345678',
@@ -340,34 +531,86 @@
         next_of_kin_name: 'Peter Wanjiku',
         next_of_kin_phone: '0723456789',
         next_of_kin_relationship: 'Spouse',
-        total: 19000,
+        subtotal: 300,
+        total: 300,
         items: [
             { 
                 product: { 
-                    name: 'Samsung Galaxy A07', 
-                    model: 'A07', 
-                    specs: '4GB/64GB', 
-                    sku: '356123456789001' 
+                    name: 'Product (x)', 
+                    model: 'product (x)', 
+                    specs: 'specifications(x)', 
+                    sku: 'product (x)' 
                 }, 
                 quantity: 1, 
-                price: 18000, 
-                subtotal: 18000 
+                price: 100, 
+                subtotal: 100 
             },
             { 
                 product: { 
-                    name: 'USB-C Cable', 
-                    model: '', 
-                    specs: '1m Length', 
-                    sku: 'USB-C-001' 
+                    name: 'product (y)', 
+                    model: 'product  (y)', 
+                    specs: 'specifications (y)', 
+                    sku: 'product (y)' 
                 }, 
                 quantity: 2, 
-                price: 500, 
-                subtotal: 1000 
+                price: 200, 
+                subtotal: 200 
             }
         ]
     };
     
+    // ============================================
+    // LOGO DATA
+    // ============================================
+    let logoData = {
+        hasLogo: {% if settings.has_valid_logo %}true{% else %}false{% endif %},
+        logoUrl: {% if settings.has_valid_logo %}'{{ settings.logo.url }}'{% else %}null{% endif %},
+        showLogo: {% if settings.show_logo_on_receipts %}true{% else %}false{% endif %}
+    };
+    
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    function formatMoney(amount) {
+        return Number(amount).toLocaleString(undefined, { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        });
+    }
+    
+    function handleLogoUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                logoData.hasLogo = true;
+                logoData.logoUrl = e.target.result;
+                logoData.showLogo = document.getElementById('show_logo_on_receipts')?.checked || false;
+                updatePreview();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    function resetPreview() {
+        location.reload();
+    }
+    
+    // ============================================
+    // MAIN PREVIEW UPDATE FUNCTION
+    // ============================================
     function updatePreview() {
+        // Get ALL settings from form inputs
         const settings = {
             show_business_name: document.getElementById('show_business_name')?.checked || false,
             show_address: document.getElementById('show_address')?.checked || false,
@@ -390,6 +633,11 @@
             show_line_total: document.getElementById('show_line_total')?.checked || false,
             show_gross_total: document.getElementById('show_gross_total')?.checked || false,
             show_footer_message: document.getElementById('show_footer_message')?.checked || false,
+            show_logo_on_receipts: document.getElementById('show_logo_on_receipts')?.checked || false,
+            show_vat_on_receipt: document.getElementById('show_vat_on_receipt')?.checked || false,
+            vat_rate: parseFloat(document.getElementById('vat_rate')?.value) || 16,
+            vat_label: document.getElementById('vat_label')?.value || 'VAT',
+            tax_type: document.querySelector('input[name="tax_type"]:checked')?.value || 'exclusive',
         };
         
         const business = {
@@ -402,13 +650,55 @@
         
         const footer_text = document.getElementById('footer_text')?.value || 'Thank you for your business!';
         
+        // Get cashier info
+        let cashierName = 'System';
+        let cashierRole = 'Cashier';
+        
+        if (sampleSale.cashier) {
+            cashierName = sampleSale.cashier.get_full_name || sampleSale.cashier.username || 'System';
+            cashierRole = sampleSale.cashier.role === 'sales_agent' ? 'Agent' : 'Cashier';
+        }
+        
+        const vatRate = settings.vat_rate;
+        const vatLabel = settings.vat_label;
+        const taxType = settings.tax_type;
+        const showVat = settings.show_vat_on_receipt;
+        
         const date = new Date(sampleSale.created_at);
         const formattedDate = date.toLocaleDateString('en-KE');
         const formattedTime = date.toLocaleTimeString('en-KE');
         
+        // Calculate VAT based on tax type
+        const subtotal = sampleSale.subtotal || sampleSale.total || 0;
+        let vatAmount, totalWithVat;
+        
+        if (taxType === 'inclusive') {
+            vatAmount = subtotal - (subtotal / (1 + vatRate / 100));
+            totalWithVat = subtotal;
+        } else {
+            vatAmount = subtotal * (vatRate / 100);
+            totalWithVat = subtotal + vatAmount;
+        }
+        
         let html = '';
         
-        // Company Header - Centered
+        // ============================================
+        // LOGO SECTION
+        // ============================================
+        if (settings.show_logo_on_receipts) {
+            html += '<div class="logo-container">';
+            if (logoData.hasLogo && logoData.logoUrl) {
+                html += `<img src="${logoData.logoUrl}" alt="Company Logo">`;
+            } else {
+                html += `<div class="no-logo"><i class="fas fa-store"></i></div>`;
+                html += '<div><small class="text-muted">No logo uploaded</small></div>';
+            }
+            html += '</div>';
+        }
+        
+        // ============================================
+        // COMPANY HEADER
+        // ============================================
         html += '<div class="text-center border-bottom pb-3 mb-3">';
         if (settings.show_business_name && business.name) {
             html += `<h4 class="mb-1">${escapeHtml(business.name)}</h4>`;
@@ -427,19 +717,21 @@
         }
         html += '</div>';
         
-        // Receipt Info Row
+        // ============================================
+        // RECEIPT INFO ROW
+        // ============================================
         if (settings.show_receipt_number || settings.show_agent_user || settings.show_sale_date || settings.show_sale_time) {
             html += '<div class="row mb-3">';
             if (settings.show_receipt_number) {
                 html += `<div class="col-6">
-                            <small class="text-muted">ETR No.</small>
+                            <small class="text-dark">ETR No.</small>
                             <div class="fw-bold">${escapeHtml(sampleSale.invoice_no)}</div>
                         </div>`;
             }
             if (settings.show_agent_user) {
                 html += `<div class="col-6 text-end">
-                            <small class="text-muted">Cashier</small>
-                            <div class="fw-bold">${escapeHtml(sampleSale.cashier)}</div>
+                            <small class="text-dark">${cashierRole}</small>
+                            <div class="fw-bold">${escapeHtml(cashierName)}</div>
                         </div>`;
             }
             html += '</div>';
@@ -447,13 +739,13 @@
             html += '<div class="row mb-3">';
             if (settings.show_sale_date) {
                 html += `<div class="col-6">
-                            <small class="text-muted">Date</small>
+                            <small class="text-dark">Date</small>
                             <div class="fw-bold">${formattedDate}</div>
                         </div>`;
             }
             if (settings.show_sale_time) {
                 html += `<div class="col-6 text-end">
-                            <small class="text-muted">Time</small>
+                            <small class="text-dark">Time</small>
                             <div class="fw-bold">${formattedTime}</div>
                         </div>`;
             }
@@ -461,50 +753,54 @@
             html += '<hr class="my-2">';
         }
         
-        // Customer Details
+        // ============================================
+        // CUSTOMER DETAILS
+        // ============================================
         if (settings.show_buyer_name || settings.show_buyer_phone || settings.show_buyer_id) {
             html += '<div class="mb-3">';
             html += '<h6 class="fw-bold mb-2">Customer Details</h6>';
             if (settings.show_buyer_name && sampleSale.customer_name) {
                 html += `<div class="row small">
-                            <div class="col-4 text-muted">Full Names:</div>
+                            <div class="col-4 text-dark">Full Names:</div>
                             <div class="col-8">${escapeHtml(sampleSale.customer_name)}</div>
                         </div>`;
             }
             if (settings.show_buyer_phone && sampleSale.customer_phone) {
                 html += `<div class="row small">
-                            <div class="col-4 text-muted">Phone Number:</div>
+                            <div class="col-4 text-dark">Phone Number:</div>
                             <div class="col-8">${escapeHtml(sampleSale.customer_phone)}</div>
                         </div>`;
             }
             if (settings.show_buyer_id && sampleSale.customer_id_number) {
                 html += `<div class="row small">
-                            <div class="col-4 text-muted">ID Number:</div>
+                            <div class="col-4 text-dark">ID Number:</div>
                             <div class="col-8">${escapeHtml(sampleSale.customer_id_number)}</div>
                         </div>`;
             }
             html += '</div>';
         }
         
-        // Next of Kin Details
+        // ============================================
+        // NEXT OF KIN DETAILS
+        // ============================================
         if (settings.show_next_of_kin_name || settings.show_next_of_kin_phone) {
             html += '<div class="mb-3">';
             html += '<h6 class="fw-bold mb-2">Next of Kin</h6>';
             if (settings.show_next_of_kin_name && sampleSale.next_of_kin_name) {
                 html += `<div class="row small">
-                            <div class="col-4 text-muted">Full Names:</div>
+                            <div class="col-4 text-dark">Full Names:</div>
                             <div class="col-8">${escapeHtml(sampleSale.next_of_kin_name)}</div>
                         </div>`;
             }
             if (settings.show_next_of_kin_phone && sampleSale.next_of_kin_phone) {
                 html += `<div class="row small">
-                            <div class="col-4 text-muted">Phone Number:</div>
+                            <div class="col-4 text-dark">Phone Number:</div>
                             <div class="col-8">${escapeHtml(sampleSale.next_of_kin_phone)}</div>
                         </div>`;
             }
             if (sampleSale.next_of_kin_relationship) {
                 html += `<div class="row small">
-                            <div class="col-4 text-muted">Relationship:</div>
+                            <div class="col-4 text-dark">Relationship:</div>
                             <div class="col-8">${escapeHtml(sampleSale.next_of_kin_relationship)}</div>
                         </div>`;
             }
@@ -517,7 +813,9 @@
             html += '<hr class="my-2">';
         }
         
-        // Product Details Table
+        // ============================================
+        // PRODUCT DETAILS TABLE
+        // ============================================
         if (settings.show_items_table) {
             html += '<div class="mb-3">';
             html += '<h6 class="fw-bold mb-2">Product Details</h6>';
@@ -534,9 +832,9 @@
                 if (settings.show_quantity) html += `<td class="text-center">${item.quantity}</td>`;
                 html += `<td>
                             ${escapeHtml(item.product.name)}<br>
-                            <small class="text-muted">${escapeHtml(item.product.model)} ${escapeHtml(item.product.specs)}</small><br>`;
+                            <small class="text-dark">${escapeHtml(item.product.model)} ${escapeHtml(item.product.specs)}</small><br>`;
                 if (settings.show_imei && item.product.sku) {
-                    html += `<small class="text-muted">IMEI: ${escapeHtml(item.product.sku)}</small>`;
+                    html += `<small class="text-dark">IMEI: ${escapeHtml(item.product.sku)}</small>`;
                 }
                 html += `</td>`;
                 if (settings.show_unit_price) html += `<td class="text-end">KES ${formatMoney(item.price)}</td>`;
@@ -545,11 +843,39 @@
             });
             
             html += '</tbody>';
-            if (settings.show_gross_total) {
+            
+            // ============================================
+            // VAT/TAX DISPLAY
+            // ============================================
+            if (showVat) {
+                const taxTypeDisplay = taxType === 'inclusive' ? 'After Tax (Inclusive)' : 'Before Tax (Exclusive)';
+                const taxBadgeClass = taxType === 'inclusive' ? 'inclusive' : 'exclusive';
+                
+                html += `<tfoot>
+                            <tr class="subtotal-row">
+                                <td colspan="${settings.show_quantity ? 2 : 1}" class="text-end fw-bold">Subtotal:</td>
+                                <td class="text-end">KES ${formatMoney(subtotal)}</td>
+                            </tr>`;
+                
+                html += `<tr class="vat-row">
+                            <td colspan="${settings.show_quantity ? 2 : 1}" class="text-end fw-bold vat-label">
+                                ${escapeHtml(vatLabel)} (${vatRate}%)
+                                <span class="tax-type-badge ${taxBadgeClass}">${taxTypeDisplay}</span>
+                            </td>
+                            <td class="text-end vat-amount">KES ${formatMoney(vatAmount)}</td>
+                        </tr>`;
+                
+                html += `<tr class="grand-total-row">
+                            <td colspan="${settings.show_quantity ? 2 : 1}" class="text-end fw-bold">GRAND TOTAL:</td>
+                            <td class="text-end text-success">KES ${formatMoney(totalWithVat)}</td>
+                        </tr>`;
+                
+                html += `</tfoot>`;
+            } else if (settings.show_gross_total) {
                 html += `<tfoot>
                             <tr class="table-light">
-                                <td colspan="3" class="text-end fw-bold">GRAND TOTAL:${!settings.show_quantity ? '<td colspan="1">' : ''}</td>
-                                <td class="text-end fw-bold text-success">KES ${formatMoney(sampleSale.total)}</td>
+                                <td colspan="${settings.show_quantity ? 2 : 1}" class="text-end fw-bold">GRAND TOTAL:</td>
+                                <td class="text-end fw-bold text-success">KES ${formatMoney(subtotal)}</td>
                             </tr>
                         </tfoot>`;
             }
@@ -557,53 +883,46 @@
             html += '</div>';
             
             if (settings.show_gross_total && !settings.show_items_table) {
-                html += `<div class="text-end mb-3 fw-bold">GRAND TOTAL: KES ${formatMoney(sampleSale.total)}</div>`;
+                html += `<div class="text-end mb-3 fw-bold">GRAND TOTAL: KES ${formatMoney(subtotal)}</div>`;
             }
             
             html += '<hr class="my-3">';
         }
         
-        // Footer
+        // ============================================
+        // FOOTER
+        // ============================================
         if (settings.show_footer_message && footer_text) {
-            html += '<div class="text-center small text-muted">';
+            html += '<div class="text-center small text-dark">';
             html += `<p class="mb-0">${escapeHtml(footer_text)}</p>`;
-            html += '<p class="mb-0">This is a computer generated receipt</p>';
+            if (showVat) {
+                html += `<p class="mb-0 small text-dark footer-vat-info">
+                            ${taxType === 'inclusive' 
+                                ? `All prices include ${escapeHtml(vatLabel)} at ${vatRate}%`
+                                : `${escapeHtml(vatLabel)} at ${vatRate}% added where applicable`}
+                        </p>`;
+            }
             html += '</div>';
         } else if (settings.show_footer_message) {
-            html += '<div class="text-center small text-muted">';
-            html += '<p class="mb-0">Thank you for your business!</p>';
-            html += '<p class="mb-0">This is a computer generated receipt</p>';
+            html += '<div class="text-center small text-dark">';
+            html += '<p class="mb-0">Goods Once Sold Cannot Be Re-Accepted!</p>';
             html += '</div>';
         }
         
         document.getElementById('receiptPreview').innerHTML = html;
     }
     
-    function formatMoney(amount) {
-        return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-    
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-    
-    function resetPreview() {
-        location.reload();
-    }
-    
-    // Attach event listeners to all inputs for real-time preview
+    // ============================================
+    // INITIALIZE
+    // ============================================
     document.addEventListener('DOMContentLoaded', function() {
+        // Attach event listeners to all inputs for real-time preview
         const inputs = document.querySelectorAll('input, textarea, select');
         inputs.forEach(input => {
             input.addEventListener('change', updatePreview);
             input.addEventListener('keyup', updatePreview);
         });
+        // Initial preview
         updatePreview();
     });
 </script>

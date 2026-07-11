@@ -1,11 +1,10 @@
-# apps/tech_master/urls.py
+# apps/tech_master/urls.py - Add these missing URL patterns
 
 from django.urls import path
+from . import views
 from apps.shared.portal import views as portal_views
-from apps.tech_master.inventory import views as inventory_views
-from apps.tech_master.sales import views as sales_views
-from apps.tech_master.expenses import views as expenses_views
-from apps.tech_master.reports import views as reports_views
+from apps.tech_master import views as inventory_views
+from apps.tech_master import views as sales_views
 from apps.shared.portal import api_views as pos_api_views
 
 app_name = 'tech_master'
@@ -51,6 +50,7 @@ urlpatterns = [
     path('inventory/<int:product_id>/edit/', inventory_views.edit_product, name='edit_product'),
     path('inventory/<int:product_id>/edit-bulk/', inventory_views.edit_bulk_product, name='edit_bulk_product'),
     path('inventory/<int:product_id>/delete/', inventory_views.delete_product, name='delete_product'),
+    path('inventory/manage/', inventory_views.manage_products, name='manage_products'),
     
     # Product Units
     path('inventory/<int:product_id>/add-unit/', inventory_views.add_unit, name='add_unit'),
@@ -66,6 +66,7 @@ urlpatterns = [
     path('categories/add/', inventory_views.add_category, name='add_category'),
     path('categories/<int:category_id>/edit/', inventory_views.edit_category, name='edit_category'),
     path('categories/<int:category_id>/delete/', inventory_views.delete_category, name='delete_category'),
+    path('categories/manage/', inventory_views.manage_categories, name='manage_categories'),
     
     # Branches
     path('branches/', inventory_views.branch_list, name='branch_list'),
@@ -79,6 +80,7 @@ urlpatterns = [
     path('suppliers/add/', inventory_views.add_supplier, name='add_supplier'),
     path('suppliers/<int:supplier_id>/edit/', inventory_views.edit_supplier, name='edit_supplier'),
     path('suppliers/<int:supplier_id>/delete/', inventory_views.delete_supplier, name='delete_supplier'),
+    path('suppliers/manage/', inventory_views.manage_suppliers, name='manage_suppliers'), 
     
     # Import/Export
     path('import/', inventory_views.import_products, name='import_products'),
@@ -110,6 +112,9 @@ urlpatterns = [
     path('stock-history/', inventory_views.stock_history, name='stock_history'),
     path('damaged-report/', inventory_views.damaged_units_report, name='damaged_units_report'),
     path('stock-history/<int:product_id>/', inventory_views.stock_history, name='stock_history_product'),
+    path('stock/manage/', inventory_views.manage_stock, name='manage_stock'),
+    path('stock/take/', inventory_views.stock_take, name='stock_take'),  
+    path('stock/adjust/<int:product_id>/', inventory_views.stock_adjustment, name='stock_adjustment'),
     
     # ============================================
     # SALES
@@ -118,8 +123,8 @@ urlpatterns = [
     path('my-sales/', sales_views.my_sales, name='my_sales'),
     path('my-stock/', sales_views.my_stock, name='my_stock'),
     path('agent-sale/', sales_views.agent_sale, name='agent_sale'),
-    path('my-stock/<int:unit_id>/', sales_views.my_stock_detail, name='my_stock_detail'),
     path('my-stock/<int:unit_id>/sell/', sales_views.my_stock_sell, name='my_stock_sell'),
+    path('my-stock/<int:unit_id>/', sales_views.my_stock_detail, name='my_stock_detail'),
     path('sales-search/', sales_views.sales_search, name='sales_search'),
     path('api/sales-search/', sales_views.sales_search_ajax, name='sales_search_ajax'),
     
@@ -127,33 +132,76 @@ urlpatterns = [
     path('sales/', sales_views.sales_history, name='sales_history'),
     path('sales/<int:sale_id>/', sales_views.sale_detail, name='sale_detail'),
     path('sales/<int:sale_id>/receipt/', sales_views.receipt, name='receipt'),
+    path('sales/<int:sale_id>/reverse/', sales_views.reverse_sale, name='sale_reverse'),
     path('sales/<int:sale_id>/return/', sales_views.create_return, name='create_return'),
+    
+    # Receipt Search
+    path('receipt-search/', sales_views.receipt_search, name='receipt_search'),
+    
+    # ============================================
+    # PRICE CHECK
+    # ============================================
+    path('price-check/', sales_views.price_check, name='price_check'),
+    path('api/price-check/', sales_views.price_check_ajax, name='price_check_ajax'),
+    
+    # Product Search (for quick lookup)
+    path('product-search/', sales_views.product_search, name='product_search'),
+    path('api/product-search/', sales_views.product_search_ajax, name='product_search_ajax'),
     
     # Returns
     path('returns/', sales_views.return_list, name='return_list'),
     path('returns/<int:return_id>/', sales_views.return_detail, name='return_detail'),
-    
+
     # ============================================
     # EXPENSES
     # ============================================
-    path('expenses/', expenses_views.expense_list, name='expense_list'),
-    path('expenses/add/', expenses_views.add_expense, name='add_expense'),
-    path('expenses/<int:expense_id>/', expenses_views.expense_detail, name='expense_detail'),
-    path('expenses/<int:expense_id>/approve/', expenses_views.approve_expense, name='approve_expense'),
-    path('expenses/<int:expense_id>/reject/', expenses_views.reject_expense, name='reject_expense'),
-    path('expenses/<int:expense_id>/pay/', expenses_views.mark_expense_paid, name='mark_expense_paid'),
-    path('expenses/report/', expenses_views.expense_report, name='expense_report'),
+    path('expenses/', views.expense_list, name='expense_list'),
+    path('expenses/report/', views.expense_report, name='expense_report'),
+    path('expenses/add/', views.add_expense, name='add_expense'),
+    path('expenses/<int:expense_id>/', views.expense_detail, name='expense_detail'),
+    path('expenses/<int:expense_id>/approve/', views.approve_expense, name='approve_expense'),
+    path('expenses/<int:expense_id>/reject/', views.reject_expense, name='reject_expense'),
+    path('expenses/<int:expense_id>/pay/', views.mark_expense_paid, name='mark_expense_paid'),
     
     # Expense Categories
-    path('expenses/categories/', expenses_views.category_list, name='expense_category_list'),
-    path('expenses/categories/add/', expenses_views.add_category, name='add_expense_category'),
-    path('expenses/categories/<int:category_id>/edit/', expenses_views.edit_category, name='edit_expense_category'),
-    path('expenses/categories/<int:category_id>/delete/', expenses_views.delete_category, name='delete_expense_category'),
-    
+    path('expenses/categories/', views.category_list, name='expense_category_list'),
+    path('expenses/categories/add/', views.add_category, name='add_expense_category'),
+    path('expenses/categories/<int:category_id>/edit/', views.edit_category, name='edit_expense_category'),
+    path('expenses/categories/<int:category_id>/delete/', views.delete_category, name='delete_expense_category'),
+
+    # ============================================
+    # ROLE & PERMISSION MANAGEMENT
+    # ============================================
+    path('roles/', views.role_list, name='role_list'),
+    path('roles/create/', views.role_create, name='role_create'),
+    path('roles/<int:role_id>/edit/', views.role_edit, name='role_edit'),
+    path('roles/<int:role_id>/delete/', views.role_delete, name='role_delete'),
+    path('roles/assign/', views.role_assign, name='role_assign'),
+    path('roles/remove/<int:assignment_id>/', views.role_remove_user, name='role_remove_user'),
+    path('roles/<int:role_id>/users/', views.role_user_list, name='role_user_list'),
+
+    # ============================================
+    # STAFF MANAGEMENT
+    # ============================================
+    path('staff/', views.staff_list, name='staff_list'),
+    path('staff/add/', views.staff_create, name='staff_create'),
+    path('staff/<int:staff_id>/', views.staff_detail, name='staff_detail'),
+    path('staff/<int:staff_id>/edit/', views.staff_edit, name='staff_edit'),
+    path('staff/<int:staff_id>/delete/', views.staff_delete, name='staff_delete'),
+    path('staff/<int:staff_id>/toggle-status/', views.staff_toggle_status, name='staff_toggle_status'),
+    path('staff/attendance/', views.staff_attendance, name='staff_attendance'),
+    path('staff/attendance/<int:staff_id>/', views.staff_attendance_detail, name='staff_attendance_detail'),
+    path('staff/leave/', views.staff_leave_list, name='staff_leave_list'),
+    path('staff/leave/create/', views.staff_leave_create, name='staff_leave_create'),
+    path('staff/leave/<int:leave_id>/approve/', views.staff_leave_approve, name='staff_leave_approve'),
+    path('staff/leave/<int:leave_id>/reject/', views.staff_leave_reject, name='staff_leave_reject'),
+    path('staff/manage/', views.manage_staff, name='manage_staff'),
+
     # ============================================
     # REPORTS
     # ============================================
-    path('reports/', reports_views.report_dashboard, name='report_dashboard'),
-    path('reports/inventory/', reports_views.inventory_report, name='inventory_report'),
-    path('reports/sales/', reports_views.sales_report, name='sales_report'),
+    path('reports/dashboard/', views.report_dashboard, name='report_dashboard'),
+    path('reports/sales/', views.sales_report, name='sales_report'),
+    path('reports/inventory/', views.inventory_report, name='inventory_report'),
+    path('reports/export/', views.export_reports, name='export_reports'),
 ]

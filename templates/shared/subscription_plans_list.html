@@ -20,7 +20,7 @@
                 <div class="card-body">
                     <!-- Stats -->
                     <div class="row mb-4">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card bg-info text-white">
                                 <div class="card-body">
                                     <h6>Total Plans</h6>
@@ -28,7 +28,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card bg-success text-white">
                                 <div class="card-body">
                                     <h6>Active Plans</h6>
@@ -36,11 +36,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card bg-warning text-dark">
                                 <div class="card-body">
-                                    <h6>Monthly Revenue Potential</h6>
-                                    <h3>${{ total_monthly_revenue|floatformat:0 }}</h3>
+                                    <h6>Total Tenants</h6>
+                                    <h3>{{ total_tenants }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h6>Monthly Revenue</h6>
+                                    <h3>KES {{ total_monthly_revenue|floatformat:0 }}</h3>
                                 </div>
                             </div>
                         </div>
@@ -58,6 +66,8 @@
                                     <th>Users</th>
                                     <th>Products</th>
                                     <th>Branches</th>
+                                    <th class="text-center">Tenants</th>
+                                    <th class="text-center">Monthly Revenue</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -65,13 +75,32 @@
                             <tbody>
                                 {% for plan in plans %}
                                 <tr>
-                                    <td><strong>{{ plan.name }}</strong> <i class="fas {{ plan.icon }}"></i></td>
+                                    <td>
+                                        <strong>{{ plan.name }}</strong>
+                                        <i class="fas {{ plan.icon }} ms-1"></i>
+                                    </td>
                                     <td><code>{{ plan.code }}</code></td>
-                                    <td>${{ plan.price_monthly }}</td>
-                                    <td>${{ plan.price_yearly }}</td>
+                                    <td>${{ plan.price_monthly|floatformat:2 }}</td>
+                                    <td>${{ plan.price_yearly|floatformat:2 }}</td>
                                     <td>{{ plan.max_users }}</td>
                                     <td>{{ plan.max_products }}</td>
                                     <td>{{ plan.max_branches }}</td>
+                                    <td class="text-center">
+                                        <span class="badge {% if plan.tenant_count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill px-3 py-2">
+                                            <i class="fas fa-users me-1"></i>{{ plan.tenant_count }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if plan.tenant_count > 0 %}
+                                            <span class="badge bg-success rounded-pill px-3 py-2">
+                                                ${{ plan.monthly_revenue|floatformat:2 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary rounded-pill px-3 py-2">
+                                                $0.00
+                                            </span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if plan.is_active %}
                                             <span class="badge bg-success">Active</span>
@@ -84,20 +113,41 @@
                                             <a href="{% url 'tenants:subscription_plan_edit' plan.id %}" class="btn btn-warning">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                            {% if plan.tenant_count == 0 %}
                                             <a href="{% url 'tenants:subscription_plan_delete' plan.id %}" 
                                                class="btn btn-danger"
                                                onclick="return confirm('Delete this plan?')">
                                                 <i class="fas fa-trash"></i>
                                             </a>
+                                            {% else %}
+                                            <button class="btn btn-secondary" disabled title="Cannot delete - plan has tenants">
+                                                <i class="fas fa-lock"></i>
+                                            </button>
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="9" class="text-center">No subscription plans found</td>
+                                    <td colspan="11" class="text-center py-5">
+                                        <i class="fas fa-crown fa-3x text-muted opacity-25 d-block mb-3"></i>
+                                        <h5>No Subscription Plans Found</h5>
+                                        <p class="text-muted">Get started by creating your first subscription plan.</p>
+                                        <a href="{% url 'tenants:subscription_plan_create' %}" class="btn btn-primary mt-2">
+                                            <i class="fas fa-plus me-2"></i>Create Plan
+                                        </a>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="7" class="text-end fw-bold">TOTALS:</th>
+                                    <th class="text-center fw-bold">{{ total_tenants }}</th>
+                                    <th class="text-center fw-bold text-success">${{ total_monthly_revenue|floatformat:2 }}</th>
+                                    <th colspan="2"></th>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -105,4 +155,49 @@
         </div>
     </div>
 </div>
+
+<style>
+    .table th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .table tbody tr {
+        transition: all 0.2s;
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.04);
+    }
+    
+    .badge {
+        font-weight: 500;
+    }
+    
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        border-radius: 12px 12px 0 0 !important;
+    }
+    
+    .bg-primary {
+        background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
+    }
+    
+    .bg-success {
+        background: linear-gradient(135deg, #198754, #157347) !important;
+    }
+    
+    .bg-warning {
+        background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+    }
+    
+    .bg-info {
+        background: linear-gradient(135deg, #0dcaf0, #0aa2c0) !important;
+    }
+</style>
 {% endblock %}

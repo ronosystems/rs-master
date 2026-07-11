@@ -1,0 +1,501 @@
+<!-- templates/food_master/add_menu_item.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Add Menu Item - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<style>
+    .preview-card {
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        background: white;
+        height: 100%;
+        position: sticky;
+        top: 20px;
+    }
+    .preview-card .preview-header {
+        border-bottom: 2px solid #e67e22;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    .preview-card .preview-item {
+        text-align: center;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    .preview-card .preview-item .item-name {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    .preview-card .preview-item .item-price {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #e67e22;
+    }
+    .preview-card .preview-item .item-category {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .preview-card .preview-item .item-description {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-top: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        min-height: 50px;
+    }
+    .preview-card .preview-item .item-badges {
+        margin-top: 15px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+    }
+    .preview-card .preview-item .item-badges .badge {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+    }
+    .preview-card .preview-item .item-unit {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin-top: 5px;
+    }
+    .preview-placeholder {
+        color: #adb5bd;
+        text-align: center;
+        padding: 40px 20px;
+    }
+    .preview-placeholder i {
+        font-size: 3rem;
+        display: block;
+        margin-bottom: 15px;
+    }
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #e9ecef;
+    }
+    .form-section .form-section-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #e67e22;
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #e67e22;
+        box-shadow: 0 0 0 0.2rem rgba(230, 126, 34, 0.25);
+    }
+    .preview-item .price-tag {
+        background: #e67e22;
+        color: white;
+        padding: 2px 12px;
+        border-radius: 20px;
+        display: inline-block;
+        font-size: 0.8rem;
+        margin-top: 5px;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #e67e22;"></i>Add Menu Item</h4>
+        <a href="{% url 'food_master:menu_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Menu
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- LEFT COLUMN - Form -->
+        <div class="col-lg-7">
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-utensils me-2"></i> Menu Item Details
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data" id="menuItemForm">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <!-- Basic Info -->
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">
+                                <i class="fas fa-tag me-1" style="color: #e67e22;"></i>
+                                Item Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   placeholder="e.g., Grilled Chicken" required oninput="updatePreview()">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="category" class="form-label">
+                                <i class="fas fa-folder me-1" style="color: #e67e22;"></i>
+                                Category <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="category" name="category" required onchange="updatePreview()">
+                                <option value="">-- Select Category --</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if not categories %}
+                                <small class="text-danger">
+                                    <a href="{% url 'food_master:add_category' %}">Create a category first</a>
+                                </small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="price" class="form-label">
+                                <i class="fas fa-money-bill-wave me-1" style="color: #e67e22;"></i>
+                                Price (KES) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="price" name="price" 
+                                   step="0.01" placeholder="0.00" required oninput="updatePreview()">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="cost" class="form-label">
+                                <i class="fas fa-coins me-1" style="color: #e67e22;"></i>
+                                Cost (KES)
+                            </label>
+                            <input type="number" class="form-control" id="cost" name="cost" 
+                                   step="0.01" placeholder="0.00" oninput="updatePreview()">
+                            <small class="text-muted">Cost to make</small>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="unit" class="form-label">
+                                <i class="fas fa-balance-scale me-1" style="color: #e67e22;"></i>
+                                Unit
+                            </label>
+                            <select class="form-select" id="unit" name="unit" onchange="updatePreview()">
+                                <option value="serving">Serving</option>
+                                <option value="plate">Plate</option>
+                                <option value="piece">Piece</option>
+                                <option value="kg">Kilogram</option>
+                                <option value="g">Gram</option>
+                                <option value="ml">Milliliter</option>
+                                <option value="l">Liter</option>
+                                <option value="bottle">Bottle</option>
+                                <option value="glass">Glass</option>
+                                <option value="cup">Cup</option>
+                                <option value="bowl">Bowl</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="preparation_time" class="form-label">
+                                <i class="fas fa-clock me-1" style="color: #e67e22;"></i>
+                                Prep Time (minutes)
+                            </label>
+                            <input type="number" class="form-control" id="preparation_time" name="preparation_time" 
+                                   placeholder="15" value="15" oninput="updatePreview()">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="branch" class="form-label">
+                                <i class="fas fa-store me-1" style="color: #e67e22;"></i>
+                                Branch
+                            </label>
+                            <select class="form-select" id="branch" name="branch" onchange="updatePreview()">
+                                <option value="">All Branches</option>
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="col-12">
+                            <label for="description" class="form-label">
+                                <i class="fas fa-align-left me-1" style="color: #e67e22;"></i>
+                                Description
+                            </label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="3" placeholder="Describe the item..." oninput="updatePreview()"></textarea>
+                        </div>
+                        
+                        <!-- Options -->
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2" style="color: #e67e22;">
+                                <i class="fas fa-toggle-on me-2"></i>Options
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_available" name="is_available" checked onchange="updatePreview()">
+                                <label class="form-check-label" for="is_available">
+                                    <i class="fas fa-check-circle me-1" style="color: #27ae60;"></i>
+                                    Available
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_vegetarian" name="is_vegetarian" onchange="updatePreview()">
+                                <label class="form-check-label" for="is_vegetarian">
+                                    <i class="fas fa-leaf me-1" style="color: #27ae60;"></i>
+                                    Vegetarian
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_vegan" name="is_vegan" onchange="updatePreview()">
+                                <label class="form-check-label" for="is_vegan">
+                                    <i class="fas fa-seedling me-1" style="color: #27ae60;"></i>
+                                    Vegan
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_spicy" name="is_spicy" onchange="updatePreview()">
+                                <label class="form-check-label" for="is_spicy">
+                                    <i class="fas fa-fire me-1" style="color: #e74c3c;"></i>
+                                    Spicy
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_gluten_free" name="is_gluten_free" onchange="updatePreview()">
+                                <label class="form-check-label" for="is_gluten_free">
+                                    <i class="fas fa-bread-slice me-1" style="color: #3498db;"></i>
+                                    Gluten Free
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="has_allergens" name="has_allergens" onchange="updatePreview()">
+                                <label class="form-check-label" for="has_allergens">
+                                    <i class="fas fa-exclamation-triangle me-1" style="color: #e67e22;"></i>
+                                    Contains Allergens
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit -->
+                        <div class="col-12 mt-4">
+                            <button type="submit" class="btn" style="background-color: #e67e22; color: white; padding: 10px 30px;">
+                                <i class="fas fa-save me-2"></i> Save Menu Item
+                            </button>
+                            <a href="{% url 'food_master:menu_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN - Preview -->
+        <div class="col-lg-5">
+            <div class="preview-card">
+                <div class="preview-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-eye me-2" style="color: #e67e22;"></i>
+                        Live Preview
+                    </h6>
+                    <small class="text-muted">Item preview updates in real-time</small>
+                </div>
+                
+                <div id="previewContent">
+                    <div class="preview-item">
+                        <div class="item-name" id="previewName">Your Item Name</div>
+                        <div class="item-price" id="previewPrice">KES 0.00</div>
+                        <div class="item-category" id="previewCategory">Category: Not selected</div>
+                        <div class="item-unit" id="previewUnit">Unit: Serving</div>
+                        <div class="item-description" id="previewDescription">
+                            <span class="text-muted">Item description will appear here</span>
+                        </div>
+                        <div class="item-badges" id="previewBadges">
+                            <span class="badge bg-success" id="previewAvailability">✓ Available</span>
+                        </div>
+                        <div class="mt-3">
+                            <span class="price-tag" id="previewPrepTime">⏱ 15 min</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Empty State -->
+                <div id="previewPlaceholder" style="display: none;">
+                    <div class="preview-placeholder">
+                        <i class="fas fa-utensils text-muted"></i>
+                        <p>Fill in the form to see a live preview</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// LIVE PREVIEW FUNCTION
+// ============================================
+function updatePreview() {
+    // Get form values
+    const name = document.getElementById('name').value || 'Your Item Name';
+    const price = document.getElementById('price').value || '0.00';
+    const categorySelect = document.getElementById('category');
+    const categoryName = categorySelect.options[categorySelect.selectedIndex]?.text || 'Not selected';
+    const unitSelect = document.getElementById('unit');
+    const unitName = unitSelect.options[unitSelect.selectedIndex]?.text || 'Serving';
+    const description = document.getElementById('description').value || '';
+    const prepTime = document.getElementById('preparation_time').value || '0';
+    
+    // Checkboxes
+    const isAvailable = document.getElementById('is_available').checked;
+    const isVegetarian = document.getElementById('is_vegetarian').checked;
+    const isVegan = document.getElementById('is_vegan').checked;
+    const isSpicy = document.getElementById('is_spicy').checked;
+    const isGlutenFree = document.getElementById('is_gluten_free').checked;
+    const hasAllergens = document.getElementById('has_allergens').checked;
+    
+    // Update preview elements
+    document.getElementById('previewName').textContent = name || 'Your Item Name';
+    document.getElementById('previewPrice').textContent = `KES ${parseFloat(price).toFixed(2)}`;
+    document.getElementById('previewCategory').textContent = `Category: ${categoryName}`;
+    document.getElementById('previewUnit').textContent = `Unit: ${unitName}`;
+    document.getElementById('previewDescription').textContent = description || 'Item description will appear here';
+    document.getElementById('previewPrepTime').textContent = `⏱ ${prepTime} min`;
+    
+    // Update availability badge
+    const availabilityBadge = document.getElementById('previewAvailability');
+    if (isAvailable) {
+        availabilityBadge.textContent = '✓ Available';
+        availabilityBadge.className = 'badge bg-success';
+    } else {
+        availabilityBadge.textContent = '✗ Unavailable';
+        availabilityBadge.className = 'badge bg-danger';
+    }
+    
+    // Update badges
+    const badgesContainer = document.getElementById('previewBadges');
+    let badgesHtml = `<span class="badge bg-success" id="previewAvailability">${isAvailable ? '✓ Available' : '✗ Unavailable'}</span>`;
+    
+    if (isVegetarian) {
+        badgesHtml += `<span class="badge bg-success">🌱 Vegetarian</span>`;
+    }
+    if (isVegan) {
+        badgesHtml += `<span class="badge bg-info">🌿 Vegan</span>`;
+    }
+    if (isSpicy) {
+        badgesHtml += `<span class="badge bg-danger">🌶️ Spicy</span>`;
+    }
+    if (isGlutenFree) {
+        badgesHtml += `<span class="badge bg-primary">Gluten Free</span>`;
+    }
+    if (hasAllergens) {
+        badgesHtml += `<span class="badge bg-warning text-dark">⚠️ Allergens</span>`;
+    }
+    
+    badgesContainer.innerHTML = badgesHtml;
+    
+    // Show/hide placeholder
+    const hasInput = name !== 'Your Item Name' || price !== '0.00' || categoryName !== 'Not selected';
+    document.getElementById('previewPlaceholder').style.display = hasInput ? 'none' : 'block';
+}
+
+// ============================================
+// FORM VALIDATION
+// ============================================
+document.getElementById('menuItemForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const category = document.getElementById('category').value;
+    const price = document.getElementById('price').value;
+    
+    if (!name) {
+        e.preventDefault();
+        alert('Please enter the item name.');
+        document.getElementById('name').focus();
+        return false;
+    }
+    
+    if (!category) {
+        e.preventDefault();
+        alert('Please select a category.');
+        document.getElementById('category').focus();
+        return false;
+    }
+    
+    if (!price || parseFloat(price) <= 0) {
+        e.preventDefault();
+        alert('Please enter a valid price.');
+        document.getElementById('price').focus();
+        return false;
+    }
+    
+    return true;
+});
+
+// ============================================
+// INITIALIZE PREVIEW
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    updatePreview();
+});
+
+// ============================================
+// REAL-TIME UPDATE ON INPUT
+// ============================================
+document.querySelectorAll('#menuItemForm input, #menuItemForm select, #menuItemForm textarea').forEach(element => {
+    element.addEventListener('input', updatePreview);
+    element.addEventListener('change', updatePreview);
+});
+</script>
+
+<style>
+/* Additional styling for the preview */
+.preview-item {
+    transition: all 0.3s ease;
+}
+.preview-item .item-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+}
+.preview-item .item-price {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #e67e22;
+}
+.preview-item .item-description {
+    min-height: 50px;
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+}
+.price-tag {
+    background: #e67e22;
+    color: white;
+    padding: 2px 12px;
+    border-radius: 20px;
+    display: inline-block;
+    font-size: 0.8rem;
+}
+.form-control:focus, .form-select:focus {
+    border-color: #e67e22;
+    box-shadow: 0 0 0 0.2rem rgba(230, 126, 34, 0.25);
+}
+</style>
+{% endblock %}

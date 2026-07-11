@@ -1,0 +1,772 @@
+<!-- templates/hotel_master/guests.html -->
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="fas fa-user-friends text-warning me-2"></i>Guest Management
+        </h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success btn-sm" onclick="exportGuests()">
+                <i class="fas fa-file-export me-2"></i>Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Guest Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Total Guests</h6>
+                <h3 class="fw-bold">{{ total_guests|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Checked In</h6>
+                <h3 class="fw-bold text-success">{{ checked_in_guests|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Checked Out</h6>
+                <h3 class="fw-bold text-secondary">{{ checked_out_guests|default:0 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted">Today's Check-ins</h6>
+                <h3 class="fw-bold text-info">{{ today_checkins|default:0 }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Search Guest</label>
+                    <input type="text" id="searchGuest" class="form-control form-control-sm" placeholder="Name, phone or email...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Status</label>
+                    <select id="filterStatus" class="form-select form-select-sm">
+                        <option value="">All Status</option>
+                        <option value="checked_in">Checked In</option>
+                        <option value="checked_out">Checked Out</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="pending">Pending</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Stay Type</label>
+                    <select id="filterStayType" class="form-select form-select-sm">
+                        <option value="">All Types</option>
+                        <option value="current">Current Stay</option>
+                        <option value="past">Past Stays</option>
+                        <option value="upcoming">Upcoming</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary btn-sm w-100" onclick="filterGuests()">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guests Table -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="guestTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Guest Name</th>
+                            <th>Contact</th>
+                            <th>Room</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in guests %}
+                        <tr data-status="{{ booking.status }}" data-stay-type="{% if booking.status == 'checked_in' %}current{% elif booking.status == 'checked_out' %}past{% else %}upcoming{% endif %}" data-id="{{ booking.id }}">
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <div class="fw-bold">{{ booking.guest_name }}</div>
+                                <small class="text-muted">Booking #{{ booking.booking_number }}</small>
+                            </td>
+                            <td>
+                                <div><i class="fas fa-phone me-1 text-muted"></i>{{ booking.guest_phone }}</div>
+                                {% if booking.guest_email %}
+                                <small class="text-muted"><i class="fas fa-envelope me-1"></i>{{ booking.guest_email }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ booking.room.room_number }} </td>
+                            <td>{{ booking.check_in|date:"M d, Y" }}</td>
+                            <td>{{ booking.check_out|date:"M d, Y" }}</td>
+                            <td>
+                                {% if booking.status == 'checked_in' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Checked In
+                                    </span>
+                                {% elif booking.status == 'checked_out' %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-check-double me-1"></i>Checked Out
+                                    </span>
+                                {% elif booking.status == 'confirmed' %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-clock me-1"></i>Confirmed
+                                    </span>
+                                {% elif booking.status == 'pending' %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-hourglass-half me-1"></i>Pending
+                                    </span>
+                                {% elif booking.status == 'cancelled' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times-circle me-1"></i>Cancelled
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ booking.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="viewGuest({{ booking.id }})" title="View Guest">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% if booking.status == 'confirmed' %}
+                                    <button class="btn btn-outline-success" onclick="checkInGuest({{ booking.id }}, '{{ booking.guest_name }}')" title="Check In">
+                                        <i class="fas fa-sign-in-alt"></i>
+                                    </button>
+                                    {% elif booking.status == 'checked_in' %}
+                                    <button class="btn btn-outline-warning" onclick="checkOutGuest({{ booking.id }}, '{{ booking.guest_name }}')" title="Check Out">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-outline-danger" onclick="confirmDelete({{ booking.id }}, '{{ booking.guest_name }}')" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-user-friends fa-3x text-muted opacity-25 d-block mb-3"></i>
+                                <h5>No Guests Yet</h5>
+                                <p class="text-muted">Guests will appear here when bookings are created.</p>
+                                <a href="{% url 'hotel_master:new_booking' %}" class="btn btn-success mt-2">
+                                    <i class="fas fa-plus-circle me-2"></i>Create Booking
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if guests.has_other_pages %}
+        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center py-3 px-4">
+            <div class="text-muted small">
+                Showing {{ guests.start_index }} - {{ guests.end_index }} of {{ guests.paginator.count }} guests
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if guests.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ guests.previous_page_number }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in guests.paginator.page_range %}
+                        {% if guests.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > guests.number|add:'-3' and num < guests.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if guests.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ guests.next_page_number }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- View Guest Modal -->
+<div class="modal fade" id="viewGuestModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user me-2"></i>Guest Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="viewGuestContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printGuest()">
+                    <i class="fas fa-print me-2"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// ============================================
+// FILTER GUESTS
+// ============================================
+function filterGuests() {
+    const search = document.getElementById('searchGuest').value.toLowerCase();
+    const status = document.getElementById('filterStatus').value;
+    const stayType = document.getElementById('filterStayType').value;
+    const rows = document.querySelectorAll('#guestTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const rowStatus = row.getAttribute('data-status');
+        const rowStayType = row.getAttribute('data-stay-type');
+        
+        let show = true;
+        
+        if (search && !text.includes(search)) show = false;
+        if (status && rowStatus !== status) show = false;
+        if (stayType && rowStayType !== stayType) show = false;
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+// ============================================
+// VIEW GUEST
+// ============================================
+function viewGuest(bookingId) {
+    const modal = new bootstrap.Modal(document.getElementById('viewGuestModal'));
+    const content = document.getElementById('viewGuestContent');
+    
+    // Show loading
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch booking details
+    fetch(`/hotel/api/booking/${bookingId}/`)
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const json = JSON.parse(text);
+                        throw new Error(json.error || `HTTP error ${response.status}`);
+                    } catch (e) {
+                        throw new Error(`Server error (${response.status})`);
+                    }
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const booking = data.booking;
+                const statusColors = {
+                    'confirmed': 'info',
+                    'pending': 'warning',
+                    'checked_in': 'success',
+                    'checked_out': 'secondary',
+                    'cancelled': 'danger',
+                    'no_show': 'dark'
+                };
+                
+                const statusDisplay = booking.status_display || booking.status.charAt(0).toUpperCase() + booking.status.slice(1);
+                
+                content.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Guest Name</label>
+                                <h5 class="fw-bold">${booking.guest_name}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Phone</label>
+                                <h5>${booking.guest_phone}</h5>
+                            </div>
+                            ${booking.guest_email ? `
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Email</label>
+                                <h5>${booking.guest_email}</h5>
+                            </div>
+                            ` : ''}
+                            ${booking.guest_id ? `
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">ID Number</label>
+                                <h5>${booking.guest_id}</h5>
+                            </div>
+                            ` : ''}
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Booking Number</label>
+                                <h5><code>${booking.booking_number}</code></h5>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Room</label>
+                                <h5>${booking.room_number}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Check In</label>
+                                <h5>${booking.check_in}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Check Out</label>
+                                <h5>${booking.check_out}</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Status</label>
+                                <h5>
+                                    <span class="badge bg-${statusColors[booking.status] || 'secondary'}">
+                                        ${statusDisplay}
+                                    </span>
+                                </h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small fw-bold">Payment Status</label>
+                                <h5>
+                                    <span class="badge bg-${booking.payment_status === 'paid' ? 'success' : 'warning'}">
+                                        ${(booking.payment_status || 'Pending').charAt(0).toUpperCase() + (booking.payment_status || 'pending').slice(1)}
+                                    </span>
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">Total Amount:</span>
+                                <span class="fw-bold text-success">KES ${(booking.total_amount || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span>Amount Paid:</span>
+                                <span>KES ${(booking.paid_amount || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span>Balance:</span>
+                                <span class="text-danger">KES ${((booking.total_amount || 0) - (booking.paid_amount || 0)).toLocaleString()}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span>Nights:</span>
+                                <span>${booking.nights || 1} night(s)</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span>Guests:</span>
+                                <span>${booking.guests || 1} guest(s)</span>
+                            </div>
+                        </div>
+                    </div>
+                    ${booking.special_requests ? `
+                    <hr>
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold">Special Requests</label>
+                        <p class="mb-0">${booking.special_requests}</p>
+                    </div>
+                    ` : ''}
+                    ${booking.notes ? `
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold">Notes</label>
+                        <p class="mb-0">${booking.notes}</p>
+                    </div>
+                    ` : ''}
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        ${data.error || 'Failed to load guest details'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('View error:', error);
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    ${error.message || 'Error loading guest details. Please try again.'}
+                    <br><br>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewGuest(${bookingId})">
+                        <i class="fas fa-sync-alt me-1"></i>Retry
+                    </button>
+                </div>
+            `;
+        });
+}
+
+// ============================================
+// CHECK IN GUEST
+// ============================================
+function checkInGuest(bookingId, guestName) {
+    Swal.fire({
+        title: 'Check In Guest',
+        html: `
+            <p>Are you sure you want to check in <strong>${guestName}</strong>?</p>
+            <p class="text-muted small">This will mark the guest as checked in and occupy the room.</p>
+            <div class="text-start mt-3">
+                <label class="form-label small fw-bold">Payment Status</label>
+                <select id="checkinPaymentStatus" class="form-select form-select-sm">
+                    <option value="paid">Paid</option>
+                    <option value="pending">Pending</option>
+                    <option value="partial">Partial Payment</option>
+                </select>
+            </div>
+            <div class="text-start mt-2">
+                <label class="form-label small fw-bold">ID Verified</label>
+                <select id="checkinIdVerified" class="form-select form-select-sm">
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                </select>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Check In',
+        cancelButtonText: 'Cancel',
+        preConfirm: () => {
+            const paymentStatus = document.getElementById('checkinPaymentStatus').value;
+            const idVerified = document.getElementById('checkinIdVerified').value;
+            return { paymentStatus, idVerified };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const { paymentStatus, idVerified } = result.value;
+            
+            // Show loading
+            Swal.fire({
+                title: 'Checking In...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Perform check-in via API
+            fetch(`/hotel/api/booking/${bookingId}/checkin/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    payment_status: paymentStatus,
+                    id_verified: idVerified
+                })
+            })
+            .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                } else {
+                    throw new Error('Server returned non-JSON response');
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: '✅ Checked In!',
+                        text: `${guestName} has been checked in successfully.`,
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.error || 'Failed to check in guest',
+                        icon: 'error'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An error occurred while checking in the guest',
+                    icon: 'error'
+                });
+                console.error('Check-in error:', error);
+            });
+        }
+    });
+}
+
+// ============================================
+// CHECK OUT GUEST
+// ============================================
+function checkOutGuest(bookingId, guestName) {
+    Swal.fire({
+        title: 'Check Out Guest',
+        html: `
+            <p>Are you sure you want to check out <strong>${guestName}</strong>?</p>
+            <p class="text-muted small">This will mark the guest as checked out and free up the room.</p>
+            <div class="text-start mt-3">
+                <label class="form-label small fw-bold">Final Amount (KES)</label>
+                <input type="number" id="checkoutFinalAmount" class="form-control" placeholder="Enter final amount" step="0.01">
+            </div>
+            <div class="text-start mt-2">
+                <label class="form-label small fw-bold">Notes</label>
+                <textarea id="checkoutNotes" class="form-control" rows="2" placeholder="Any checkout notes..."></textarea>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Check Out',
+        cancelButtonText: 'Cancel',
+        preConfirm: () => {
+            const finalAmount = document.getElementById('checkoutFinalAmount').value;
+            const notes = document.getElementById('checkoutNotes').value;
+            if (!finalAmount) {
+                Swal.showValidationMessage('Please enter the final amount');
+                return false;
+            }
+            return { finalAmount, notes };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const { finalAmount, notes } = result.value;
+            
+            // Show loading
+            Swal.fire({
+                title: 'Checking Out...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Perform check-out via API
+            fetch(`/hotel/api/booking/${bookingId}/checkout/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    final_amount: finalAmount,
+                    notes: notes
+                })
+            })
+            .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                } else {
+                    throw new Error('Server returned non-JSON response');
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: '✅ Checked Out!',
+                        text: `${guestName} has been checked out successfully.`,
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.error || 'Failed to check out guest',
+                        icon: 'error'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An error occurred while checking out the guest',
+                    icon: 'error'
+                });
+                console.error('Check-out error:', error);
+            });
+        }
+    });
+}
+
+// ============================================
+// DELETE GUEST
+// ============================================
+function confirmDelete(bookingId, guestName) {
+    Swal.fire({
+        title: 'Delete Guest Record?',
+        html: `
+            <p>Are you sure you want to delete the record for <strong>${guestName}</strong>?</p>
+            <p class="text-danger small">This action cannot be undone. This will also delete the associated booking.</p>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Delete',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading
+            Swal.fire({
+                title: 'Deleting...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Delete via AJAX
+            fetch(`/hotel/api/booking/${bookingId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                } else {
+                    throw new Error('Server returned non-JSON response');
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: `Record for ${guestName} has been deleted.`,
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.error || 'Failed to delete guest record',
+                        icon: 'error'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'An error occurred while deleting the record',
+                    icon: 'error'
+                });
+                console.error('Delete error:', error);
+            });
+        }
+    });
+}
+
+// ============================================
+// EXPORT GUESTS
+// ============================================
+function exportGuests() {
+    // Export current filtered list to CSV
+    const rows = document.querySelectorAll('#guestTable tbody tr:visible');
+    let csv = 'Guest Name,Phone,Email,Room,Check In,Check Out,Status\n';
+    
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length > 0) {
+            const name = cells[1]?.textContent.trim() || '';
+            const contact = cells[2]?.textContent.trim() || '';
+            const room = cells[3]?.textContent.trim() || '';
+            const checkIn = cells[4]?.textContent.trim() || '';
+            const checkOut = cells[5]?.textContent.trim() || '';
+            const status = cells[6]?.textContent.trim() || '';
+            
+            csv += `"${name}","${contact}","${room}","${checkIn}","${checkOut}","${status}"\n`;
+        }
+    });
+    
+    // Download CSV
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `guests_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// ============================================
+// PRINT GUEST
+// ============================================
+function printGuest() {
+    window.print();
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1];
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('searchGuest').addEventListener('keyup', filterGuests);
+    document.getElementById('filterStatus').addEventListener('change', filterGuests);
+    document.getElementById('filterStayType').addEventListener('change', filterGuests);
+});
+</script>
+{% endblock %}

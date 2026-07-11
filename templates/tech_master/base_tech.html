@@ -1,4 +1,6 @@
+<!-- templates/tech_master/base_tech.html -->
 {% load static %}
+{% load tech_permissions %}
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
 <head>
@@ -17,11 +19,12 @@
           onerror="this.onerror=null;this.href='{% static 'css/all.min.css' %}'">
     
     <!-- Simple data URI favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>®️</text></svg>">
+    
     
     <style>
         /* ============================================ */
-        /* ALL YOUR EXISTING STYLES (KEEP THEM) */
+        /* ALL YOUR EXISTING STYLES - KEEP AS IS */
         /* ============================================ */
         * {
             margin: 0;
@@ -51,10 +54,19 @@
             --sidebar-bg: #1a1a2e;
             --sidebar-hover: #2d2d44;
             --sidebar-active: #0f67b3;
-            --sidebar-text: #e0e0e0;
+            --sidebar-text: #ffffff;
             --sidebar-border: #2d2d44;
             --footer-bg: #1a1a2e;
             --card-bg: #1e1e2e;
+        }
+
+        /* ============================================ */
+        /* BRANDING COLORS FROM COMPANY SETTINGS */
+        /* ============================================ */
+        :root {
+            --brand-primary: {% if company_settings and company_settings.primary_color %}{{ company_settings.primary_color }}{% else %}#0d6efd{% endif %};
+            --brand-secondary: {% if company_settings and company_settings.secondary_color %}{{ company_settings.secondary_color }}{% else %}#6c757d{% endif %};
+            --brand-accent: {% if company_settings and company_settings.accent_color %}{{ company_settings.accent_color }}{% else %}#ffc107{% endif %};
         }
 
         /* Fixed Top Navbar */
@@ -102,7 +114,7 @@
         .company-logo {
             width: 50px;
             height: 50px;
-            background: linear-gradient(135deg, #0f67b3, #0284c7);
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -168,7 +180,7 @@
         .user-avatar {
             width: 45px;
             height: 45px;
-            background: linear-gradient(135deg, #0f67b3, #0284c7);
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -201,7 +213,7 @@
             right: 0;
             left: auto;
             border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.986);
             border: none;
         }
 
@@ -212,8 +224,8 @@
             left: 0;
             bottom: 0;
             width: 280px;
-            background: var(--sidebar-bg);
-            box-shadow: 2px 0 15px rgba(0,0,0,0.08);
+            background: #b9e2cf;
+            box-shadow: 2px 0 15px rgb(0, 0, 0);
             z-index: 999;
             display: flex;
             flex-direction: column;
@@ -239,7 +251,7 @@
         }
 
         .sidebar-toggle {
-            background: linear-gradient(135deg, #0f67b3, #0284c7);
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
             border: none;
             color: white;
             font-size: 1.2rem;
@@ -272,6 +284,59 @@
 
         .sidebar-menu {
             padding: 5px 0 20px 0;
+        }
+
+        /* ============================================ */
+        /* SUB-MENU STYLES */
+        /* ============================================ */
+        .menu-group {
+            margin: 4px 0;
+        }
+
+        .menu-group .menu-title {
+            padding: 12px 15px 8px 15px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            color: #000000;
+            letter-spacing: 1px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .menu-group .menu-title:hover {
+            background: var(--sidebar-hover);
+        }
+
+        .menu-group .menu-title .toggle-icon {
+            font-size: 0.7rem;
+            transition: transform 0.3s ease;
+            opacity: 0.7;
+        }
+
+        .menu-group .menu-title.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .menu-group .sub-menu {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        .menu-group .sub-menu.open {
+            max-height: 1000px;
+            opacity: 1;
+        }
+
+        .menu-group .sub-menu .menu-item {
+            padding-left: 35px !important;
         }
 
         .sidebar-menu .menu-item {
@@ -314,15 +379,6 @@
             margin: 15px 15px;
         }
 
-        .sidebar-menu .menu-title {
-            padding: 15px 15px 8px 15px;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            color: #fc9002;
-            letter-spacing: 1px;
-            font-weight: 600;
-        }
-
         .fixed-left-sidebar.collapsed .menu-item span {
             display: none;
         }
@@ -331,11 +387,21 @@
             text-align: center;
             font-size: 0.6rem;
             padding: 15px 5px;
+            justify-content: center;
+        }
+
+        .fixed-left-sidebar.collapsed .menu-title .toggle-icon {
+            display: none;
         }
 
         .fixed-left-sidebar.collapsed .menu-item {
             justify-content: center;
             padding: 12px 0;
+        }
+
+        .fixed-left-sidebar.collapsed .sub-menu {
+            max-height: 0 !important;
+            opacity: 0 !important;
         }
 
         /* Sidebar Footer */
@@ -362,6 +428,7 @@
 
         .sidebar-footer .footer-btn:hover {
             background: var(--sidebar-hover);
+            box-shadow: 0 2px 10px rgb(0, 0, 0);
         }
 
         .sidebar-footer .footer-btn i {
@@ -377,11 +444,13 @@
         .sidebar-footer .footer-btn.help-btn {
             background: linear-gradient(135deg, #00b7ff, #0099ff);
             color: white;
+            box-shadow: 0 2px 10px rgb(0, 0, 0);
         }
 
         .sidebar-footer .footer-btn.help-btn:hover {
             background: linear-gradient(135deg, #00a2ff, #00a2ff);
             transform: translateX(5px);
+            box-shadow: 0 2px 10px rgb(0, 0, 0);
         }
 
         .fixed-left-sidebar.collapsed .sidebar-footer .footer-btn span {
@@ -400,7 +469,7 @@
             min-height: calc(100vh - 130px);
             padding: 25px 30px;
             transition: all 0.3s ease;
-            background: var(--bs-body-bg);
+            background: #c2e2e2;
         }
 
         .main-content.sidebar-collapsed {
@@ -474,7 +543,7 @@
 
         /* Tenant Limit Card */
         .tenant-limit-card {
-            background: #00b7ff;
+            background: #e0e6e5;
         }
         .tenant-limit-card:hover {
             transform: translateY(-2px);
@@ -607,78 +676,97 @@
     </style>
 </head>
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
 
-<!-- Sidebar Overlay -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
-
-<!-- ============================================ -->
-<!-- FIXED TOP NAVBAR -->
-<!-- ============================================ -->
-<div class="fixed-top-navbar">
-    <div class="navbar-left">
-        <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">
-            <i class="fas fa-bars"></i>
-        </button>
-        
-    <div class="company-logo" id="companyLogo">
-        {% if tenant_has_valid_logo and tenant_logo_url %}
-            <img src="{{ tenant_logo_url }}" 
-                 alt="{{ tenant.company_name }}" 
-                 style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;"
-                 onerror="this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex'">
-            <div class="logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">
-                <i class="fas fa-store" style="font-size: 1.5rem; color: white;"></i>
-            </div>
-        {% else %}
-            <i class="fas fa-store" style="font-size: 1.5rem; color: white;"></i>
-        {% endif %}
-    </div>
-        <div class="company-name">
-            {{ tenant.company_name|default:"Tech Master" }}
-        </div>
-    </div>
-    <div class="navbar-right">
-        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
-            <i class="fas fa-moon"></i>
-        </button>
-        <div class="user-info">
-            <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
-            <div class="user-role">
-                {% if user.role == 'admin' or user.role == 'tenant_admin' %}
-                    Company Admin
-                {% elif user.role == 'manager' %}
-                    Company Manager
-                {% elif user.role == 'cashier' or user.role == 'sales_agent' %}
-                    Staff
+    <!-- ============================================ -->
+    <!-- FIXED TOP NAVBAR -->
+    <!-- ============================================ -->
+    <div class="fixed-top-navbar">
+        <div class="navbar-left">
+            <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <div class="company-logo" id="companyLogo">
+                {% if company_settings and company_settings.show_logo_on_dashboard and company_settings.has_valid_logo %}
+                    <img src="{{ company_settings.logo.url }}" 
+                         alt="{{ company_settings.company_name|default:tenant.company_name }}" 
+                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;"
+                         onerror="this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex'">
+                    <div class="logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">
+                        <i class="fas fa-store" style="font-size: 1.5rem; color: white;"></i>
+                    </div>
+                {% elif tenant_has_valid_logo and tenant_logo_url %}
+                    <img src="{{ tenant_logo_url }}" 
+                         alt="{{ company_settings.company_name|default:tenant.company_name }}" 
+                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;"
+                         onerror="this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex'">
+                    <div class="logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">
+                        <i class="fas fa-store" style="font-size: 1.5rem; color: white;"></i>
+                    </div>
                 {% else %}
-                    {{ user.get_role_display }}
+                    <i class="fas fa-store" style="font-size: 1.5rem; color: white;"></i>
+                {% endif %}
+            </div>
+            
+            <div class="company-name" style="color: {% if company_settings and company_settings.primary_color %}{{ company_settings.primary_color }}{% else %}white{% endif %};">
+                {% if company_settings and company_settings.company_name %}
+                    {{ company_settings.company_name }}
+                {% elif tenant and tenant.company_name %}
+                    {{ tenant.company_name }}
+                {% else %}
+                    Tech Master
                 {% endif %}
             </div>
         </div>
-        <div class="dropdown">
-            <div class="user-avatar" data-bs-toggle="dropdown">
-                <i class="fas fa-user-circle fa-2x"></i>
+        
+        <div class="navbar-right">
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+                <i class="fas fa-moon"></i>
+            </button>
+            <div class="user-info">
+                <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                <div class="user-role">
+                    {% if user.is_super_admin or user.is_tenant_admin %}
+                        Company Admin
+                    {% elif user.is_regular_user %}
+                        Company Staff
+                    {% else %}
+                        {{ user.get_role_display }}
+                    {% endif %}
+                </div>
             </div>
-            <ul class="dropdown-menu dropdown-menu-profile">
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="{% url 'portal:profile' %}">
-                    <i class="fas fa-user me-2"></i> My Profile
-                </a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="{% url 'portal:change_password' %}">
-                    <i class="fas fa-key me-2"></i> Change Password
-                </a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="{% url 'portal:logout' %}">
-                    <i class="fas fa-sign-out-alt me-2"></i> Logout
-                </a></li>
-            </ul>
+            <div class="dropdown">
+                <div class="user-avatar" data-bs-toggle="dropdown">
+                    <i class="fas fa-user-circle fa-2x"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-profile">
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'portal:profile' %}">
+                        <i class="fas fa-user me-2"></i> My Profile
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'settings:profile_settings' %}" >
+                        <i class="fas fa-user me-2"></i> Profile settings
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'portal:change_password' %}">
+                        <i class="fas fa-key me-2"></i> Change Password
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="{% url 'portal:logout' %}">
+                        <i class="fas fa-sign-out-alt me-2"></i> Logout
+                    </a></li>
+                </ul>
+            </div>
         </div>
     </div>
-</div>
+
+
 
 <!-- ============================================ -->
-<!-- FIXED LEFT SIDEBAR - ROLE BASED -->
+<!-- FIXED LEFT SIDEBAR - PERMISSION BASED -->
 <!-- ============================================ -->
 <div class="fixed-left-sidebar" id="sidebar">
     <div class="sidebar-header">
@@ -691,521 +779,660 @@
         <div class="sidebar-menu">
                     
             <!-- ============================================ -->
-            <!-- DASHBOARD - ALL ROLES -->
+            <!-- DASHBOARD - BASED ON PERMISSIONS -->
             <!-- ============================================ -->
-            <div class="menu-title">📊 DASHBOARD</div>
-            
-            <!-- ADMIN / TENANT ADMIN Dashboard -->
-            {% if user.role == 'admin' or user.role == 'tenant_admin' %}
-            <a href="{% url 'tech_master:dashboard' %}" class="menu-item">
-                <i class="fas fa-tachometer-alt"></i>
-                <span>Admin Dashboard</span>
-            </a>
-            
-            <!-- MANAGER Dashboard -->
-            {% elif user.role == 'manager' %}
-            <a href="{% url 'tech_master:dashboard' %}" class="menu-item">
-                <i class="fas fa-tachometer-alt"></i>
-                <span>Manager Dashboard</span>
-            </a>
-            
-            <!-- CASHIER Dashboard -->
-            {% elif user.role == 'cashier' %}
-            <a href="{% url 'tech_master:pos' %}" class="menu-item">
-                <i class="fas fa-shopping-cart"></i>
-                <span>POS Dashboard</span>
-            </a>
-            
-            <!-- SALES AGENT Dashboard -->
-            {% elif user.role == 'sales_agent' %}
-            <a href="{% url 'tech_master:my_sales' %}" class="menu-item">
-                <i class="fas fa-chart-line"></i>
-                <span>Sales Dashboard</span>
-            </a>
-            {% endif %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    📊 DASHBOARD
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_dashboard_overview' %}
+                    <a href="{% url 'tech_master:dashboard' %}" class="menu-item">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Overview</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if user|tech_can:'can_view_reports_dashboard' %}
+                    <a href="{% url 'tech_master:report_dashboard' %}" class="menu-item">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Reports Dashboard</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if user|tech_can:'can_view_sales_history' %}
+                    <a href="{% url 'tech_master:sales_history' %}" class="menu-item">
+                        <i class="fas fa-history"></i>
+                        <span>Sales History</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if user|tech_can:'can_view_low_stock_alerts' %}
+                    <a href="{% url 'tech_master:low_stock_alert' %}" class="menu-item">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Low Stock Alerts</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if user|tech_can:'can_view_pos' %}
+                    <a href="{% url 'tech_master:pos' %}" class="menu-item">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Point of Sale</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
 
             <!-- ============================================ -->
-            <!-- ADMIN & MANAGER ONLY SECTION -->
-            <!-- ============================================ -->
-            {% if user.role == 'admin' or user.role == 'tenant_admin' or user.role == 'manager' %}
-
             <!-- COMPANY - ADMIN ONLY -->
-            {% if user.role == 'admin' or user.role == 'tenant_admin' %}
-            <div class="menu-title">🏢 COMPANY</div>
-            {% if tenant %}
-                <a href="{% url 'tenants:my_subscription' tenant.id %}" class="menu-item">
-                    <i class="fas fa-crown"></i>
-                    <span>My Subscription</span>
-                </a>
-            {% else %}
-                <a href="javascript:void(0)" class="menu-item disabled" onclick="event.preventDefault(); alert('No tenant assigned!');">
-                    <i class="fas fa-crown"></i>
-                    <span>My Subscription</span>
-                </a>
-            {% endif %}
-            {% endif %}
-
             <!-- ============================================ -->
-            <!-- USER MANAGEMENT - ADMIN ONLY -->
-            <!-- ============================================ -->
-            {% if user.role == 'admin' or user.role == 'tenant_admin' %}
-            <div class="menu-title">👥 USER MANAGEMENT</div>
-            <a href="{% url 'users:user_list' %}" class="menu-item">
-                <i class="fas fa-users"></i>
-                <span>Manage Users</span>
-            </a>
-            <a href="{% url 'users:add_user' %}" class="menu-item">
-                <i class="fas fa-user-plus"></i>
-                <span>Onboard Staff</span>
-            </a>
-            
-            <!-- ============================================ -->
-            <!-- USER MANAGEMENT - MANAGER ONLY -->
-            <!-- ============================================ -->
-            {% elif user.role == 'manager' %}
-            <div class="menu-title">👥 USER MANAGEMENT</div>
-            <a href="{% url 'users:user_list' %}" class="menu-item">
-                <i class="fas fa-users"></i>
-                <span>Manage Users</span>
-            </a>
-            <a href="{% url 'users:add_user' %}" class="menu-item">
-                <i class="fas fa-user-plus"></i>
-                <span>Onboard Staff</span>
-            </a>
+            {% if user.is_super_admin or user.is_tenant_admin %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    🏢 COMPANY
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_check_plans' %}
+                    <a href="{% url 'tenants:my_subscription' tenant.id %}" class="menu-item">
+                        <i class="fas fa-crown"></i>
+                        <span>Check Plans</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_my_subscription' %}
+                    <a href="{% url 'tenants:my_subscription' tenant.id %}" class="menu-item">
+                        <i class="fas fa-crown"></i>
+                        <span>My Subscription</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
             {% endif %}
 
             <!-- ============================================ -->
-            <!-- BRANCHES - ADMIN & MANAGER -->
+            <!-- MEMBERS - BASED ON STAFF PERMISSIONS -->
             <!-- ============================================ -->
-            <div class="menu-title">📍 BRANCHES</div>
-            <a href="{% url 'tech_master:branch_list' %}" class="menu-item">
-                <i class="fas fa-store"></i>
-                <span>Shop Branches</span>
-            </a>
-            <a href="{% url 'tech_master:add_branch' %}" class="menu-item">
-                <i class="fas fa-plus-circle"></i>
-                <span>Add Branch</span>
-            </a>
-            {% if user.role == 'admin' or user.role == 'tenant_admin' %}
-            <a href="{% url 'tech_master:assign_branch_manager' %}" class="menu-item">
-                <i class="fas fa-user-tie"></i>
-                <span>Assign Manager</span>
-            </a>
-            {% endif %}
-            
-            <!-- ============================================ -->
-            <!-- INVENTORY - ADMIN & MANAGER -->
-            <!-- ============================================ -->
-            <div class="menu-title">📦 INVENTORY</div>
-            <a href="{% url 'tech_master:category_list' %}" class="menu-item">
-                <i class="fas fa-tags"></i>
-                <span>Categories</span>
-            </a>
-            <a href="{% url 'tech_master:add_category' %}" class="menu-item">
-                <i class="fas fa-plus-circle"></i>
-                <span>Add Category</span>
-            </a>
-            <div class="menu-divider"></div>
-            <a href="{% url 'tech_master:product_list' %}" class="menu-item">
-                <i class="fas fa-boxes"></i>
-                <span>Product List</span>
-            </a>
-            <a href="{% url 'tech_master:add_product_selection' %}" class="menu-item">
-                <i class="fas fa-plus-circle"></i>
-                <span>Add Product</span>
-            </a>
-            <a href="{% url 'tech_master:import_products' %}" class="menu-item">
-                <i class="fas fa-file-upload"></i>
-                <span>Import Products</span>
-            </a>
-            <a href="{% url 'tech_master:barcode_labels_list' %}" class="menu-item">
-                <i class="fas fa-barcode"></i>
-                <span>Product Barcodes</span>
-            </a>
-            <a href="{% url 'tech_master:move_product_ownership' %}" class="menu-item">
-                <i class="fas fa-exchange-alt"></i>
-                <span>Item Transfer</span>
-            </a>
-            <a href="{% url 'tech_master:low_stock_alert' %}" class="menu-item">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span>Low Stock Alert</span>
-            </a>
-            
-            <!-- ============================================ -->
-            <!-- REPORTS & EXPENSES - ADMIN & MANAGER -->
-            <!-- ============================================ -->
-            <div class="menu-title">📈 SALES & REPORTS</div>
-            <a href="{% url 'tech_master:sales_history' %}" class="menu-item">
-                <i class="fas fa-history"></i>
-                <span>Sales History</span>
-            </a>
-            <a href="{% url 'tech_master:return_list' %}" class="menu-item">
-                <i class="fas fa-undo-alt"></i>
-                <span>Returns</span>
-            </a>
-            <a href="{% url 'tech_master:expense_list' %}" class="menu-item">
-                <i class="fas fa-receipt"></i>
-                <span>Expenses</span>
-            </a>
-            <a href="{% url 'tech_master:report_dashboard' %}" class="menu-item">
-                <i class="fas fa-chart-bar"></i>
-                <span>Reports</span>
-            </a>
-            
-            <!-- ============================================ -->
-            <!-- SETTINGS - ADMIN & MANAGER -->
-            <!-- ============================================ -->
-            <div class="menu-title">⚙️ SETTINGS</div>
-            <a href="{% url 'settings:receipt_settings' %}" class="menu-item">
-                <i class="fas fa-receipt"></i>
-                <span>Receipt Settings</span>
-            </a>
-            
-            {% endif %}
-            <!-- END ADMIN & MANAGER ONLY -->
-
-            <!-- ============================================ -->
-            <!-- CASHIER ONLY -->
-            <!-- ============================================ -->
-            {% if user.role == 'cashier' %}
-            <div class="menu-title">💳 DRAWER</div>
-            <a href="javascript:void(0)" class="menu-item" onclick="openDrawer()">
-                <i class="fas fa-cash-register"></i>
-                <span>Open Drawer</span>
-            </a>
-            <a href="javascript:void(0)" class="menu-item" onclick="closeDrawer()">
-                <i class="fas fa-lock"></i>
-                <span>Close Drawer</span>
-            </a>
-            <div class="menu-divider"></div>
-
-            <div class="menu-title">SALES</div>
-            <a href="{% url 'tech_master:sales_history' %}" class="menu-item">
-                <i class="fas fa-history"></i>
-                <span>My Sales</span>
-            </a>
+            {% if user|tech_can_any:'can_view_staff_list,can_manage_staff,can_add_staff,can_view_staff_attendance,can_view_staff_leave,can_view_roles_list,can_create_role,can_assign_role' %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    👥 MEMBERS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_staff_list' %}
+                    <a href="{% url 'tech_master:staff_list' %}" class="menu-item">
+                        <i class="fas fa-users"></i>
+                        <span>Staff List</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_manage_staff' %}
+                    <a href="{% url 'tech_master:manage_staff' %}" class="menu-item">
+                        <i class="fas fa-edit"></i>
+                        <span>Manage Staff</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_add_staff' %}
+                    <a href="{% url 'tech_master:staff_create' %}" class="menu-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Add Staff</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_staff_attendance' %}
+                    <a href="{% url 'tech_master:staff_attendance' %}" class="menu-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Staff Attendance</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_staff_leave' %}
+                    <a href="{% url 'tech_master:staff_leave_list' %}" class="menu-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Staff Leave</span>
+                    </a>
+                    {% endif %}
+                    <div class="menu-divider"></div>
+                    {% if user|tech_can:'can_view_roles_list' %}
+                    <a href="{% url 'tech_master:role_list' %}" class="menu-item">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Roles List</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_create_role' %}
+                    <a href="{% url 'tech_master:role_create' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Create Role</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_assign_role' %}
+                    <a href="{% url 'tech_master:role_assign' %}" class="menu-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Assign Role</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
             {% endif %}
 
             <!-- ============================================ -->
-            <!-- SALES AGENT ONLY -->
+            <!-- BRANCHES - BASED ON BRANCH PERMISSIONS -->
             <!-- ============================================ -->
-            {% if user.role == 'sales_agent' %}
-            <div class="menu-title">📦 SALES AGENT</div>
-            <a href="{% url 'tech_master:my_stock' %}" class="menu-item">
-                <i class="fas fa-box"></i>
-                <span>My Stock</span>
-            </a>
-            <a href="{% url 'tech_master:agent_sale' %}" class="menu-item">
-                <i class="fas fa-plus-circle"></i>
-                <span>New Sale</span>
-            </a>
-            <a href="{% url 'tech_master:sales_search' %}" class="menu-item">
-                <i class="fas fa-search"></i>
-                <span>Search Sale</span>
-            </a>
+            {% if user|tech_can_any:'can_view_branches,can_add_branch,can_assign_branch_manager,can_view_branch_stock,can_transfer_stock' %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    📍 BRANCHES
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_branches' %}
+                    <a href="{% url 'tech_master:branch_list' %}" class="menu-item">
+                        <i class="fas fa-store"></i>
+                        <span>Shop Branches</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_add_branch' %}
+                    <a href="{% url 'tech_master:add_branch' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Add Branch</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_assign_branch_manager' %}
+                    <a href="{% url 'tech_master:assign_branch_manager' %}" class="menu-item">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Assign Manager</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_branch_stock' %}
+                    <a href="{% url 'tech_master:branch_stock_list' %}" class="menu-item">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Branch Stock</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_transfer_stock' %}
+                    <a href="{% url 'tech_master:transfer_stock' %}" class="menu-item">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Transfer Stock</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- ============================================ -->
+            <!-- INVENTORY - BASED ON PERMISSIONS -->
+            <!-- ============================================ -->
+            {% if user|tech_can_any:'can_view_categories,can_manage_categories,can_add_category,can_view_products,can_manage_products,can_add_product,can_view_damaged_units,can_transfer_items,can_bulk_print_labels,can_view_product_barcodes,can_import_products,can_manage_stock,can_view_stock_report,can_view_stock_history,can_assign_to_agent' %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    📦 INVENTORY
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    <!-- Categories -->
+                    {% if user|tech_can:'can_view_categories' %}
+                    <a href="{% url 'tech_master:category_list' %}" class="menu-item">
+                        <i class="fas fa-tags"></i>
+                        <span>Categories</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_manage_categories' %}
+                    <a href="{% url 'tech_master:manage_categories' %}" class="menu-item">
+                        <i class="fas fa-edit"></i>
+                        <span>Manage Categories</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_add_category' %}
+                    <a href="{% url 'tech_master:add_category' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Add Category</span>
+                    </a>
+                    {% endif %}
+
+                    <div class="menu-divider"></div>
+                    
+                    <!-- Products -->
+                    {% if user|tech_can:'can_view_products' %}
+                    <a href="{% url 'tech_master:product_list' %}" class="menu-item">
+                        <i class="fas fa-boxes"></i>
+                        <span>Product List</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_manage_products' %}
+                    <a href="{% url 'tech_master:manage_products' %}" class="menu-item">
+                        <i class="fas fa-edit"></i>
+                        <span>Manage Products</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_add_product' %}
+                    <a href="{% url 'tech_master:add_product_selection' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Add Product</span>
+                    </a>
+                    {% endif %}
+
+                    <div class="menu-divider"></div>
+                    
+                    <!-- Stock Management -->
+                    {% if user|tech_can:'can_view_stock_report' %}
+                    <a href="{% url 'tech_master:stock_report' %}" class="menu-item">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Stock Report</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_stock_history' %}
+                    <a href="{% url 'tech_master:stock_history' %}" class="menu-item">
+                        <i class="fas fa-history"></i>
+                        <span>Stock History</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_damaged_units' %}
+                    <a href="{% url 'tech_master:damaged_units_report' %}" class="menu-item">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Damaged Units</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_transfer_items' %}
+                    <a href="{% url 'tech_master:move_product_ownership' %}" class="menu-item">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Item Transfer</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_assign_to_agent' %}
+                    <a href="{% url 'tech_master:assign_products_to_agent' %}" class="menu-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Assign to Agent</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_manage_stock' %}
+                    <a href="{% url 'tech_master:manage_stock' %}" class="menu-item">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>Stock Management</span>
+                    </a>
+                    {% endif %}
+
+                    <div class="menu-divider"></div>
+                    
+                    <!-- Barcodes -->
+                    {% if user|tech_can:'can_view_product_barcodes' %}
+                    <a href="{% url 'tech_master:barcode_labels_list' %}" class="menu-item">
+                        <i class="fas fa-barcode"></i>
+                        <span>Product Barcodes</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_bulk_print_labels' %}
+                    <a href="{% url 'tech_master:bulk_print_labels' %}" class="menu-item">
+                        <i class="fas fa-print"></i>
+                        <span>Bulk Print Labels</span>
+                    </a>
+                    {% endif %}
+                    
+                    <!-- Import/Export -->
+                    {% if user|tech_can:'can_import_products' %}
+                    <a href="{% url 'tech_master:import_products' %}" class="menu-item">
+                        <i class="fas fa-file-upload"></i>
+                        <span>Import Products</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- ============================================ -->
+            <!-- SALES & RETURNS - BASED ON PERMISSIONS -->
+            <!-- ============================================ -->
+            {% if user|tech_can_any:'can_view_agent_sale,can_view_sales_history,can_search_sales,can_view_returns,can_view_receipt_search' %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    💰 SALES
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_agent_sale' %}
+                    <a href="{% url 'tech_master:agent_sale' %}" class="menu-item">
+                        <i class="fas fa-hand-holding-usd"></i>
+                        <span>New Sale</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_sales_history' %}
+                    <a href="{% url 'tech_master:sales_history' %}" class="menu-item">
+                        <i class="fas fa-history"></i>
+                        <span>Sales History</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_search_sales' %}
+                    <a href="{% url 'tech_master:sales_search' %}" class="menu-item">
+                        <i class="fas fa-search"></i>
+                        <span>Search Sales</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_returns' %}
+                    <a href="{% url 'tech_master:return_list' %}" class="menu-item">
+                        <i class="fas fa-undo-alt"></i>
+                        <span>Returns</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_receipt_search' %}
+                    <a href="{% url 'tech_master:receipt_search' %}" class="menu-item">
+                        <i class="fas fa-file-invoice"></i>
+                        <span>Receipt Lookup</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- ============================================ -->
+            <!-- SUPPLIERS - BASED ON PERMISSIONS -->
+            <!-- ============================================ -->
+            {% if user|tech_can_any:'can_view_suppliers,can_manage_suppliers,can_add_supplier' %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    🏭 SUPPLIERS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_suppliers' %}
+                    <a href="{% url 'tech_master:supplier_list' %}" class="menu-item">
+                        <i class="fas fa-truck"></i>
+                        <span>Supplier List</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_manage_suppliers' %}
+                    <a href="{% url 'tech_master:manage_suppliers' %}" class="menu-item">
+                        <i class="fas fa-edit"></i>
+                        <span>Manage Suppliers</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_add_supplier' %}
+                    <a href="{% url 'tech_master:add_supplier' %}" class="menu-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Add Supplier</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- ============================================ -->
+            <!-- REPORTS - BASED ON PERMISSIONS -->
+            <!-- ============================================ -->
+            {% if user|tech_can_any:'can_view_report_dashboard,can_view_sales_reports,can_view_expenses,can_view_expense_report,can_view_inventory_report,can_export_reports' %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    📈 REPORTS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_report_dashboard' %}
+                    <a href="{% url 'tech_master:report_dashboard' %}" class="menu-item">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Report Dashboard</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_sales_reports' %}
+                    <a href="{% url 'tech_master:sales_report' %}" class="menu-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Sales Reports</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_expenses' %}
+                    <a href="{% url 'tech_master:expense_list' %}" class="menu-item">
+                        <i class="fas fa-receipt"></i>
+                        <span>Expenses</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_expense_report' %}
+                    <a href="{% url 'tech_master:expense_report' %}" class="menu-item">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Expense Report</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_inventory_report' %}
+                    <a href="{% url 'tech_master:inventory_report' %}" class="menu-item">
+                        <i class="fas fa-boxes"></i>
+                        <span>Inventory Report</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_export_reports' %}
+                    <a href="{% url 'tech_master:export_reports' %}" class="menu-item">
+                        <i class="fas fa-file-export"></i>
+                        <span>Export Reports</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- ============================================ -->
+            <!-- SETTINGS - BASED ON PERMISSIONS -->
+            <!-- ============================================ -->
+            {% if user|tech_can_any:'can_view_receipt_settings,can_view_payment_settings,can_view_company_settings' %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    ⚙️ SETTINGS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_receipt_settings' %}
+                    <a href="{% url 'settings:receipt_settings' %}" class="menu-item">
+                        <i class="fas fa-receipt"></i>
+                        <span>Receipt Settings</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_payment_settings' %}
+                    <a href="{% url 'settings:payment_settings' %}" class="menu-item">
+                        <i class="fas fa-dollar"></i>
+                        <span>Payment Settings</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_company_settings' %}
+                    <a href="{% url 'settings:company_settings' %}" class="menu-item">
+                        <i class="fas fa-building"></i>
+                        <span>Company Settings</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
             {% endif %}
 
             <!-- ============================================ -->
-            <!-- PROFILE SETTINGS - ALL ROLES -->
+            <!-- MY WORK - BASED ON PERMISSIONS -->
             <!-- ============================================ -->
-            <div class="menu-title">👤 PROFILE</div>
-            <a href="{% url 'settings:profile_settings' %}" class="menu-item">
-                <i class="fas fa-user-cog"></i>
-                <span>Profile Settings</span>
-            </a>
-            
+            {% if user|tech_can_any:'can_view_my_stock,can_view_my_sales,can_view_agent_sale_form' %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    💰 My Work
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_my_stock' %}
+                    <a href="{% url 'tech_master:my_stock' %}" class="menu-item">
+                        <i class="fas fa-box"></i>
+                        <span>My Stock</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_my_sales' %}
+                    <a href="{% url 'tech_master:my_sales' %}" class="menu-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>My Sales</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ============================================ -->
+            <!-- LOOKUPS - BASED ON PERMISSIONS -->
+            <!-- ============================================ -->
+            {% if user|tech_can_any:'can_view_price_check,can_view_product_search' %}
+            <div class="menu-group">
+                <div class="menu-title" onclick="toggleSubMenu(this)">
+                    🔍 LOOKUPS
+                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                </div>
+                <div class="sub-menu">
+                    {% if user|tech_can:'can_view_price_check' %}
+                    <a href="{% url 'tech_master:price_check' %}" class="menu-item">
+                        <i class="fas fa-dollar-sign"></i>
+                        <span>Price Check</span>
+                    </a>
+                    {% endif %}
+                    {% if user|tech_can:'can_view_product_search' %}
+                    <a href="{% url 'tech_master:product_search' %}" class="menu-item">
+                        <i class="fas fa-search"></i>
+                        <span>Product Search</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
 
     <!-- Sidebar Footer -->
     <div class="sidebar-footer">
-        <a href="javascript:void(0)" class="footer-btn help-btn" onclick="showHelp()">
-            <span> 📞 </span>
-            <span> Help Line </span>
-            <span> 0722 527 955 </span>
+        <a href="{% url 'portal:no_project_assigned' %}" class="footer-btn help-btn">
+            <i class="fas fa-question-circle"></i>
+            <span><Center> 🔴🟡🟢 About RS Master </Center></span>
+            <span class="badge bg-danger ms-1" id="chatBadge" style="display: none;">0</span>
         </a>
     </div>
 </div>
 
-<!-- ============================================ -->
-<!-- MAIN CONTENT -->
-<!-- ============================================ -->
-<div class="main-content" id="mainContent">
 
-    <!-- Show restricted access warning for admin with expired subscription -->
-    {% if subscription_restricted %}
-    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        <strong>Restricted Access!</strong> Your subscription has expired. 
-        Please <a href="{% url 'tenants:tenant_subscription' tenant.id %}" class="alert-link">renew now</a> to restore full access.
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    {% endif %}
 
     <!-- ============================================ -->
-    <!-- TENANT LIMITS DASHBOARD WIDGETS (ADMIN ONLY) -->
+    <!-- MAIN CONTENT -->
     <!-- ============================================ -->
-    {% if user.role == 'admin' or user.role == 'tenant_admin' %}
-    {% if tenant_has_limits %}
-    <div class="row g-4 mb-4">
-        <!-- Users Limit Card -->
-        <div class="col-xl-3 col-lg-6 col-md-6">
-            <div class="card border-0 shadow-sm h-100 tenant-limit-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="badge {% if tenant_users_at_limit %}bg-danger{% else %}bg-primary{% endif %} bg-opacity-100 p-2 rounded-3">
-                                <i class="fas fa-users fs-5 {% if tenant_users_at_limit %}text-danger{% else %}text-dark{% endif %}"></i>
-                            </span>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge {% if tenant_users_at_limit %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3 py-2">
-                                {{ tenant_users_count|default:0 }} / {{ tenant_user_limit|default:0 }}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <h6 class="fw-bold mb-1">Users</h6>
-                    <p class="text-muted small mb-3">
-                        {% if current_subscription %}
-                            {{ tenant_user_limit|default:0 }} users included in {{ current_subscription.name }}
-                        {% else %}
-                            No subscription plan active ({{ tenant_user_limit|default:0 }} default limit)
-                        {% endif %}
-                    </p>
-                    
-                    <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
-                        <div class="progress-bar {% if tenant_users_at_limit %}bg-danger{% elif tenant_users_percentage > 80 %}bg-warning{% else %}bg-success{% endif %}" 
-                             style="width: {{ tenant_users_percentage|default:0 }}%; border-radius: 8px; transition: width 0.6s ease;">
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            {% if tenant_users_remaining > 0 %}
-                                <i class="fas fa-user-plus me-1 text-success"></i> {{ tenant_users_remaining }} remaining
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Limit reached!</span>
-                            {% endif %}
-                        </small>
-                        <small class="fw-bold">{{ tenant_users_percentage|floatformat:0 }}%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Products Limit Card -->
-        <div class="col-xl-3 col-lg-6 col-md-6">
-            <div class="card border-0 shadow-sm h-100 tenant-limit-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="badge {% if tenant_products_at_limit %}bg-danger{% else %}bg-primary{% endif %} bg-opacity-100 p-2 rounded-3">
-                                <i class="fas fa-boxes fs-5 {% if tenant_products_at_limit %}text-danger{% else %}text-dark{% endif %}"></i>
-                            </span>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge {% if tenant_products_at_limit %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3 py-2">
-                                {{ tenant_products_count|default:0 }} / {{ tenant_product_limit|default:0 }}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <h6 class="fw-bold mb-1">Products</h6>
-                    <p class="text-muted small mb-3">
-                        {% if current_subscription %}
-                            {{ tenant_product_limit|default:0 }} products included in {{ current_subscription.name }}
-                        {% else %}
-                            No subscription plan active ({{ tenant_product_limit|default:0 }} default limit)
-                        {% endif %}
-                    </p>
-                    
-                    <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
-                        <div class="progress-bar {% if tenant_products_at_limit %}bg-danger{% elif tenant_products_percentage > 80 %}bg-warning{% else %}bg-success{% endif %}" 
-                             style="width: {{ tenant_products_percentage|default:0 }}%; border-radius: 8px; transition: width 0.6s ease;">
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            {% if tenant_products_remaining > 0 %}
-                                <i class="fas fa-plus-circle me-1 text-success"></i> {{ tenant_products_remaining }} remaining
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Limit reached!</span>
-                            {% endif %}
-                        </small>
-                        <small class="fw-bold">{{ tenant_products_percentage|floatformat:0 }}%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Branches Limit Card -->
-        <div class="col-xl-3 col-lg-6 col-md-6">
-            <div class="card border-0 shadow-sm h-100 tenant-limit-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="badge {% if tenant_branches_at_limit %}bg-danger{% else %}bg-primary{% endif %} bg-opacity-100 p-2 rounded-3">
-                                <i class="fas fa-store fs-5 {% if tenant_branches_at_limit %}text-danger{% else %}text-dark{% endif %}"></i>
-                            </span>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge {% if tenant_branches_at_limit %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3 py-2">
-                                {{ tenant_branches_count|default:0 }} / {{ tenant_branch_limit|default:0 }}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <h6 class="fw-bold mb-1">Branches</h6>
-                    <p class="text-muted small mb-3">
-                        {% if current_subscription %}
-                            {{ tenant_branch_limit|default:0 }} branches included in {{ current_subscription.name }}
-                        {% else %}
-                            No subscription plan active ({{ tenant_branch_limit|default:0 }} default limit)
-                        {% endif %}
-                    </p>
-                    
-                    <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
-                        <div class="progress-bar {% if tenant_branches_at_limit %}bg-danger{% elif tenant_branches_percentage > 80 %}bg-warning{% else %}bg-success{% endif %}" 
-                             style="width: {{ tenant_branches_percentage|default:0 }}%; border-radius: 8px; transition: width 0.6s ease;">
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            {% if tenant_branches_remaining > 0 %}
-                                <i class="fas fa-plus-circle me-1 text-success"></i> {{ tenant_branches_remaining }} remaining
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Limit reached!</span>
-                            {% endif %}
-                        </small>
-                        <small class="fw-bold">{{ tenant_branches_percentage|floatformat:0 }}%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Storage Limit Card -->
-        <div class="col-xl-3 col-lg-6 col-md-6">
-            <div class="card border-0 shadow-sm h-100 tenant-limit-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="badge {% if tenant_storage_at_limit %}bg-danger{% else %}bg-info{% endif %} bg-opacity-100 p-2 rounded-3">
-                                <i class="fas fa-hdd fs-5 {% if tenant_storage_at_limit %}text-danger{% else %}text-dark{% endif %}"></i>
-                            </span>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge {% if tenant_storage_at_limit %}bg-danger{% else %}bg-info{% endif %} fs-6 px-3 py-2">
-                                {{ tenant_storage_used|floatformat:1|default:"0" }} GB / {{ tenant_storage_limit|default:0 }} GB
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <h6 class="fw-bold mb-1">Storage</h6>
-                    <p class="text-muted small mb-3">
-                        {% if current_subscription %}
-                            {{ tenant_storage_limit|default:0 }} GB included in {{ current_subscription.name }}
-                        {% else %}
-                            No subscription plan active ({{ tenant_storage_limit|default:0 }} GB default limit)
-                        {% endif %}
-                    </p>
-                    
-                    <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
-                        <div class="progress-bar {% if tenant_storage_at_limit %}bg-danger{% elif tenant_storage_percentage > 80 %}bg-warning{% else %}bg-info{% endif %}" 
-                             style="width: {{ tenant_storage_percentage|default:0 }}%; border-radius: 8px; transition: width 0.6s ease;">
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            {% if tenant_storage_remaining > 0 %}
-                                <i class="fas fa-check-circle me-1 text-success"></i> {{ tenant_storage_remaining|floatformat:1 }} GB available
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Storage full!</span>
-                            {% endif %}
-                        </small>
-                        <small class="fw-bold">{{ tenant_storage_percentage|floatformat:0 }}%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    {% endif %}
+    <div class="main-content" id="mainContent">
 
-    <!-- Django Messages -->
-    {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
-            {{ message }}
+        <!-- Show restricted access warning for admin with expired subscription -->
+        {% if subscription_restricted %}
+        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Restricted Access!</strong> Your subscription has expired. 
+            Please <a href="{% url 'tenants:tenant_subscription' tenant.id %}" class="alert-link">renew now</a> to restore full access.
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        {% endfor %}
-    {% endif %}
-        
-    {% block content %}{% endblock %}
-</div>
-
-<!-- ============================================ -->
-<!-- FIXED FOOTER -->
-<!-- ============================================ -->
-<div class="fixed-footer" id="footer">
-    <div>
-        Copyright
-        <i class="fas fa-copyright me-1"></i> <span id="currentYear"></span> 
-        {{ tenant.company_name|default:"Tech Master" }}   | All Rights Reserved
-    </div>
-    <div>
-        <i class="fas fa-code-branch me-1"></i> Version 2.0
-        {% if project_type %}
-            <span class="project-badge tech">
-                {{ project_type.name }}
-            </span>
         {% endif %}
+
+
+        <!-- Django Messages -->
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+            
+        {% block content %}{% endblock %}
     </div>
-</div>
 
-<!-- jQuery - CDN with local fallback -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js" 
-        onerror="this.onerror=null;this.src='{% static 'js/jquery.min.js' %}'"></script>
+    <!-- ============================================ -->
+    <!-- FIXED FOOTER -->
+    <!-- ============================================ -->
+    <div class="fixed-footer" id="footer">
+        <div>
+            Copyright
+            <i class="fas fa-copyright me-1"></i> <span id="currentYear"></span> 
+            {% if company_settings and company_settings.company_name %}
+                {{ company_settings.company_name }}
+            {% elif tenant and tenant.company_name %}
+                {{ tenant.company_name }}
+            {% else %}
+                Tech Master
+            {% endif %}
+            | All Rights Reserved
+        </div>
+        <div>
+            <i class="fas fa-code-branch me-1"></i> Version 2.0
+            {% if project_type %}
+                <span class="project-badge tech">
+                    {{ project_type.name }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
 
-<!-- Bootstrap JS - CDN with local fallback -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" 
-        onerror="this.onerror=null;this.src='{% static 'js/bootstrap.bundle.min.js' %}'"></script>
+    <!-- jQuery - CDN with local fallback -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" 
+            onerror="this.onerror=null;this.src='{% static 'js/jquery.min.js' %}'"></script>
 
-<script>
-// ============================================
-// LOGO ERROR HANDLING - FIXED VERSION
-// ============================================
-function handleLogoError(img) {
-    console.warn('Logo image failed to load:', img.src);
-    
-    // Get the parent container
-    const parent = img.parentElement;
-    
-    // Remove the broken image
-    img.style.display = 'none';
-    
-    // Create fallback icon
-    const icon = document.createElement('i');
-    icon.className = 'fas fa-store';
-    icon.style.fontSize = '1.5rem';
-    icon.style.color = 'white';
-    
-    // Replace image with icon
-    parent.appendChild(icon);
-    
-    // Optionally, you can make an AJAX call to log this error
-    // but we'll skip the non-existent API endpoint
-    console.log('Logo fallback activated for tenant');
-}
-</script>
+    <!-- Bootstrap JS - CDN with local fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" 
+            onerror="this.onerror=null;this.src='{% static 'js/bootstrap.bundle.min.js' %}'">
+        </script>
 
-<script>
-    // Theme Toggle
+    <script>
+    // ============================================
+    // SUB-MENU TOGGLE FUNCTION
+    // ============================================
+    function toggleSubMenu(titleElement) {
+        const menuGroup = titleElement.closest('.menu-group');
+        if (!menuGroup) return;
+        
+        const subMenu = menuGroup.querySelector('.sub-menu');
+        if (!subMenu) return;
+        
+        subMenu.classList.toggle('open');
+        titleElement.classList.toggle('collapsed');
+        
+        const allGroups = document.querySelectorAll('.menu-group');
+        allGroups.forEach(group => {
+            if (group !== menuGroup) {
+                const otherSubMenu = group.querySelector('.sub-menu');
+                const otherTitle = group.querySelector('.menu-title');
+                if (otherSubMenu && otherSubMenu.classList.contains('open')) {
+                    otherSubMenu.classList.remove('open');
+                    if (otherTitle) otherTitle.classList.remove('collapsed');
+                }
+            }
+        });
+        
+        const menuStates = JSON.parse(localStorage.getItem('menuStates') || '{}');
+        const menuKey = titleElement.textContent.trim();
+        menuStates[menuKey] = subMenu.classList.contains('open');
+        localStorage.setItem('menuStates', JSON.stringify(menuStates));
+    }
+
+    // ============================================
+    // RESTORE SUB-MENU STATES
+    // ============================================
+    function restoreMenuStates() {
+        const menuStates = JSON.parse(localStorage.getItem('menuStates') || '{}');
+        document.querySelectorAll('.menu-group').forEach(group => {
+            const title = group.querySelector('.menu-title');
+            const subMenu = group.querySelector('.sub-menu');
+            if (title && subMenu) {
+                const menuKey = title.textContent.trim();
+                if (menuStates[menuKey]) {
+                    subMenu.classList.add('open');
+                    title.classList.remove('collapsed');
+                }
+            }
+        });
+    }
+
+    // ============================================
+    // LOGO ERROR HANDLING
+    // ============================================
+    function handleLogoError(img) {
+        console.warn('Logo image failed to load:', img.src);
+        const parent = img.parentElement;
+        img.style.display = 'none';
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-store';
+        icon.style.fontSize = '1.5rem';
+        icon.style.color = 'white';
+        parent.appendChild(icon);
+    }
+
+    // ============================================
+    // THEME TOGGLE
+    // ============================================
     function toggleTheme() {
         const html = document.documentElement;
         const currentTheme = html.getAttribute('data-bs-theme');
@@ -1238,6 +1465,9 @@ function handleLogoError(img) {
     
     document.getElementById('currentYear').innerText = new Date().getFullYear();
     
+    // ============================================
+    // SIDEBAR TOGGLE
+    // ============================================
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('mainContent');
@@ -1296,30 +1526,16 @@ function handleLogoError(img) {
         });
     }
     
-    // Cashier Functions
-    function openDrawer() {
-        if (confirm('Are you sure you want to open the cash drawer?')) {
-            alert('Cash drawer opened!');
-            // Here you would typically make an AJAX call to open the drawer
-        }
-    }
-    
-    function closeDrawer() {
-        if (confirm('Are you sure you want to close the cash drawer?')) {
-            alert('Cash drawer closed!');
-            // Here you would typically make an AJAX call to close the drawer
-        }
-    }
-    
-    // Help Function - Fixed to not require SweetAlert2
+    // ============================================
+    // HELP FUNCTION
+    // ============================================
     function showHelp() {
-        // Simple alert with contact information
-        alert('📞 For support, please call: 0722 527 955\n\nOr email: support@techmaster.com');
-        
-        // You can also open a modal if you have one
-        // $('#helpModal').modal('show');
+        alert('📞 For support, Contact site owner or your Administrator');
     }
     
+    // ============================================
+    // WINDOW EVENTS
+    // ============================================
     window.addEventListener('resize', function() {
         if (window.innerWidth > 768) {
             closeMobileSidebar();
@@ -1332,7 +1548,6 @@ function handleLogoError(img) {
     
     document.querySelectorAll('.menu-item').forEach(item => {
         item.addEventListener('click', function(e) {
-            // Don't close if it's a disabled link or javascript:void(0)
             if (this.getAttribute('href') === 'javascript:void(0)') {
                 e.preventDefault();
                 return;
@@ -1343,12 +1558,19 @@ function handleLogoError(img) {
         });
     });
     
+    // ============================================
+    // DOM READY
+    // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         loadTheme();
         loadSidebarState();
         setActiveMenuItem();
+        restoreMenuStates();
     });
     
+    // ============================================
+    // CSRF TOKEN
+    // ============================================
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -1383,8 +1605,8 @@ function handleLogoError(img) {
             }, 500);
         });
     }, 5000);
-</script>
+    </script>
 
-{% block extra_js %}{% endblock %}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

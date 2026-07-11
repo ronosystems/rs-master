@@ -1,0 +1,31 @@
+{% extends "shared/base_shared.html" %}
+{% load static %}
+
+{% block title %}Documentation{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-book me-2"></i>Documentation
+                    </h4>
+                </div>
+                <div class="card-body p-4 text-center py-5">
+                    <div class="display-1 text-muted mb-4">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h5>Documentation Coming Soon</h5>
+                    <p class="text-muted">We're working on comprehensive documentation for our platform.</p>
+                    <p class="text-muted small">In the meantime, please contact support for assistance.</p>
+                    <a href="{% url 'portal:support' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Support
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

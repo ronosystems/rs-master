@@ -1,0 +1,171 @@
+<!-- templates/fashion_master/sale_detail.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Sale Details - {{ sale.invoice_no }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-receipt text-primary me-2"></i>Sale Details
+            </h4>
+            <p class="text-muted mb-0">Invoice: <code>{{ sale.invoice_no }}</code></p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:sale_receipt' sale.id %}" class="btn btn-primary">
+                <i class="fas fa-print me-2"></i>Print Receipt
+            </a>
+            <a href="{% url 'fashion_master:sale_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold">Sale Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="text-muted small">Invoice Number</label>
+                        <p class="fw-semibold"><code>{{ sale.invoice_no }}</code></p>
+                    </div>
+                    <div class="mb-2">
+                        <label class="text-muted small">Date</label>
+                        <p class="fw-semibold">{{ sale.sale_date|date:"F d, Y H:i" }}</p>
+                    </div>
+                    <div class="mb-2">
+                        <label class="text-muted small">Status</label>
+                        <p>
+                            {% if sale.status == 'completed' %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif sale.status == 'pending' %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ sale.status|title }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="mb-2">
+                        <label class="text-muted small">Payment Method</label>
+                        <p><span class="badge bg-info">{{ sale.get_payment_method_display }}</span></p>
+                    </div>
+                    <div class="mb-2">
+                        <label class="text-muted small">Cashier</label>
+                        <p class="fw-semibold">{{ sale.cashier.get_full_name|default:sale.cashier.username }}</p>
+                    </div>
+                    <div class="mb-2">
+                        <label class="text-muted small">Branch</label>
+                        <p class="fw-semibold">{{ sale.branch.name|default:"Main Store" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold">Customer Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="text-muted small">Customer Name</label>
+                            <p class="fw-semibold">{{ sale.customer_name|default:"Walk-in Customer" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">Phone Number</label>
+                            <p class="fw-semibold">{{ sale.customer_phone|default:"-" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">Email</label>
+                            <p class="fw-semibold">{{ sale.customer_email|default:"-" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold">Items</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th>Size</th>
+                                    <th>Color</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ item.product_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">SKU: {{ item.product_sku }}</small>
+                                    </td>
+                                    <td>{{ item.product_size|default:"-" }}</td>
+                                    <td>{{ item.product_color|default:"-" }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>KES {{ item.price|floatformat:2 }}</td>
+                                    <td class="text-end fw-bold">KES {{ item.subtotal|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="bg-light">
+                                <tr>
+                                    <td colspan="6" class="text-end fw-bold">Subtotal:</td>
+                                    <td class="text-end fw-bold">KES {{ sale.subtotal|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6" class="text-end fw-bold">Tax:</td>
+                                    <td class="text-end fw-bold">KES {{ sale.tax|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6" class="text-end fw-bold">Discount:</td>
+                                    <td class="text-end fw-bold">KES {{ sale.discount|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6" class="text-end fw-bold text-success">Total:</td>
+                                    <td class="text-end fw-bold text-success">KES {{ sale.total|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6" class="text-end fw-bold">Amount Paid:</td>
+                                    <td class="text-end fw-bold text-primary">KES {{ sale.amount_paid|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6" class="text-end fw-bold">Change Given:</td>
+                                    <td class="text-end fw-bold text-info">KES {{ sale.change_given|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {% if sale.notes %}
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold">Notes</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ sale.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

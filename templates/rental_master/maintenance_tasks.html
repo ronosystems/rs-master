@@ -1,0 +1,145 @@
+<!-- apps/rental_master/templates/rental_master/tasks.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Task List - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-clipboard-list me-2" style="color: #17a2b8;"></i>Task List</h4>
+        <div>
+            <a href="{% url 'rental_master:new_request' %}" class="btn" style="background-color: #17a2b8; color: white;">
+                <i class="fas fa-plus me-1"></i> New Task
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Task Status</label>
+                    <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Tasks</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    {% if request.GET.status %}
+                        <a href="{% url 'rental_master:task_list' %}" class="btn btn-outline-secondary">Clear Filters</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Task Statistics -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center" style="border-left: 4px solid #ffc107;">
+                <div class="card-body">
+                    <h3 class="mb-0 text-warning">{{ pending_tasks }}</h3>
+                    <small class="text-muted">Pending</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center" style="border-left: 4px solid #17a2b8;">
+                <div class="card-body">
+                    <h3 class="mb-0 text-info">{{ in_progress_tasks }}</h3>
+                    <small class="text-muted">In Progress</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center" style="border-left: 4px solid #28a745;">
+                <div class="card-body">
+                    <h3 class="mb-0 text-success">{{ completed_tasks }}</h3>
+                    <small class="text-muted">Completed</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center" style="border-left: 4px solid #dc3545;">
+                <div class="card-body">
+                    <h3 class="mb-0 text-danger">{{ overdue_tasks }}</h3>
+                    <small class="text-muted">Overdue</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tasks Table -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <i class="fas fa-tasks me-2" style="color: #17a2b8;"></i>
+            All Tasks
+            <span class="badge bg-secondary ms-2">{{ total_tasks }}</span>
+        </div>
+        <div class="card-body">
+            {% if tasks %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Task</th>
+                                <th>Unit</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Reported</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in tasks %}
+                                <tr>
+                                    <td>{{ task.id }}</td>
+                                    <td>
+                                        <a href="{% url 'rental_master:maintenance_detail' task.id %}">
+                                            <strong>{{ task.title }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>{{ task.rental_unit.unit_number }}</td>
+                                    <td>
+                                        <span class="badge {% if task.priority == 'urgent' %}bg-danger{% elif task.priority == 'high' %}bg-warning{% elif task.priority == 'medium' %}bg-info{% else %}bg-secondary{% endif %}">
+                                            {{ task.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if task.status == 'pending' %}bg-warning{% elif task.status == 'in_progress' %}bg-info{% elif task.status == 'completed' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ task.get_status_display }}
+                                        </span>
+                                        {% if task.is_overdue %}
+                                            <span class="badge bg-danger">Overdue</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ task.reported_by|default:"-" }}</td>
+                                    <td>
+                                        <a href="{% url 'rental_master:maintenance_detail' task.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-clipboard-list fa-3x d-block mb-3"></i>
+                    <p>No tasks available</p>
+                    <a href="{% url 'rental_master:new_request' %}" class="btn btn-sm" style="background-color: #17a2b8; color: white;">
+                        <i class="fas fa-plus me-1"></i> Create Task
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

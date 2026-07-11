@@ -1,0 +1,464 @@
+{% extends "shared/base_shared.html" %}
+{% load static %}
+
+{% block title %}Company Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preview-container {
+        position: sticky;
+        top: 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        overflow: hidden;
+        color: #000000;
+    }
+    .company-preview {
+        background: #f8f9fa;
+        color: #000000;
+        padding: 30px 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 100%;
+        margin: 0 auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    .company-preview .logo-container {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 20px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+    }
+    .company-preview .logo-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .company-preview .logo-container .no-logo {
+        font-size: 3rem;
+        color: #adb5bd;
+    }
+    .company-preview .company-name-preview {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    .company-preview .company-details {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .company-preview .color-swatches {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 15px;
+    }
+    .company-preview .color-swatch {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.7rem;
+        color: #6c757d;
+    }
+    .company-preview .color-swatch .swatch {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid #dee2e6;
+        margin-bottom: 5px;
+    }
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        color: #000000;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .form-section h6 {
+        color: #00060a;
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    .setting-checkbox {
+        margin-bottom: 8px;
+    }
+    .setting-checkbox input {
+        margin-right: 8px;
+    }
+    .setting-checkbox label {
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+    .live-badge {
+        background: #28a745;
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+    hr {
+        margin: 10px 0;
+    }
+    .company-preview .brand-preview {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    .company-preview .brand-preview .brand-text {
+        font-weight: 600;
+        padding: 5px 15px;
+        border-radius: 4px;
+        display: inline-block;
+        margin: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- LEFT COLUMN - Settings Form (60%) -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-building me-2"></i>Company Settings
+                    </h5>
+                    <p class="mb-0 small text-white-50">Customize your company branding and display settings</p>
+                </div>
+                <div class="card-body p-4" style="max-height: calc(100vh - 200px); overflow-y: auto;">
+                    <form method="post" enctype="multipart/form-data" id="companySettingsForm" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Company Details -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-info-circle text-primary me-2"></i>Company Details</h6>
+                            <div class="row g-3">
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold">Company Name</label>
+                                    <input type="text" name="company_name" id="company_name" class="form-control" 
+                                           value="{{ settings.company_name|default:'' }}" placeholder="Enter company name" onkeyup="updatePreview()">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label fw-semibold">Company Address</label>
+                                    <textarea name="company_address" id="company_address" class="form-control" rows="2" 
+                                              placeholder="Enter full company address" onkeyup="updatePreview()">{{ settings.company_address|default:'' }}</textarea>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Phone Number</label>
+                                    <input type="tel" name="company_phone" id="company_phone" class="form-control" 
+                                           value="{{ settings.company_phone|default:'' }}" placeholder="+254 700 000 000" onkeyup="updatePreview()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Email Address</label>
+                                    <input type="email" name="company_email" id="company_email" class="form-control" 
+                                           value="{{ settings.company_email|default:'' }}" placeholder="info@example.com" onkeyup="updatePreview()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Company Website</label>
+                                    <input type="url" name="company_website" id="company_website" class="form-control" 
+                                           value="{{ settings.company_website|default:'' }}" placeholder="https://www.example.com" onkeyup="updatePreview()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Tax PIN</label>
+                                    <input type="text" name="company_tax_pin" id="company_tax_pin" class="form-control" 
+                                           value="{{ settings.company_tax_pin|default:'' }}" placeholder="Enter tax PIN" onkeyup="updatePreview()">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Branding -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-palette text-warning me-2"></i>Branding</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Company Logo</label>
+                                    {% if settings.has_valid_logo %}
+                                        <div class="mb-2">
+                                            <img src="{{ settings.logo.url }}" alt="Current Logo" style="max-height: 80px; max-width: 150px; border: 1px solid #dee2e6; border-radius: 4px; padding: 5px;">
+                                        </div>
+                                    {% endif %}
+                                    <input type="file" name="logo" id="logo" class="form-control" accept="image/*" onchange="updatePreview()">
+                                    <small class="text-muted">Recommended: PNG or JPG, max 5MB</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Favicon</label>
+                                    {% if settings.favicon %}
+                                        <div class="mb-2">
+                                            <img src="{{ settings.favicon.url }}" alt="Current Favicon" style="max-height: 32px; max-width: 32px; border: 1px solid #dee2e6; border-radius: 4px; padding: 5px;">
+                                        </div>
+                                    {% endif %}
+                                    <input type="file" name="favicon" id="favicon" class="form-control" accept="image/*" onchange="updatePreview()">
+                                    <small class="text-muted">Recommended: ICO or PNG, max 1MB</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Brand Colors -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-paint-bucket text-info me-2"></i>Brand Colors</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Primary Color</label>
+                                    <div class="input-group">
+                                        <input type="color" name="primary_color" id="primary_color" class="form-control form-control-color" 
+                                               value="{{ settings.primary_color|default:'#0d6efd' }}" style="max-width: 60px;" onchange="updatePreview()">
+                                        <input type="text" name="primary_color_text" id="primary_color_text" class="form-control" 
+                                               value="{{ settings.primary_color|default:'#0d6efd' }}" 
+                                               onchange="document.getElementById('primary_color').value=this.value; updatePreview();"
+                                               onkeyup="document.getElementById('primary_color').value=this.value; updatePreview();">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Secondary Color</label>
+                                    <div class="input-group">
+                                        <input type="color" name="secondary_color" id="secondary_color" class="form-control form-control-color" 
+                                               value="{{ settings.secondary_color|default:'#6c757d' }}" style="max-width: 60px;" onchange="updatePreview()">
+                                        <input type="text" name="secondary_color_text" id="secondary_color_text" class="form-control" 
+                                               value="{{ settings.secondary_color|default:'#6c757d' }}"
+                                               onchange="document.getElementById('secondary_color').value=this.value; updatePreview();"
+                                               onkeyup="document.getElementById('secondary_color').value=this.value; updatePreview();">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Accent Color</label>
+                                    <div class="input-group">
+                                        <input type="color" name="accent_color" id="accent_color" class="form-control form-control-color" 
+                                               value="{{ settings.accent_color|default:'#ffc107' }}" style="max-width: 60px;" onchange="updatePreview()">
+                                        <input type="text" name="accent_color_text" id="accent_color_text" class="form-control" 
+                                               value="{{ settings.accent_color|default:'#ffc107' }}"
+                                               onchange="document.getElementById('accent_color').value=this.value; updatePreview();"
+                                               onkeyup="document.getElementById('accent_color').value=this.value; updatePreview();">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Display Settings -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-eye text-info me-2"></i>Display Settings</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_logo_on_dashboard" id="show_logo_on_dashboard" class="form-check-input" 
+                                               {% if settings.show_logo_on_dashboard %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_logo_on_dashboard">Show on Dashboard</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_logo_on_receipts" id="show_logo_on_receipts" class="form-check-input" 
+                                               {% if settings.show_logo_on_receipts %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_logo_on_receipts">Show on Receipts</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_logo_on_invoices" id="show_logo_on_invoices" class="form-check-input" 
+                                               {% if settings.show_logo_on_invoices %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_logo_on_invoices">Show on Invoices</label>
+                                    </div>
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="show_logo_on_reports" id="show_logo_on_reports" class="form-check-input" 
+                                               {% if settings.show_logo_on_reports %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="show_logo_on_reports">Show on Reports</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i>Save Settings
+                            </button>
+                            <button type="button" class="btn btn-secondary px-4" onclick="resetPreview()">
+                                <i class="fas fa-refresh me-2"></i>Reset Preview
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RIGHT COLUMN - Company Preview (40%) -->
+        <div class="col-lg-5">
+            <div class="preview-container">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-header bg-success text-white py-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-eye me-2"></i>Brand Preview
+                        </h5>
+                        <p class="mb-0 small text-white-50">Live preview of your company branding</p>
+                    </div>
+                    <div class="card-body p-3" style="background: #f5f5f5; max-height: calc(100vh - 200px); overflow-y: auto;">
+                        <div id="companyPreview" class="company-preview">
+                            <!-- Preview will be dynamically updated -->
+                            <div class="text-center py-5">
+                                <i class="fas fa-building fa-3x text-muted mb-2"></i>
+                                <p>Loading preview...</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                This is a live preview - settings update in real-time
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updatePreview() {
+        // Get form values
+        const companyName = document.getElementById('company_name')?.value || 'Your Company';
+        const companyAddress = document.getElementById('company_address')?.value || '';
+        const companyPhone = document.getElementById('company_phone')?.value || '';
+        const companyEmail = document.getElementById('company_email')?.value || '';
+        const companyWebsite = document.getElementById('company_website')?.value || '';
+        const companyTaxPin = document.getElementById('company_tax_pin')?.value || '';
+        
+        // Get colors
+        const primaryColor = document.getElementById('primary_color')?.value || '#0d6efd';
+        const secondaryColor = document.getElementById('secondary_color')?.value || '#6c757d';
+        const accentColor = document.getElementById('accent_color')?.value || '#ffc107';
+        
+        // Get display settings
+        const showLogoOnDashboard = document.getElementById('show_logo_on_dashboard')?.checked || false;
+        const showLogoOnReceipts = document.getElementById('show_logo_on_receipts')?.checked || false;
+        const showLogoOnInvoices = document.getElementById('show_logo_on_invoices')?.checked || false;
+        const showLogoOnReports = document.getElementById('show_logo_on_reports')?.checked || false;
+        
+        // Check if logo exists (from server)
+        const hasLogo = {% if settings.has_valid_logo %}true{% else %}false{% endif %};
+        const logoUrl = {% if settings.has_valid_logo %}'{{ settings.logo.url }}'{% else %}null{% endif %};
+        
+        let html = '';
+        
+        // Logo
+        html += '<div class="logo-container">';
+        if (hasLogo && showLogoOnDashboard) {
+            html += `<img src="${logoUrl}" alt="${escapeHtml(companyName)} Logo">`;
+        } else {
+            html += `<div class="no-logo"><i class="fas fa-building"></i></div>`;
+        }
+        html += '</div>';
+        
+        // Company Name
+        html += `<div class="company-name-preview" style="color: ${primaryColor};">${escapeHtml(companyName)}</div>`;
+        
+        // Company Details
+        let details = [];
+        if (companyAddress) details.push(escapeHtml(companyAddress));
+        if (companyPhone) details.push(`Tel: ${escapeHtml(companyPhone)}`);
+        if (companyEmail) details.push(`Email: ${escapeHtml(companyEmail)}`);
+        if (companyWebsite) details.push(`Web: ${escapeHtml(companyWebsite)}`);
+        if (companyTaxPin) details.push(`PIN: ${escapeHtml(companyTaxPin)}`);
+        
+        if (details.length > 0) {
+            html += `<div class="company-details mt-2">${details.join(' | ')}</div>`;
+        }
+        
+        // Color Swatches
+        html += '<div class="color-swatches">';
+        html += `<div class="color-swatch">
+                    <div class="swatch" style="background-color: ${primaryColor};"></div>
+                    <span>Primary</span>
+                </div>`;
+        html += `<div class="color-swatch">
+                    <div class="swatch" style="background-color: ${secondaryColor};"></div>
+                    <span>Secondary</span>
+                </div>`;
+        html += `<div class="color-swatch">
+                    <div class="swatch" style="background-color: ${accentColor};"></div>
+                    <span>Accent</span>
+                </div>`;
+        html += '</div>';
+        
+        // Brand Preview
+        html += '<div class="brand-preview mt-3" style="border-color: ' + primaryColor + ';">';
+        html += '<h6 style="color: ' + primaryColor + ';">Brand Preview</h6>';
+        html += `<button class="btn btn-sm me-2" style="background-color: ${primaryColor}; color: white;">Primary Button</button>`;
+        html += `<button class="btn btn-sm me-2" style="background-color: ${secondaryColor}; color: white;">Secondary Button</button>`;
+        html += `<span class="badge" style="background-color: ${accentColor}; color: #000;">Accent Badge</span>`;
+        html += `<div class="mt-2">
+                    <span class="brand-text" style="background-color: ${primaryColor}; color: white;">Brand Text</span>
+                    <span class="brand-text" style="background-color: ${secondaryColor}; color: white;">Brand Text</span>
+                    <span class="brand-text" style="background-color: ${accentColor}; color: #000;">Brand Text</span>
+                </div>`;
+        html += '</div>';
+        
+        // Display Settings Status
+        html += '<div class="mt-3">';
+        html += '<small class="text-muted">Display Settings:</small>';
+        html += '<div class="d-flex flex-wrap gap-2 mt-1">';
+        if (showLogoOnDashboard) html += '<span class="badge bg-success">Dashboard</span>';
+        if (showLogoOnReceipts) html += '<span class="badge bg-success">Receipts</span>';
+        if (showLogoOnInvoices) html += '<span class="badge bg-success">Invoices</span>';
+        if (showLogoOnReports) html += '<span class="badge bg-success">Reports</span>';
+        if (!showLogoOnDashboard && !showLogoOnReceipts && !showLogoOnInvoices && !showLogoOnReports) {
+            html += '<span class="badge bg-secondary">No display locations selected</span>';
+        }
+        html += '</div></div>';
+        
+        document.getElementById('companyPreview').innerHTML = html;
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            if (m === '"') return '&quot;';
+            return m;
+        });
+    }
+    
+    function resetPreview() {
+        location.reload();
+    }
+    
+    // Attach event listeners to all inputs for real-time preview
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            input.addEventListener('change', updatePreview);
+            input.addEventListener('keyup', updatePreview);
+        });
+        
+        // File input change handler
+        document.getElementById('logo')?.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const logoContainer = document.querySelector('.logo-container');
+                    if (logoContainer) {
+                        logoContainer.innerHTML = `<img src="${e.target.result}" alt="Logo Preview">`;
+                    }
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+        
+        // Initial preview
+        setTimeout(updatePreview, 100);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,404 @@
+<!-- templates/food_master/order_detail.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Order #{{ order.order_number }} - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-receipt me-2" style="color: #e67e22;"></i>Order #{{ order.order_number }}</h4>
+        <div>
+            {% if order.payment_status != 'paid' and order.status != 'cancelled' %}
+                <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#markPaidModal">
+                    <i class="fas fa-check-circle me-1"></i> Mark as Paid
+                </button>
+            {% endif %}
+            <a href="{% url 'food_master:orders' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Orders
+            </a>
+        </div>
+    </div>
+
+    <!-- Mark as Paid Modal -->
+    <div class="modal fade" id="markPaidModal" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h6 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>Mark Order as Paid
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" id="markPaidForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="mark_paid">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <strong>Order #{{ order.order_number }}</strong>
+                            <br>
+                            Total Amount: <strong>KES {{ order.total_amount|floatformat:0 }}</strong>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Payment Method</label>
+                            <select class="form-select" name="payment_method" required>
+                                <option value="cash">Cash</option>
+                                <option value="mpesa">M-Pesa</option>
+                                <option value="card">Card</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Amount Paid</label>
+                            <input type="number" class="form-control" name="amount_paid" 
+                                   value="{{ order.total_amount|floatformat:0 }}" step="0.01" min="{{ order.total_amount }}" required>
+                            <small class="text-muted">Minimum: KES {{ order.total_amount|floatformat:0 }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Transaction Reference (Optional)</label>
+                            <input type="text" class="form-control" name="transaction_ref" placeholder="e.g., M-Pesa confirmation code">
+                        </div>
+                        
+                        <div class="mb-0">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" name="payment_notes" rows="2" placeholder="Payment notes..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check-circle me-1"></i> Confirm Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Order Info -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-2" style="color: #e67e22;"></i>
+                    Order Information
+                </div>
+                <div class="card-body">
+                    <p><strong>Order #:</strong> {{ order.order_number }}</p>
+                    <p><strong>Customer:</strong> {{ order.customer.name|default:"Walk-in" }}</p>
+                    <p><strong>Table:</strong> {{ order.table.table_number|default:"N/A" }}</p>
+                    <p><strong>Type:</strong> {{ order.get_order_type_display }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="badge {% if order.status == 'completed' %}bg-success{% elif order.status == 'pending' %}bg-warning{% elif order.status == 'preparing' %}bg-info{% elif order.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {{ order.get_status_display }}
+                        </span>
+                    </p>
+                    <p><strong>Payment:</strong> 
+                        <span class="badge {% if order.payment_status == 'paid' %}bg-success{% elif order.payment_status == 'pending' %}bg-warning{% else %}bg-secondary{% endif %}">
+                            {{ order.get_payment_status_display }}
+                        </span>
+                    </p>
+                    <p><strong>Created:</strong> {{ order.created_at|date:"M d, Y H:i" }}</p>
+                    {% if order.payment_method %}
+                        <p><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
+                    {% endif %}
+                    {% if order.notes %}
+                        <p><strong>Notes:</strong> {{ order.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Order Totals -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header">
+                    <i class="fas fa-calculator me-2" style="color: #e67e22;"></i>
+                    Order Totals
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td>Subtotal:</td>
+                            <td class="text-end">KES {{ order.subtotal|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td>Tax:</td>
+                            <td class="text-end">KES {{ order.tax|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td>Discount:</td>
+                            <td class="text-end text-success">-KES {{ order.discount|floatformat:0 }}</td>
+                        </tr>
+                        <tr class="fw-bold">
+                            <td>Total:</td>
+                            <td class="text-end" style="color: #e67e22;">KES {{ order.total_amount|floatformat:0 }}</td>
+                        </tr>
+                        {% if order.payment_status == 'paid' %}
+                            <tr class="text-success">
+                                <td><i class="fas fa-check-circle me-1"></i> Paid:</td>
+                                <td class="text-end">KES {{ order.total_amount|floatformat:0 }}</td>
+                            </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Items -->
+        <div class="col-md-8">
+            <div class="card shadow-sm mt-3">
+                <div class="card-header">
+                    <i class="fas fa-edit me-2" style="color: #e67e22;"></i>
+                    Update Status
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_status">
+                        <div class="mb-3">
+                            <select class="form-select" name="status">
+                                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                <option value="preparing" {% if order.status == 'preparing' %}selected{% endif %}>Preparing</option>
+                                <option value="ready" {% if order.status == 'ready' %}selected{% endif %}>Ready</option>
+                                <option value="served" {% if order.status == 'served' %}selected{% endif %}>Served</option>
+                                <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn w-100" style="background-color: #e67e22; color: white;">
+                            <i class="fas fa-save me-1"></i> Update Status
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-utensils me-2" style="color: #e67e22;"></i>
+                        Order Items
+                    </div>
+                    <span class="badge bg-secondary">{{ order.items.count }} items</span>
+                </div>
+                <div class="card-body">
+                    {% if order.items.all %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Quantity</th>
+                                        <th>Unit Price</th>
+                                        <th>Subtotal</th>
+                                        {% if order.payment_status != 'paid' %}
+                                            <th>Actions</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in order.items.all %}
+                                        <tr>
+                                            <td>{{ item.menu_item.name }}</td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td>KES {{ item.unit_price|floatformat:0 }}</td>
+                                            <td>KES {{ item.subtotal|floatformat:0 }}</td>
+                                            {% if order.payment_status != 'paid' %}
+                                                <td>
+                                                    <form method="POST" style="display: inline;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="action" value="remove_item">
+                                                        <input type="hidden" name="item_id" value="{{ item.id }}">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this item?')">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            {% endif %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-utensils fa-2x d-block mb-2"></i>
+                            <p>No items in this order yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Add Items - Only if not paid -->
+            {% if order.payment_status != 'paid' and order.status != 'cancelled' %}
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header">
+                        <i class="fas fa-plus-circle me-2" style="color: #e67e22;"></i>
+                        Add Items to Order
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" class="row g-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_item">
+                            <div class="col-md-5">
+                                <select class="form-select" name="item_id" required>
+                                    <option value="">-- Select Item --</option>
+                                    {% for item in menu_items %}
+                                        <option value="{{ item.id }}">{{ item.name }} - KES {{ item.price|floatformat:0 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="number" class="form-control" name="quantity" value="1" min="1">
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn w-100" style="background-color: #27ae60; color: white;">
+                                    <i class="fas fa-plus me-1"></i> Add to Order
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Print Receipt Button -->
+            {% if order.payment_status == 'paid' %}
+                <div class="card shadow-sm mt-3">
+                    <div class="card-body">
+                        <button class="btn btn-primary w-100" onclick="printReceipt()">
+                            <i class="fas fa-print me-2"></i> Print Receipt
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Print Area (Hidden) -->
+<div id="receiptPrintArea" style="display: none;">
+    <div class="receipt-container" style="max-width: 320px; margin: 0 auto; font-family: 'Courier New', monospace; font-size: 11px; padding: 15px; background: white; color: #000;">
+        <div style="text-align: center; border-bottom: 2px dashed #333; padding-bottom: 8px; margin-bottom: 8px;">
+            <h5 style="font-weight: bold; margin-bottom: 3px;">{{ receipt_settings.business_name|default:tenant.company_name }}</h5>
+            <p style="margin-bottom: 2px; font-size: 10px;">{{ receipt_settings.business_address|default:"" }}</p>
+            <p style="margin-bottom: 2px; font-size: 10px;">Tel: {{ receipt_settings.business_phone|default:"N/A" }}</p>
+            <hr>
+            <p><strong>RECEIPT #: {{ order.order_number }}</strong></p>
+            <p><small>{{ order.created_at|date:"Y-m-d H:i" }}</small></p>
+            <p><small>Payment: {{ order.get_payment_method_display|default:"Cash" }}</small></p>
+        </div>
+        
+        <div id="receiptPrintItems">
+            {% for item in order.items.all %}
+                <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px;">
+                    <span>{{ item.quantity }}x {{ item.menu_item.name }}</span>
+                    <span>KES {{ item.subtotal|floatformat:0 }}</span>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div style="border-top: 2px solid #333; padding-top: 8px; margin-top: 8px;">
+            <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px;">
+                <span>Subtotal:</span>
+                <span>KES {{ order.subtotal|floatformat:0 }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px;">
+                <span>Tax (16%):</span>
+                <span>KES {{ order.tax|floatformat:0 }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px; font-weight: bold; border-top: 1px solid #333; padding-top: 5px; margin-top: 5px;">
+                <span>TOTAL:</span>
+                <span>KES {{ order.total_amount|floatformat:0 }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px; border-top: 1px solid #333; padding-top: 5px; margin-top: 5px;">
+                <span>Paid:</span>
+                <span>KES {{ order.total_amount|floatformat:0 }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px;">
+                <span>Method:</span>
+                <span>{{ order.get_payment_method_display|default:"Cash" }}</span>
+            </div>
+            {% if order.payment_method == 'mpesa' and order.notes %}
+                <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px;">
+                    <span>Ref:</span>
+                    <span>{{ order.notes|truncatechars:15 }}</span>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div style="text-align: center; border-top: 2px dashed #333; padding-top: 8px; margin-top: 8px; font-size: 9px;">
+            <p>Thank you for dining with us!</p>
+            <p>Please come again</p>
+            <p><small>{{ order.created_at|date:"Y-m-d H:i" }}</small></p>
+        </div>
+    </div>
+</div>
+
+<script>
+function printReceipt() {
+    const content = document.getElementById('receiptPrintArea').innerHTML;
+    const win = window.open('', '', 'width=400,height=600');
+    win.document.write(`
+        <html>
+            <head>
+                <title>Receipt #{{ order.order_number }}</title>
+                <style>
+                    body { font-family: 'Courier New', monospace; font-size: 11px; padding: 20px; margin: 0; }
+                    .receipt-container { max-width: 320px; margin: 0 auto; }
+                </style>
+            </head>
+            <body>
+                ${content}
+                <script>
+                    window.onload = function() { 
+                        window.print(); 
+                        setTimeout(function() { window.close(); }, 500);
+                    }
+                <\/script>
+            </body>
+        </html>
+    `);
+    win.document.close();
+}
+
+// Auto-complete order when marked as paid
+document.getElementById('markPaidForm')?.addEventListener('submit', function(e) {
+    // The form will submit normally, and the server will handle the completion
+    // This is just a visual indicator for the user
+    const btn = this.querySelector('button[type="submit"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+    }
+});
+</script>
+
+<script>
+// Optional: Auto-refresh page after payment to show updated status
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we just came back from a payment
+    if (window.location.search.includes('paid=1')) {
+        // Show success message
+        Swal.fire({
+            title: '✅ Payment Confirmed!',
+            text: 'Order has been marked as paid and completed.',
+            icon: 'success',
+            timer: 3000,
+            showConfirmButton: false
+        });
+    }
+});
+</script>
+
+<style>
+.modal-content {
+    border-radius: 12px;
+}
+.modal-header {
+    border-radius: 12px 12px 0 0;
+}
+</style>
+{% endblock %}

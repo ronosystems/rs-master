@@ -1,0 +1,97 @@
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Tenants - {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-users me-2" style="color: #17a2b8;"></i>Tenants</h4>
+        <div>
+            <a href="{% url 'rental_master:add_tenant' %}" class="btn" style="background-color: #17a2b8; color: white;">
+                <i class="fas fa-user-plus me-1"></i> Add Tenant
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label for="has_active_lease" class="form-label">Lease Status</label>
+                    <select name="has_active_lease" id="has_active_lease" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Tenants</option>
+                        <option value="yes" {% if request.GET.has_active_lease == 'yes' %}selected{% endif %}>Active Tenants</option>
+                        <option value="no" {% if request.GET.has_active_lease == 'no' %}selected{% endif %}>Inactive Tenants</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    {% if request.GET.has_active_lease %}
+                        <a href="{% url 'rental_master:tenants' %}" class="btn btn-outline-secondary">Clear Filter</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if tenants %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Type</th>
+                        <th>Current Unit</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tenant in tenants %}
+                        <tr>
+                            <td><strong>{{ tenant.full_name }}</strong></td>
+                            <td>{{ tenant.email }}</td>
+                            <td>{{ tenant.phone_number }}</td>
+                            <td>{{ tenant.get_tenant_type_display }}</td>
+                            <td>
+                                {% if tenant.current_rental_unit %}
+                                    {{ tenant.current_rental_unit.unit_number }}
+                                {% else %}
+                                    <span class="text-muted">None</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if tenant.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ tenant.is_active|yesno:"Active,Inactive" }}
+                                </span>
+                                {% if tenant.active_leases %}
+                                    <br><small class="text-success">Has Active Lease</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'rental_master:tenant_detail' tenant.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-users fa-4x text-muted mb-3" style="color: #17a2b8;"></i>
+                <h4>No Tenants Found</h4>
+                <p class="text-muted">No tenants match your filters.</p>
+                <a href="{% url 'rental_master:add_tenant' %}" class="btn" style="background-color: #17a2b8; color: white;">
+                    <i class="fas fa-user-plus me-1"></i> Add Tenant
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

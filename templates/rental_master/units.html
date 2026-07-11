@@ -1,0 +1,115 @@
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Units - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-door-open me-2" style="color: #d4a373;"></i>Rental Units</h4>
+        <div>
+            <a href="{% url 'rental_master:add_unit' %}" class="btn" style="background-color: #28a745; color: white;">
+                <i class="fas fa-plus me-1"></i> Add Unit
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="branch" class="form-label">Branch</label>
+                    <select name="branch" id="branch" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Branches</option>
+                        {% for branch in branches %}
+                            <option value="{{ branch.id }}" {% if request.GET.branch == branch.id|stringformat:"s" %}selected{% endif %}>
+                                {{ branch.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="property" class="form-label">Property</label>
+                    <select name="property" id="property" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Properties</option>
+                        {% for prop in properties %}
+                            <option value="{{ prop.id }}" {% if request.GET.property == prop.id|stringformat:"s" %}selected{% endif %}>
+                                {{ prop.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Status</option>
+                        <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
+                        <option value="occupied" {% if request.GET.status == 'occupied' %}selected{% endif %}>Occupied</option>
+                        <option value="reserved" {% if request.GET.status == 'reserved' %}selected{% endif %}>Reserved</option>
+                        <option value="maintenance" {% if request.GET.status == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    {% if request.GET.branch or request.GET.property or request.GET.status %}
+                        <a href="{% url 'rental_master:units' %}" class="btn btn-outline-secondary">Clear Filters</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if units %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Unit #</th>
+                        <th>Property</th>
+                        <th>Branch</th>
+                        <th>Type</th>
+                        <th>Monthly Rent</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for unit in units %}
+                        <tr>
+                            <td><strong>{{ unit.unit_number }}</strong></td>
+                            <td>{{ unit.property.name }}</td>
+                            <td>{{ unit.property.branch.name }}</td>
+                            <td>{{ unit.get_unit_type_display }}</td>
+                            <td>KES {{ unit.monthly_rent|floatformat:0 }}</td>
+                            <td>
+                                <span class="badge {% if unit.status == 'available' %}bg-success{% elif unit.status == 'occupied' %}bg-warning{% elif unit.status == 'maintenance' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ unit.get_status_display }}
+                                </span>
+                                {% if unit.current_tenant %}
+                                    <br><small class="text-muted">{{ unit.current_tenant.full_name }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'rental_master:unit_detail' unit.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-door-open fa-4x text-muted mb-3" style="color: #d4a373;"></i>
+                <h4>No Units Found</h4>
+                <p class="text-muted">No rental units match your filters.</p>
+                <a href="{% url 'rental_master:add_unit' %}" class="btn" style="background-color: #28a745; color: white;">
+                    <i class="fas fa-plus me-1"></i> Add Unit
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

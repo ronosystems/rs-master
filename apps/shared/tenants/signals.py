@@ -1,8 +1,7 @@
 # apps/shared/tenants/signals.py
 
-from django.db.models.signals import post_migrate, pre_save
+from django.db.models.signals import post_migrate
 from django.dispatch import receiver
-from django.conf import settings
 from .models import ProjectType
 
 @receiver(post_migrate)

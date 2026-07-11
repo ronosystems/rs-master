@@ -11,6 +11,7 @@ urlpatterns = [
     # ============================================
     path('login/', views.portal_login, name='login'),
     path('logout/', views.portal_logout, name='logout'),
+    path('debug/', views.debug_redirect, name='debug'), 
     
     # ============================================
     # USER PROFILE
@@ -31,6 +32,8 @@ urlpatterns = [
     # ============================================
     # PLATFORM SETTINGS
     # ============================================
+    path('analytics/', views.platform_analytics, name='analytics'),
+    path('platform-analytics/', views.platform_analytics, name='platform_analytics'),
     path('platform-settings/', views.platform_settings, name='platform_settings'),
     path('platform-settings/stats/', views.platform_settings_stats, name='platform_settings_stats'),
     
@@ -39,59 +42,26 @@ urlpatterns = [
     # ============================================
     path('maintenance/', views.maintenance_page, name='maintenance'),
     path('toggle-maintenance/', views.toggle_maintenance_mode, name='toggle_maintenance'),
-    
-    # ============================================
-    # PROJECT MASTER DASHBOARDS
-    # ============================================
-    path('tech/dashboard/', views.tech_dashboard, name='tech_dashboard'),
-    path('tech/pos/', views.tech_pos, name='tech_pos'),
-    path('tech/reports/', views.report_dashboard, name='report_dashboard'),
-    path('analytics/', views.platform_analytics, name='platform_analytics'),
-    
-    # ============================================
-    # HOTEL MASTER
-    # ============================================
-    path('hotel/dashboard/', views.hotel_dashboard, name='hotel_dashboard'),
-    path('hotel/rooms/', views.hotel_rooms, name='hotel_rooms'),
-    path('hotel/rooms/add/', views.hotel_add_room, name='hotel_add_room'),
-    path('hotel/bookings/', views.hotel_bookings, name='hotel_bookings'),
-    path('hotel/bookings/new/', views.hotel_new_booking, name='hotel_new_booking'),
-    path('hotel/guests/', views.hotel_guests, name='hotel_guests'),
-    path('hotel/checkin/', views.hotel_checkin, name='hotel_checkin'),
-    path('hotel/checkout/', views.hotel_checkout, name='hotel_checkout'),
-    
-    # ============================================
-    # FOOD MASTER
-    # ============================================
-    path('food/dashboard/', views.food_dashboard, name='food_dashboard'),
-    path('food/menu/', views.food_menu, name='food_menu'),
-    path('food/orders/', views.food_orders, name='food_orders'),
-    path('food/tables/', views.food_tables, name='food_tables'),
-    path('food/kitchen/', views.food_kitchen, name='food_kitchen'),
-    
-    # ============================================
-    # RETAIL MASTER
-    # ============================================
-    path('retail/dashboard/', views.retail_dashboard, name='retail_dashboard'),
-    
-    # ============================================
-    # HEALTH MASTER
-    # ============================================
-    path('health/dashboard/', views.health_dashboard, name='health_dashboard'),
-    
-    # ============================================
-    # FASHION MASTER
-    # ============================================
-    path('fashion/dashboard/', views.fashion_dashboard, name='fashion_dashboard'),
-    
-    # ============================================
-    # USER MANAGEMENT (Portal)
-    # ============================================
-    path('users/', views.user_list, name='user_list'),
-    path('users/add/', views.add_user, name='add_user'),
+    path('support/', views.support, name='support'),
     
     # ============================================
     # MANAGER DASHBOARD
     # ============================================
     path('manager-dashboard/', views.manager_dashboard, name='manager_dashboard'),
+
+    # ============================================
+    # FALLBACK PAGE
+    # ============================================
+    path('no-project/', views.no_project_assigned, name='no_project_assigned'),
+
+    # ============================================
+    # LIVE CHAT
+    # ============================================
+    path('live-chat/', views.live_chat, name='live_chat'),
+
+    # Support Pages
+    path('support/', views.support, name='support'),
+    path('docs/', views.documentation, name='documentation'),
+    path('tutorials/', views.tutorials, name='tutorials'),
+    path('support/tickets/', views.support_tickets, name='support_tickets'),
 ]

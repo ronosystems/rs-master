@@ -1,0 +1,439 @@
+{% extends "shared/base_shared.html" %}
+{% load static %}
+
+{% block title %}  {{ tenant.company_name }}  {% endblock %}
+
+{% block extra_css %}
+<style>
+    .permission-sidebar {
+        max-height: calc(100vh - 250px);
+        overflow-y: auto;
+        border-right: 1px solid #dee2e6;
+        padding-right: 15px;
+    }
+    .permission-sidebar::-webkit-scrollbar {
+        width: 5px;
+    }
+    .permission-sidebar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .permission-sidebar::-webkit-scrollbar-thumb {
+        background: #0d6efd;
+        border-radius: 10px;
+    }
+    .permission-sidebar::-webkit-scrollbar-thumb:hover {
+        background: #0b5ed7;
+    }
+    
+    .model-item {
+        padding: 10px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+        margin-bottom: 2px;
+    }
+    .model-item:hover {
+        background: #f8f9fa;
+        border-left-color: #0d6efd;
+    }
+    .model-item.active {
+        background: #e3f2fd;
+        border-left-color: #0d6efd;
+        font-weight: 600;
+    }
+    .model-item .badge {
+        float: right;
+        margin-top: 2px;
+    }
+    .model-item .model-name {
+        font-size: 0.9rem;
+    }
+    
+    .permission-detail-table {
+        max-height: calc(100vh - 250px);
+        overflow-y: auto;
+    }
+    .permission-detail-table::-webkit-scrollbar {
+        width: 5px;
+    }
+    .permission-detail-table::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .permission-detail-table::-webkit-scrollbar-thumb {
+        background: #0d6efd;
+        border-radius: 10px;
+    }
+    .permission-detail-table::-webkit-scrollbar-thumb:hover {
+        background: #0b5ed7;
+    }
+    
+    .permission-row {
+        transition: all 0.2s ease;
+    }
+    .permission-row:hover {
+        background: #f8f9fa;
+    }
+    
+    .badge-action {
+        font-size: 0.7rem;
+        padding: 3px 10px;
+        border-radius: 20px;
+        min-width: 60px;
+        display: inline-block;
+        text-align: center;
+    }
+    .badge-action.view { background: #0d6efd; color: white; }
+    .badge-action.add { background: #198754; color: white; }
+    .badge-action.change { background: #ffc107; color: #000; }
+    .badge-action.delete { background: #dc3545; color: white; }
+    .badge-action.manage { background: #6f42c1; color: white; }
+    .badge-action.export { background: #17a2b8; color: white; }
+    .badge-action.import { background: #fd7e14; color: white; }
+    .badge-action.print { background: #20c997; color: white; }
+    .badge-action.approve { background: #198754; color: white; }
+    .badge-action.reject { background: #dc3545; color: white; }
+    .badge-action.default { background: #6c757d; color: white; }
+    
+    .model-header {
+        padding: 10px 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    .model-header h5 {
+        margin: 0;
+        color: #0d6efd;
+    }
+    
+    .empty-state {
+        padding: 40px 20px;
+        text-align: center;
+        color: #6c757d;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        color: #dee2e6;
+    }
+    
+    .project-badge {
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-users-cog text-primary me-2"></i>
+                System Permissions
+                <span class="badge bg-secondary ms-2">{{ users|length }}</span>
+            </h1>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'users:user_list' %}" class="btn btn-primary">
+                <i class="fas fa-users"></i>Staff Users
+            </a>
+
+            <a href="{% url 'users:user_create' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Add User
+            </a>
+
+            <a href="{% url 'permissions:role_list' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>View Roles
+            </a>
+
+            <a href="{% url 'permissions:role_create' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Add Role
+            </a>
+
+            <form method="post" action="{% url 'permissions:sync_permissions' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning btn-sm">
+                    <i class="fas fa-sync me-1"></i> Sync Permissions
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" id="searchPermissions" class="form-control" placeholder="Search permissions by name, codename, or model...">
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="badge bg-primary fs-6">{{ total_permissions }}</span>
+                    <small class="text-muted">Total Permissions</small>
+                    <br>
+                    <small class="text-muted">
+                        {% if tenant %}
+                            <i class="fas fa-building me-1"></i> {{ tenant.company_name }}
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="row g-0">
+                <!-- LEFT COLUMN - Model List -->
+                <div class="col-md-4 p-3 border-end">
+                    <h6 class="mb-3 text-muted">
+                        <i class="fas fa-list me-2"></i> Models
+                        <span class="badge bg-secondary float-end">{{ grouped_permissions|length }}</span>
+                    </h6>
+                    <div class="permission-sidebar" id="modelList">
+                        {% for key, group in grouped_permissions.items %}
+                        <div class="model-item {% if forloop.first %}active{% endif %}" 
+                             data-model="{{ key }}"
+                             onclick="loadPermissions('{{ key }}')">
+                            <span class="model-name">
+                                <i class="fas fa-table me-2 text-primary"></i>
+                                {{ group.model_name|title }}
+                            </span>
+                            <span class="badge bg-primary">{{ group.permissions|length }}</span>
+                        </div>
+                        {% empty %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                            No models found
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN - Permissions Table -->
+                <div class="col-md-8 p-3">
+                    <div id="permissionDetail">
+                        <!-- Default content will be loaded here -->
+                        <div class="model-header">
+                            <h5 id="currentModelName">
+                                {% if first_model %}
+                                    {{ first_model.model_name|title }}
+                                {% else %}
+                                    No Permissions
+                                {% endif %}
+                            </h5>
+                            <small class="text-muted" id="permissionCount">
+                                {% if first_permissions %}
+                                    {{ first_permissions|length }} permissions
+                                {% else %}
+                                    0 permissions
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="permission-detail-table">
+                            <table class="table table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 35%;">Permission</th>
+                                        <th style="width: 35%;">Codename</th>
+                                        <th style="width: 30%;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="permissionTableBody">
+                                    {% if first_permissions %}
+                                        {% for perm in first_permissions %}
+                                        <tr class="permission-row" data-search="{{ perm.name }} {{ perm.codename }}">
+                                            <td>
+                                                <i class="fas fa-shield-alt me-2 text-muted"></i>
+                                                {{ perm.name }}
+                                            </td>
+                                            <td><code>{{ perm.codename }}</code></td>
+                                            <td>
+                                                {% if 'view' in perm.codename %}
+                                                    <span class="badge-action view">View</span>
+                                                {% elif 'add' in perm.codename %}
+                                                    <span class="badge-action add">Add</span>
+                                                {% elif 'change' in perm.codename %}
+                                                    <span class="badge-action change">Change</span>
+                                                {% elif 'delete' in perm.codename %}
+                                                    <span class="badge-action delete">Delete</span>
+                                                {% elif 'manage' in perm.codename %}
+                                                    <span class="badge-action manage">Manage</span>
+                                                {% elif 'export' in perm.codename %}
+                                                    <span class="badge-action export">Export</span>
+                                                {% elif 'import' in perm.codename %}
+                                                    <span class="badge-action import">Import</span>
+                                                {% elif 'print' in perm.codename %}
+                                                    <span class="badge-action print">Print</span>
+                                                {% elif 'approve' in perm.codename %}
+                                                    <span class="badge-action approve">Approve</span>
+                                                {% elif 'reject' in perm.codename %}
+                                                    <span class="badge-action reject">Reject</span>
+                                                {% else %}
+                                                    <span class="badge-action default">{{ perm.codename|cut:"_"|title }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-4">
+                                                <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                                                No permissions in this model
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Store all permissions data for quick access
+    const permissionsData = {};
+    {% for key, group in grouped_permissions.items %}
+    permissionsData['{{ key }}'] = {
+        modelName: '{{ group.model_name|title }}',
+        permissions: [
+            {% for perm in group.permissions %}
+            {
+                name: '{{ perm.name|escapejs }}',
+                codename: '{{ perm.codename|escapejs }}',
+                action: '{{ perm.codename|cut:"_"|first }}'
+            },
+            {% endfor %}
+        ]
+    };
+    {% endfor %}
+
+    // Load permissions for a specific model
+    function loadPermissions(modelKey) {
+        // Update active state
+        document.querySelectorAll('.model-item').forEach(el => {
+            el.classList.remove('active');
+        });
+        const activeItem = document.querySelector(`.model-item[data-model="${modelKey}"]`);
+        if (activeItem) {
+            activeItem.classList.add('active');
+        }
+        
+        const data = permissionsData[modelKey];
+        if (!data) return;
+        
+        // Update header
+        document.getElementById('currentModelName').textContent = data.modelName;
+        document.getElementById('permissionCount').textContent = data.permissions.length + ' permissions';
+        
+        // Update table
+        const tbody = document.getElementById('permissionTableBody');
+        if (data.permissions.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                        No permissions in this model
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        let html = '';
+        data.permissions.forEach(perm => {
+            let actionClass = 'default';
+            let actionLabel = perm.action.charAt(0).toUpperCase() + perm.action.slice(1);
+            
+            const actionMap = {
+                'view': 'view',
+                'add': 'add',
+                'change': 'change',
+                'delete': 'delete',
+                'manage': 'manage',
+                'export': 'export',
+                'import': 'import',
+                'print': 'print',
+                'approve': 'approve',
+                'reject': 'reject'
+            };
+            
+            const action = actionMap[perm.action] || 'default';
+            
+            html += `
+                <tr class="permission-row" data-search="${perm.name} ${perm.codename}">
+                    <td>
+                        <i class="fas fa-shield-alt me-2 text-muted"></i>
+                        ${perm.name}
+                    </td>
+                    <td><code>${perm.codename}</code></td>
+                    <td>
+                        <span class="badge-action ${action}">${actionLabel}</span>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+        
+        // Apply search filter if active
+        const searchTerm = document.getElementById('searchPermissions').value.toLowerCase().trim();
+        if (searchTerm) {
+            filterPermissions(searchTerm);
+        }
+    }
+    
+    // Filter permissions based on search
+    function filterPermissions(searchTerm) {
+        const rows = document.querySelectorAll('#permissionTableBody .permission-row');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+        
+        // Update count
+        const visible = document.querySelectorAll('#permissionTableBody .permission-row[style*="display: none"]');
+        const total = document.querySelectorAll('#permissionTableBody .permission-row');
+        const visibleCount = total.length - visible.length;
+        document.getElementById('permissionCount').textContent = visibleCount + ' permissions shown';
+    }
+    
+    // Search functionality
+    document.getElementById('searchPermissions').addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        // Filter model list
+        document.querySelectorAll('.model-item').forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (searchTerm === '') {
+                item.style.display = '';
+            } else {
+                item.style.display = text.includes(searchTerm) ? '' : 'none';
+            }
+        });
+        
+        // Filter permissions in the current view
+        filterPermissions(searchTerm);
+    });
+    
+    // Load first model on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // If there's a first model, load it
+        const firstModel = document.querySelector('.model-item.active');
+        if (firstModel) {
+            loadPermissions(firstModel.dataset.model);
+        }
+    });
+</script>
+{% endblock %}

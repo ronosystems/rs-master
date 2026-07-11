@@ -1,0 +1,273 @@
+<!-- apps/rental_master/templates/rental_master/maintenance_request.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}New Maintenance Request - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #dc3545;"></i>New Maintenance Request</h4>
+        <a href="{% url 'rental_master:maintenance_requests' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Requests
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-tools me-2" style="color: #dc3545;"></i>
+            Request Details
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <!-- Branch -->
+                    <div class="col-md-4">
+                        <label for="branch" class="form-label">
+                            <i class="fas fa-store me-1" style="color: #d4a373;"></i>
+                            Branch <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="branch" name="branch" required>
+                            <option value="">-- Select Branch --</option>
+                            {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Property -->
+                    <div class="col-md-4">
+                        <label for="property" class="form-label">
+                            <i class="fas fa-building me-1" style="color: #d4a373;"></i>
+                            Property <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="property" name="property" required disabled>
+                            <option value="">-- Select Branch First --</option>
+                        </select>
+                    </div>
+
+                    <!-- Unit -->
+                    <div class="col-md-4">
+                        <label for="unit" class="form-label">
+                            <i class="fas fa-door-open me-1" style="color: #d4a373;"></i>
+                            Unit <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="unit" name="unit" required disabled>
+                            <option value="">-- Select Property First --</option>
+                        </select>
+                    </div>
+
+                    <!-- Request Title -->
+                    <div class="col-md-12">
+                        <label for="title" class="form-label">
+                            <i class="fas fa-heading me-1" style="color: #dc3545;"></i>
+                            Request Title <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               placeholder="e.g., Leaking Pipe in Kitchen" required>
+                    </div>
+
+                    <!-- Priority -->
+                    <div class="col-md-4">
+                        <label for="priority" class="form-label">
+                            <i class="fas fa-flag me-1" style="color: #dc3545;"></i>
+                            Priority <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="priority" name="priority" required>
+                            <option value="">-- Select Priority --</option>
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+
+                    <!-- Category -->
+                    <div class="col-md-4">
+                        <label for="category" class="form-label">
+                            <i class="fas fa-tag me-1" style="color: #dc3545;"></i>
+                            Category <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="">-- Select Category --</option>
+                            <option value="plumbing">Plumbing</option>
+                            <option value="electrical">Electrical</option>
+                            <option value="carpentry">Carpentry</option>
+                            <option value="painting">Painting</option>
+                            <option value="appliance">Appliance Repair</option>
+                            <option value="hvac">HVAC / Air Conditioning</option>
+                            <option value="cleaning">Cleaning</option>
+                            <option value="security">Security</option>
+                            <option value="structural">Structural</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <!-- Reported By -->
+                    <div class="col-md-4">
+                        <label for="reported_by" class="form-label">
+                            <i class="fas fa-user me-1" style="color: #dc3545;"></i>
+                            Reported By <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="reported_by" name="reported_by" 
+                               value="{{ user.get_full_name|default:user.username }}" required>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="col-12">
+                        <label for="description" class="form-label">
+                            <i class="fas fa-align-left me-1" style="color: #dc3545;"></i>
+                            Description <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" id="description" name="description" rows="4" 
+                                  placeholder="Please provide detailed description of the issue..." required></textarea>
+                    </div>
+
+                    <!-- Schedule Date -->
+                    <div class="col-md-6">
+                        <label for="scheduled_date" class="form-label">
+                            <i class="fas fa-calendar-alt me-1" style="color: #dc3545;"></i>
+                            Scheduled Date
+                        </label>
+                        <input type="datetime-local" class="form-control" id="scheduled_date" name="scheduled_date">
+                        <small class="text-muted">When should this be done?</small>
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="col-12 mt-4">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn" style="background-color: #dc3545; color: white; padding: 10px 30px;">
+                                <i class="fas fa-save me-2"></i> Submit Request
+                            </button>
+                            <a href="{% url 'rental_master:maintenance_requests' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ============================================
+    // BRANCH → PROPERTY → UNIT DYNAMIC LOADING
+    // ============================================
+    const branchSelect = document.getElementById('branch');
+    const propertySelect = document.getElementById('property');
+    const unitSelect = document.getElementById('unit');
+    
+    let propertiesData = {};
+    let unitsData = {};
+    
+    // Load initial data from server
+    fetch('/rental/api/units-data/')
+        .then(response => response.json())
+        .then(data => {
+            propertiesData = data.properties || {};
+            unitsData = data.units || {};
+        })
+        .catch(error => console.error('Error loading data:', error));
+    
+    branchSelect.addEventListener('change', function() {
+        const branchId = this.value;
+        propertySelect.innerHTML = '<option value="">-- Select Property --</option>';
+        propertySelect.disabled = true;
+        unitSelect.innerHTML = '<option value="">-- Select Property First --</option>';
+        unitSelect.disabled = true;
+        
+        if (branchId) {
+            const properties = propertiesData[branchId] || [];
+            if (properties.length > 0) {
+                properties.forEach(prop => {
+                    const option = document.createElement('option');
+                    option.value = prop.id;
+                    option.textContent = prop.name;
+                    propertySelect.appendChild(option);
+                });
+                propertySelect.disabled = false;
+            }
+        }
+    });
+    
+    propertySelect.addEventListener('change', function() {
+        const propertyId = this.value;
+        unitSelect.innerHTML = '<option value="">-- Select Unit --</option>';
+        unitSelect.disabled = true;
+        
+        if (propertyId) {
+            const units = unitsData[propertyId] || [];
+            if (units.length > 0) {
+                units.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.textContent = `${unit.unit_number} - ${unit.unit_type}`;
+                    unitSelect.appendChild(option);
+                });
+                unitSelect.disabled = false;
+            }
+        }
+    });
+});
+
+// ============================================
+// FORM VALIDATION
+// ============================================
+document.querySelector('form').addEventListener('submit', function(e) {
+    const branch = document.getElementById('branch').value;
+    const property = document.getElementById('property').value;
+    const unit = document.getElementById('unit').value;
+    const title = document.getElementById('title').value.trim();
+    const priority = document.getElementById('priority').value;
+    const description = document.getElementById('description').value.trim();
+    
+    if (!branch) {
+        e.preventDefault();
+        alert('Please select a branch.');
+        document.getElementById('branch').focus();
+        return false;
+    }
+    
+    if (!property) {
+        e.preventDefault();
+        alert('Please select a property.');
+        document.getElementById('property').focus();
+        return false;
+    }
+    
+    if (!unit) {
+        e.preventDefault();
+        alert('Please select a unit.');
+        document.getElementById('unit').focus();
+        return false;
+    }
+    
+    if (!title) {
+        e.preventDefault();
+        alert('Please enter a request title.');
+        document.getElementById('title').focus();
+        return false;
+    }
+    
+    if (!priority) {
+        e.preventDefault();
+        alert('Please select a priority.');
+        document.getElementById('priority').focus();
+        return false;
+    }
+    
+    if (!description) {
+        e.preventDefault();
+        alert('Please provide a description of the issue.');
+        document.getElementById('description').focus();
+        return false;
+    }
+    
+    return true;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,124 @@
+<!-- templates/food_master/roles/create_role.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Create Role - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #e67e22;"></i>Create New Role</h4>
+        <a href="{% url 'food_master:role_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Roles
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-user-tag me-2" style="color: #e67e22;"></i>
+            Role Details
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="role_name" class="form-label">
+                            <i class="fas fa-tag me-1" style="color: #e67e22;"></i>
+                            Role Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="role_name" name="role_name" 
+                               placeholder="e.g., Waiter, Cashier, Manager" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="description" class="form-label">
+                            <i class="fas fa-align-left me-1" style="color: #e67e22;"></i>
+                            Description
+                        </label>
+                        <input type="text" class="form-control" id="description" name="description" 
+                               placeholder="Brief description of this role">
+                    </div>
+                    
+                    <div class="col-12">
+                        <label class="form-label">
+                            <i class="fas fa-lock me-1" style="color: #e67e22;"></i>
+                            Permissions
+                        </label>
+                        <div class="row">
+                            {% for permission in permissions %}
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="permissions" value="{{ permission.id }}" 
+                                               id="perm_{{ permission.id }}">
+                                        <label class="form-check-label" for="perm_{{ permission.id }}">
+                                            {{ permission.name }}
+                                        </label>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="col-12 text-muted">
+                                    No permissions available. Run migrations first.
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>Select the permissions you want to assign to this role.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <button type="submit" class="btn" style="background-color: #e67e22; color: white; padding: 10px 30px;">
+                            <i class="fas fa-save me-2"></i> Create Role
+                        </button>
+                        <a href="{% url 'food_master:role_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Help -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle fa-2x me-2" style="color: #17a2b8;"></i>
+                        <div>
+                            <h6 class="mb-1">What is a Role?</h6>
+                            <small class="text-muted">A role groups permissions together. Users assigned to this role inherit all its permissions.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-lightbulb fa-2x me-2" style="color: #ffc107;"></i>
+                        <div>
+                            <h6 class="mb-1">Tip</h6>
+                            <small class="text-muted">Create roles based on job functions (e.g., Waiter, Cashier, Manager) and assign relevant permissions.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-link fa-2x me-2" style="color: #28a745;"></i>
+                        <div>
+                            <h6 class="mb-1">Next Step</h6>
+                            <small class="text-muted">After creating a role, go to "Assign Role" to assign it to users.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Unit {{ unit.unit_number }} - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-door-open me-2" style="color: #d4a373;"></i>Unit {{ unit.unit_number }}</h4>
+        <a href="{% url 'rental_master:units' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Units
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Unit Info -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-2" style="color: #d4a373;"></i> Unit Information
+                </div>
+                <div class="card-body">
+                    <p><strong>Unit Number:</strong> {{ unit.unit_number }}</p>
+                    <p><strong>Type:</strong> {{ unit.get_unit_type_display }}</p>
+                    <p><strong>Property:</strong> {{ unit.property.name }}</p>
+                    <p><strong>Branch:</strong> {{ unit.property.branch.name }}</p>
+                    <p><strong>Monthly Rent:</strong> KES {{ unit.monthly_rent|floatformat:0 }}</p>
+                    <p><strong>Deposit:</strong> KES {{ unit.deposit_amount|floatformat:0 }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="badge {% if unit.status == 'available' %}bg-success{% elif unit.status == 'occupied' %}bg-warning{% elif unit.status == 'maintenance' %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {{ unit.get_status_display }}
+                        </span>
+                    </p>
+                    {% if current_lease %}
+                        <hr>
+                        <h6>Current Tenant</h6>
+                        <p><strong>Name:</strong> {{ current_lease.client_tenant.full_name }}</p>
+                        <p><strong>Lease:</strong> {{ current_lease.start_date|date:"M d, Y" }} - {{ current_lease.end_date|date:"M d, Y" }}</p>
+                        <p><strong>Days Remaining:</strong> {{ current_lease.days_remaining }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Lease History -->
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="fas fa-file-signature me-2" style="color: #d4a373;"></i> Lease History
+                </div>
+                <div class="card-body">
+                    {% if leases %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Tenant</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Monthly Rent</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lease in leases %}
+                                        <tr>
+                                            <td>{{ lease.client_tenant.full_name }}</td>
+                                            <td>{{ lease.start_date|date:"M d, Y" }}</td>
+                                            <td>{{ lease.end_date|date:"M d, Y" }}</td>
+                                            <td>KES {{ lease.monthly_rent|floatformat:0 }}</td>
+                                            <td>
+                                                <span class="badge {% if lease.status == 'active' %}bg-success{% elif lease.status == 'expired' %}bg-warning{% elif lease.status == 'terminated' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                    {{ lease.get_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-file-signature fa-2x d-block mb-2"></i>
+                            <p>No lease history for this unit.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Payment History -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-credit-card me-2" style="color: #28a745;"></i> Payment History
+                </div>
+                <div class="card-body">
+                    {% if payments %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Tenant</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in payments %}
+                                        <tr>
+                                            <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                                            <td>{{ payment.tenant_profile.full_name }}</td>
+                                            <td>KES {{ payment.amount_paid|floatformat:0 }}</td>
+                                            <td>
+                                                <span class="badge {% if payment.payment_status == 'paid' %}bg-success{% elif payment.payment_status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                                                    {{ payment.get_payment_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-credit-card fa-2x d-block mb-2"></i>
+                            <p>No payment history for this unit.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

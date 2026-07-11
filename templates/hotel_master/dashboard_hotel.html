@@ -1,28 +1,539 @@
+<!-- templates/hotel_master/dashboard_hotel.html -->
 {% extends "hotel_master/base_hotel.html" %}
-{% block title %}HOTEL MASTER Dashboard{% endblock %}
+{% load static %}
+
+{% block title %} {{ company_settings.company_name|default:tenant.company_name }} {% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2"><i class="fas fa-hotel text-warning me-2"></i>Hotel Dashboard</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <span class="badge bg-warning text-dark me-2"><i class="fas fa-building me-1"></i> {{ tenant.company_name }}</span>
-        <span class="badge bg-warning text-dark"><i class="fas fa-project-diagram me-1"></i> HOTEL MASTER</span>
+<div class="container-fluid p-0">
+    
+    <!-- ============================================ -->
+    <!-- FULL SCREEN SLIDESHOW - HOTEL INTERIORS -->
+    <!-- ============================================ -->
+    <div id="heroSlideshow" class="position-relative" style="height: 100vh; overflow: hidden;">
+        <!-- Slides -->
+        <div class="slide active" style="background-image: url('https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Welcome to {{ company_settings.company_name|default:tenant.company_name }}</h1>
+                    <p class="lead fs-2 mb-4">Luxury Hotel & Accommodation</p>
+                    <p class="fs-4">Experience Comfort & Elegance</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Luxurious Rooms</h1>
+                    <p class="lead fs-2 mb-4">Designed for Your Comfort</p>
+                    <p class="fs-4">Elegant & Spacious Suites</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">BNB Experience</h1>
+                    <p class="lead fs-2 mb-4">Home Away From Home</p>
+                    <p class="fs-4">Cozy & Welcoming Atmosphere</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Modern Amenities</h1>
+                    <p class="lead fs-2 mb-4">Everything You Need</p>
+                    <p class="fs-4">Pool, Spa & Fine Dining</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1584132967330-4a1cfad3e362?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Beautiful Interiors</h1>
+                    <p class="lead fs-2 mb-4">Designed With You in Mind</p>
+                    <p class="fs-4">Contemporary & Stylish</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=1200');">
+            <div class="slide-overlay">
+                <div class="slide-content text-center text-white">
+                    <h1 class="display-1 fw-bold mb-3">Book Your Stay</h1>
+                    <p class="lead fs-2 mb-4">Unforgettable Experience</p>
+                    <p class="fs-4">Best Prices Guaranteed</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Arrows -->
+        <button class="slide-arrow prev-arrow" onclick="changeSlide(-1)">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="slide-arrow next-arrow" onclick="changeSlide(1)">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <!-- Dots Navigation -->
+        <div class="slide-dots">
+            <span class="dot active" onclick="currentSlide(0)"></span>
+            <span class="dot" onclick="currentSlide(1)"></span>
+            <span class="dot" onclick="currentSlide(2)"></span>
+            <span class="dot" onclick="currentSlide(3)"></span>
+            <span class="dot" onclick="currentSlide(4)"></span>
+            <span class="dot" onclick="currentSlide(5)"></span>
+        </div>
+
+        <!-- Scroll Down Indicator -->
+        <div class="scroll-indicator">
+            <span class="mouse">
+                <span class="mouse-wheel"></span>
+            </span>
+            <span class="scroll-text">Scroll Down</span>
+        </div>
     </div>
+
+    <!-- ============================================ -->
+    <!-- DASHBOARD STATS - ONLY FOR AUTHENTICATED USERS -->
+    <!-- ============================================ -->
+    {% if user.is_super_admin or user.is_tenant_admin %}
+    <div class="container-fluid mt-4" id="statsSection">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2"><i class="fas fa-hotel text-warning me-2"></i>Hotel Dashboard</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <span class="badge bg-warning text-dark me-2"><i class="fas fa-building me-1"></i> {{ company_settings.company_name|default:tenant.company_name }}</span>
+                <span class="badge bg-warning text-dark"><i class="fas fa-project-diagram me-1"></i> HOTEL MASTER</span>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card card-hotel">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Total Rooms</h6>
+                                <h3 class="mb-0">{{ total_rooms|default:0 }}</h3>
+                            </div>
+                            <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-bed fa-2x text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-hotel">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Available Rooms</h6>
+                                <h3 class="mb-0 text-success">{{ available_rooms|default:0 }}</h3>
+                            </div>
+                            <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-check-circle fa-2x text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-hotel">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Today's Bookings</h6>
+                                <h3 class="mb-0">{{ today_bookings|default:0 }}</h3>
+                            </div>
+                            <div class="bg-info bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-calendar-check fa-2x text-info"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-hotel">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted">Occupancy Rate</h6>
+                                <h3 class="mb-0">{{ occupancy_rate|default:0 }}%</h3>
+                            </div>
+                            <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                                <i class="fas fa-chart-pie fa-2x text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <div class="card card-hotel">
+                    <div class="card-header bg-transparent">
+                        <h6 class="mb-0"><i class="fas fa-bolt text-warning me-2"></i>Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{% url 'hotel_master:add_room' %}" class="btn btn-warning text-dark">
+                                <i class="fas fa-plus-circle me-2"></i>Add Room
+                            </a>
+                            <a href="{% url 'hotel_master:new_booking' %}" class="btn btn-success">
+                                <i class="fas fa-calendar-plus me-2"></i>New Booking
+                            </a>
+                            <a href="{% url 'hotel_master:checkin' %}" class="btn btn-info text-white">
+                                <i class="fas fa-user-plus me-2"></i>Check In
+                            </a>
+                            <a href="{% url 'hotel_master:checkout' %}" class="btn btn-danger">
+                                <i class="fas fa-user-minus me-2"></i>Check Out
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-hotel bg-light">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-tools fa-4x text-warning mb-3"></i>
+                        <h4>HOTEL MASTER - Coming Soon!</h4>
+                        <p class="text-muted">Full hotel management features including room booking, guest management, and more are under development.</p>
+                        <div class="progress" style="height: 10px; max-width: 400px; margin: 0 auto;">
+                            <div class="progress-bar bg-warning" style="width: 30%;"></div>
+                        </div>
+                        <p class="text-muted small mt-2">30% complete</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
-<div class="row g-4 mb-4">
-    <div class="col-md-3"><div class="card card-hotel"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><h6 class="text-muted">Total Rooms</h6><h3 class="mb-0">{{ total_rooms|default:0 }}</h3></div><div class="bg-warning bg-opacity-10 p-3 rounded-circle"><i class="fas fa-bed fa-2x text-warning"></i></div></div></div></div></div>
-    <div class="col-md-3"><div class="card card-hotel"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><h6 class="text-muted">Available Rooms</h6><h3 class="mb-0 text-success">{{ available_rooms|default:0 }}</h3></div><div class="bg-success bg-opacity-10 p-3 rounded-circle"><i class="fas fa-check-circle fa-2x text-success"></i></div></div></div></div></div>
-    <div class="col-md-3"><div class="card card-hotel"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><h6 class="text-muted">Today's Bookings</h6><h3 class="mb-0">{{ today_bookings|default:0 }}</h3></div><div class="bg-info bg-opacity-10 p-3 rounded-circle"><i class="fas fa-calendar-check fa-2x text-info"></i></div></div></div></div></div>
-    <div class="col-md-3"><div class="card card-hotel"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><h6 class="text-muted">Occupancy Rate</h6><h3 class="mb-0">{{ occupancy_rate|default:0 }}%</h3></div><div class="bg-primary bg-opacity-10 p-3 rounded-circle"><i class="fas fa-chart-pie fa-2x text-primary"></i></div></div></div></div></div>
-</div>
-<div class="row g-3 mb-4">
-    <div class="col-12"><div class="card card-hotel"><div class="card-header bg-transparent"><h6 class="mb-0"><i class="fas fa-bolt text-warning me-2"></i>Quick Actions</h6></div><div class="card-body"><div class="d-flex flex-wrap gap-2">
-        <a href="{% url 'hotel_add_room' %}" class="btn btn-warning text-dark"><i class="fas fa-plus-circle me-2"></i>Add Room</a>
-        <a href="{% url 'hotel_new_booking' %}" class="btn btn-success"><i class="fas fa-calendar-plus me-2"></i>New Booking</a>
-        <a href="{% url 'hotel_checkin' %}" class="btn btn-info text-white"><i class="fas fa-user-plus me-2"></i>Check In</a>
-        <a href="{% url 'hotel_checkout' %}" class="btn btn-danger"><i class="fas fa-user-minus me-2"></i>Check Out</a>
-    </div></div></div></div>
-</div>
-<div class="row">
-    <div class="col-12"><div class="card card-hotel bg-light"><div class="card-body text-center py-5"><i class="fas fa-tools fa-4x text-warning mb-3"></i><h4>HOTEL MASTER - Coming Soon!</h4><p class="text-muted">Full hotel management features including room booking, guest management, and more are under development.</p><div class="progress" style="height: 10px; max-width: 400px; margin: 0 auto;"><div class="progress-bar bg-warning" style="width: 30%;"></div></div><p class="text-muted small mt-2">30% complete</p></div></div></div>
-</div>
+
+<style>
+    /* ============================================ */
+    /* SLIDESHOW STYLES */
+    /* ============================================ */
+    #heroSlideshow {
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        background: #000;
+    }
+
+    .slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out;
+        z-index: 1;
+    }
+
+    .slide.active {
+        opacity: 1;
+        z-index: 2;
+    }
+
+    .slide-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .slide-content {
+        max-width: 800px;
+        padding: 20px;
+        animation: fadeInUp 1.5s ease;
+    }
+
+    .slide-content h1 {
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        font-size: 4rem;
+    }
+
+    .slide-content p {
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Navigation Arrows */
+    .slide-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: none;
+        padding: 15px 20px;
+        cursor: pointer;
+        font-size: 1.5rem;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        z-index: 10;
+        backdrop-filter: blur(5px);
+    }
+
+    .slide-arrow:hover {
+        background: rgba(255, 255, 255, 0.4);
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    .prev-arrow {
+        left: 20px;
+    }
+
+    .next-arrow {
+        right: 20px;
+    }
+
+    /* Dots Navigation */
+    .slide-dots {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
+        z-index: 10;
+    }
+
+    .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .dot.active {
+        background: #ffc107;
+        transform: scale(1.2);
+    }
+
+    .dot:hover {
+        background: rgba(255, 255, 255, 0.8);
+        transform: scale(1.1);
+    }
+
+    /* Scroll Indicator */
+    .scroll-indicator {
+        position: absolute;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        text-align: center;
+        z-index: 10;
+        animation: bounce 2s infinite;
+        cursor: pointer;
+    }
+
+    .scroll-indicator .mouse {
+        display: block;
+        width: 25px;
+        height: 40px;
+        border: 2px solid white;
+        border-radius: 15px;
+        margin: 0 auto 8px;
+        position: relative;
+    }
+
+    .scroll-indicator .mouse-wheel {
+        display: block;
+        width: 4px;
+        height: 8px;
+        background: white;
+        border-radius: 2px;
+        margin: 6px auto 0;
+        animation: scrollWheel 1.5s infinite;
+    }
+
+    .scroll-indicator .scroll-text {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        letter-spacing: 1px;
+    }
+
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+        40% { transform: translateX(-50%) translateY(-10px); }
+        60% { transform: translateX(-50%) translateY(-5px); }
+    }
+
+    @keyframes scrollWheel {
+        0% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(10px); }
+    }
+
+    /* Stats Section */
+    #statsSection {
+        padding: 30px 20px;
+        background: #f8f4f0;
+    }
+
+    .card-hotel {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .card-hotel:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .slide-content h1 {
+            font-size: 2.5rem !important;
+        }
+        .slide-content p {
+            font-size: 1rem !important;
+        }
+        .slide-arrow {
+            padding: 10px 15px;
+            font-size: 1rem;
+        }
+        .prev-arrow {
+            left: 10px;
+        }
+        .next-arrow {
+            right: 10px;
+        }
+        #statsSection {
+            padding: 15px 10px;
+        }
+    }
+</style>
+
+<script>
+// ============================================
+// SLIDESHOW FUNCTIONALITY
+// ============================================
+let currentSlideIndex = 0;
+const slides = document.querySelectorAll('.slide');
+const dots = document.querySelectorAll('.dot');
+let slideInterval;
+
+function showSlide(index) {
+    // Remove active class from all slides
+    slides.forEach(slide => slide.classList.remove('active'));
+    dots.forEach(dot => dot.classList.remove('active'));
+    
+    // Add active class to current slide
+    slides[index].classList.add('active');
+    dots[index].classList.add('active');
+    
+    // Reset animation by removing and re-adding the content
+    const content = slides[index].querySelector('.slide-content');
+    if (content) {
+        content.style.animation = 'none';
+        setTimeout(() => {
+            content.style.animation = 'fadeInUp 1.5s ease';
+        }, 10);
+    }
+}
+
+function changeSlide(direction) {
+    currentSlideIndex += direction;
+    if (currentSlideIndex >= slides.length) {
+        currentSlideIndex = 0;
+    } else if (currentSlideIndex < 0) {
+        currentSlideIndex = slides.length - 1;
+    }
+    showSlide(currentSlideIndex);
+    resetInterval();
+}
+
+function currentSlide(index) {
+    currentSlideIndex = index;
+    showSlide(currentSlideIndex);
+    resetInterval();
+}
+
+function resetInterval() {
+    clearInterval(slideInterval);
+    slideInterval = setInterval(() => {
+        changeSlide(1);
+    }, 5000);
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft') {
+        changeSlide(-1);
+    } else if (e.key === 'ArrowRight') {
+        changeSlide(1);
+    }
+});
+
+// Touch support for mobile
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.getElementById('heroSlideshow').addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+}, {passive: true});
+
+document.getElementById('heroSlideshow').addEventListener('touchend', function(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 50) {
+        if (diff > 0) {
+            changeSlide(1);
+        } else {
+            changeSlide(-1);
+        }
+    }
+}, {passive: true});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    showSlide(0);
+    slideInterval = setInterval(() => {
+        changeSlide(1);
+    }, 5000);
+});
+
+// Scroll to stats section when clicking scroll indicator
+document.querySelector('.scroll-indicator')?.addEventListener('click', function() {
+    const statsSection = document.getElementById('statsSection');
+    if (statsSection) {
+        statsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+});
+</script>
 {% endblock %}

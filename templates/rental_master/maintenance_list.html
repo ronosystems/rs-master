@@ -1,0 +1,188 @@
+<!-- apps/rental_master/templates/rental_master/maintenance_list.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Maintenance Requests - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-tools me-2" style="color: #dc3545;"></i>Maintenance Requests</h4>
+        <div>
+            <a href="{% url 'rental_master:new_request' %}" class="btn" style="background-color: #dc3545; color: white;">
+                <i class="fas fa-plus me-1"></i> New Request
+            </a>
+        </div>
+    </div>
+
+    <!-- Urgent & Overdue Alerts -->
+    {% if urgent_requests %}
+        <div class="alert alert-danger alert-dismissible fade show mb-4">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Urgent!</strong> {{ urgent_requests.count }} urgent request{{ urgent_requests.count|pluralize }} need immediate attention.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+    
+    {% if overdue_requests %}
+        <div class="alert alert-warning alert-dismissible fade show mb-4">
+            <i class="fas fa-clock me-2"></i>
+            <strong>Overdue!</strong> {{ overdue_requests.count }} request{{ overdue_requests.count|pluralize }} are past their scheduled date.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="priority" class="form-label">Priority</label>
+                    <select name="priority" id="priority" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Priority</option>
+                        <option value="low" {% if request.GET.priority == 'low' %}selected{% endif %}>Low</option>
+                        <option value="medium" {% if request.GET.priority == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="high" {% if request.GET.priority == 'high' %}selected{% endif %}>High</option>
+                        <option value="urgent" {% if request.GET.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="category" class="form-label">Category</label>
+                    <select name="category" id="category" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Categories</option>
+                        <option value="plumbing" {% if request.GET.category == 'plumbing' %}selected{% endif %}>Plumbing</option>
+                        <option value="electrical" {% if request.GET.category == 'electrical' %}selected{% endif %}>Electrical</option>
+                        <option value="carpentry" {% if request.GET.category == 'carpentry' %}selected{% endif %}>Carpentry</option>
+                        <option value="painting" {% if request.GET.category == 'painting' %}selected{% endif %}>Painting</option>
+                        <option value="appliance" {% if request.GET.category == 'appliance' %}selected{% endif %}>Appliance</option>
+                        <option value="hvac" {% if request.GET.category == 'hvac' %}selected{% endif %}>HVAC</option>
+                        <option value="cleaning" {% if request.GET.category == 'cleaning' %}selected{% endif %}>Cleaning</option>
+                        <option value="security" {% if request.GET.category == 'security' %}selected{% endif %}>Security</option>
+                        <option value="structural" {% if request.GET.category == 'structural' %}selected{% endif %}>Structural</option>
+                        <option value="other" {% if request.GET.category == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    {% if request.GET.status or request.GET.priority or request.GET.category %}
+                        <a href="{% url 'rental_master:maintenance_requests' %}" class="btn btn-outline-secondary">Clear Filters</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center" style="border-left: 4px solid #ffc107;">
+                <div class="card-body">
+                    <h3 class="mb-0 text-warning">{{ pending_count }}</h3>
+                    <small class="text-muted">Pending</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center" style="border-left: 4px solid #17a2b8;">
+                <div class="card-body">
+                    <h3 class="mb-0 text-info">{{ in_progress_count }}</h3>
+                    <small class="text-muted">In Progress</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center" style="border-left: 4px solid #28a745;">
+                <div class="card-body">
+                    <h3 class="mb-0 text-success">{{ completed_count }}</h3>
+                    <small class="text-muted">Completed</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center" style="border-left: 4px solid #dc3545;">
+                <div class="card-body">
+                    <h3 class="mb-0 text-danger">{{ cancelled_count }}</h3>
+                    <small class="text-muted">Cancelled</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Requests List -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <i class="fas fa-list me-2" style="color: #dc3545;"></i>
+            All Requests
+            <span class="badge bg-secondary ms-2">{{ total_requests }}</span>
+        </div>
+        <div class="card-body">
+            {% if requests %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Title</th>
+                                <th>Unit</th>
+                                <th>Category</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Reported</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for request in requests %}
+                                <tr>
+                                    <td>{{ request.id }}</td>
+                                    <td>
+                                        <a href="{% url 'rental_master:maintenance_detail' request.id %}">
+                                            <strong>{{ request.title }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>{{ request.rental_unit.unit_number }}</td>
+                                    <td>{{ request.get_category_display }}</td>
+                                    <td>
+                                        <span class="badge {% if request.priority == 'urgent' %}bg-danger{% elif request.priority == 'high' %}bg-warning{% elif request.priority == 'medium' %}bg-info{% else %}bg-secondary{% endif %}">
+                                            {{ request.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if request.status == 'pending' %}bg-warning{% elif request.status == 'in_progress' %}bg-info{% elif request.status == 'completed' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ request.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ request.reported_by|default:"-" }}</td>
+                                    <td>
+                                        <a href="{% url 'rental_master:maintenance_detail' request.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-3x d-block mb-3"></i>
+                    <p>No maintenance requests found</p>
+                    <a href="{% url 'rental_master:new_request' %}" class="btn btn-sm" style="background-color: #dc3545; color: white;">
+                        <i class="fas fa-plus me-1"></i> Create Request
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

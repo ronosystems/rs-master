@@ -1,0 +1,315 @@
+<!-- templates/tech_master/stock_report.html -->
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Stock Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-clipboard-list text-primary me-2"></i>Stock Report
+            </h4>
+            <p class="text-muted mb-0">View detailed stock report for all products</p>
+        </div>
+        <div>
+            <a href="{% url 'tech_master:export_reports' %}?type=stock" class="btn btn-success">
+                <i class="fas fa-file-export me-2"></i>Export Report
+            </a>
+            <a href="{% url 'tech_master:product_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Products</h6>
+                            <h3 class="fw-bold mb-0">{{ total_products }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-box text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Stock Value</h6>
+                            <h3 class="fw-bold mb-0">KES {{ total_value|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-3">
+                            <i class="fas fa-money-bill-wave text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Low Stock Items</h6>
+                            <h3 class="fw-bold mb-0 text-warning">{{ low_stock_count|default:0 }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded p-3">
+                            <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Out of Stock</h6>
+                            <h3 class="fw-bold mb-0 text-danger">{{ out_of_stock_count|default:0 }}</h3>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 rounded p-3">
+                            <i class="fas fa-times-circle text-danger fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    {% if category_stats %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold">
+                <i class="fas fa-chart-pie me-2"></i>Stock by Category
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for category in category_stats %}
+                <div class="col-md-4 col-lg-3">
+                    <div class="bg-light rounded p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">{{ category.category__name|default:"Uncategorized" }}</div>
+                                <small class="text-muted">{{ category.count }} products</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">KES {{ category.total_value|floatformat:0 }}</div>
+                                <small class="text-muted">{{ category.total_stock }} units</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Stock Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-list me-2"></i>All Products Stock
+                </h6>
+                <div class="d-flex gap-2 flex-wrap">
+                    <div class="input-group input-group-sm" style="max-width: 250px;">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="stockSearch" class="form-control" 
+                               placeholder="Search products...">
+                    </div>
+                    <select id="categoryFilter" class="form-select form-select-sm" style="max-width: 150px;">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="stockFilter" class="form-select form-select-sm" style="max-width: 130px;">
+                        <option value="">All Stock</option>
+                        <option value="in">In Stock</option>
+                        <option value="low">Low Stock</option>
+                        <option value="out">Out of Stock</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="stockTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>SKU</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Buying Price</th>
+                            <th>Selling Price</th>
+                            <th>Stock</th>
+                            <th>Stock Value</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr class="stock-row" 
+                            data-category="{{ product.category.id }}"
+                            data-stock="{{ product.available_quantity }}">
+                            <td>
+                                <span class="badge bg-secondary">{{ product.sku_code }}</span>
+                            </td>
+                            <td>
+                                <div>
+                                    <div class="fw-semibold">{{ product.name }}</div>
+                                    <small class="text-muted">{{ product.brand }} {{ product.model }}</small>
+                                </div>
+                            </td>
+                            <td>{{ product.category.name|default:"-" }}</td>
+                            <td>KES {{ product.buying_price|floatformat:0 }}</td>
+                            <td class="fw-bold">KES {{ product.selling_price|floatformat:0 }}</td>
+                            <td>
+                                <span class="fw-bold 
+                                    {% if product.available_quantity == 0 %}text-danger
+                                    {% elif product.is_low_stock %}text-warning
+                                    {% else %}text-success{% endif %}">
+                                    {{ product.available_quantity }}
+                                </span>
+                                <small class="text-muted d-block">Reorder: {{ product.reorder_level }}</small>
+                            </td>
+                            <td>
+                                <span class="fw-bold">
+                                    KES {{ product.stock_value_annotated|floatformat:0 }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if product.available_quantity == 0 %}
+                                <span class="badge bg-danger">Out of Stock</span>
+                                {% elif product.is_low_stock %}
+                                <span class="badge bg-warning text-dark">Low Stock</span>
+                                {% else %}
+                                <span class="badge bg-success">In Stock</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="fas fa-box fa-3x d-block mb-3 opacity-50"></i>
+                                No products found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="5" class="fw-bold text-end">Totals:</td>
+                            <td class="fw-bold">{{ total_quantity|default:0 }}</td>
+                            <td class="fw-bold">KES {{ total_value|floatformat:0 }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Showing {{ products.start_index }} to {{ products.end_index }} of {{ products.paginator.count }} products
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if products.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ products.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">{{ products.number }}</span>
+                        </li>
+
+                        {% if products.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ products.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ products.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('stockSearch');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const stockFilter = document.getElementById('stockFilter');
+    const rows = document.querySelectorAll('.stock-row');
+    
+    function filterRows() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const category = categoryFilter.value;
+        const stock = stockFilter.value;
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const rowCategory = row.getAttribute('data-category');
+            const rowStock = parseInt(row.getAttribute('data-stock'));
+            
+            let show = true;
+            
+            // Search filter
+            if (searchTerm && !text.includes(searchTerm)) {
+                show = false;
+            }
+            
+            // Category filter
+            if (category && rowCategory !== category) {
+                show = false;
+            }
+            
+            // Stock filter
+            if (stock) {
+                if (stock === 'in' && rowStock <= 0) show = false;
+                else if (stock === 'low' && (rowStock > 5 || rowStock <= 0)) show = false;
+                else if (stock === 'out' && rowStock > 0) show = false;
+            }
+            
+            row.style.display = show ? '' : 'none';
+        });
+    }
+    
+    searchInput.addEventListener('input', filterRows);
+    categoryFilter.addEventListener('change', filterRows);
+    stockFilter.addEventListener('change', filterRows);
+});
+</script>
+{% endblock %}

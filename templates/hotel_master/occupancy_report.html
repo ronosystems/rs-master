@@ -1,0 +1,241 @@
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-chart-bar me-2 text-primary"></i>Occupancy Report</h4>
+        <div>
+            <a href="{% url 'hotel_master:report_dashboard' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back to Reports
+            </a>
+            <button onclick="window.print()" class="btn btn-primary btn-sm">
+                <i class="fas fa-print me-1"></i> Print
+            </button>
+        </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Total Rooms</h6>
+                    <h3 class="mb-0">{{ total_rooms }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Avg Occupied</h6>
+                    <h3 class="mb-0">{{ avg_occupied }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Avg Available</h6>
+                    <h3 class="mb-0">{{ avg_available }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Avg Occupancy Rate</h6>
+                    <h3 class="mb-0 text-{% if avg_rate > 80 %}success{% elif avg_rate > 50 %}warning{% else %}danger{% endif %}">
+                        {{ avg_rate }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Occupancy Chart -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <i class="fas fa-chart-line me-2"></i> Daily Occupancy Trend
+        </div>
+        <div class="card-body">
+            <canvas id="occupancyChart" height="80"></canvas>
+        </div>
+    </div>
+
+    <!-- Room Type Breakdown -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <i class="fas fa-bed me-2"></i> Room Type Breakdown
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Room Type</th>
+                            <th>Total</th>
+                            <th>Occupied</th>
+                            <th>Available</th>
+                            <th>Reserved</th>
+                            <th>Maintenance</th>
+                            <th>Occupancy Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in room_type_stats %}
+                        <tr>
+                            <td>{{ stat.room_type_display }}</td>
+                            <td>{{ stat.total }}</td>
+                            <td>{{ stat.occupied }}</td>
+                            <td>{{ stat.available }}</td>
+                            <td>{{ stat.reserved }}</td>
+                            <td>{{ stat.maintenance }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar {% if stat.occupancy_rate > 80 %}bg-success{% elif stat.occupancy_rate > 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                         style="width: {{ stat.occupancy_rate }}%;">
+                                        {{ stat.occupancy_rate }}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No room data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Data Table -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <i class="fas fa-table me-2"></i> Daily Occupancy Data
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Occupied Rooms</th>
+                            <th>Total Rooms</th>
+                            <th>Occupancy Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in occupancy_data %}
+                        <tr>
+                            <td>{{ data.date_label }}</td>
+                            <td>{{ data.occupied }}</td>
+                            <td>{{ data.total }}</td>
+                            <td>
+                                <span class="badge {% if data.rate > 80 %}bg-success{% elif data.rate > 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ data.rate }}%
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Occupancy Chart
+    const ctx = document.getElementById('occupancyChart').getContext('2d');
+    
+    const labels = [];
+    const data = [];
+    
+    {% for item in daily_trend %}
+    labels.push('{{ item.date }}');
+    data.push({{ item.occupied }});
+    {% endfor %}
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Occupied Rooms',
+                data: data,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y + ' rooms occupied';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Rooms'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

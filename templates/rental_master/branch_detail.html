@@ -1,0 +1,82 @@
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}{{ branch.name }} - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-store me-2" style="color: #d4a373;"></i>{{ branch.name }}</h4>
+        <a href="{% url 'rental_master:branches' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Branches
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Branch Info -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-2" style="color: #d4a373;"></i> Branch Information
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> {{ branch.name }}</p>
+                    <p><strong>Location:</strong> {{ branch.location }}</p>
+                    <p><strong>City:</strong> {{ branch.city|default:"N/A" }}</p>
+                    <p><strong>Contact Person:</strong> {{ branch.contact_person|default:"N/A" }}</p>
+                    <p><strong>Contact Phone:</strong> {{ branch.contact_phone|default:"N/A" }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="badge {% if branch.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ branch.is_active|yesno:"Active,Inactive" }}
+                        </span>
+                    </p>
+                    <p><strong>Created:</strong> {{ branch.created_at|date:"M d, Y" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Properties -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-building me-2" style="color: #d4a373;"></i> Properties
+                    </div>
+                    <a href="{% url 'rental_master:add_property' %}?branch={{ branch.id }}" class="btn btn-sm" style="background-color: #d4a373; color: white;">
+                        <i class="fas fa-plus me-1"></i> Add Property
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if properties %}
+                        <div class="list-group list-group-flush">
+                            {% for property in properties %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ property.name }}</h6>
+                                        <small class="text-muted">{{ property.property_type.name }}</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-info">{{ property.total_units }} units</span>
+                                        <span class="badge bg-success">{{ property.occupied_units }} occupied</span>
+                                        <a href="{% url 'rental_master:property_detail' property.id %}" class="btn btn-sm btn-outline-primary ms-2">
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-building fa-2x d-block mb-2"></i>
+                            <p>No properties in this branch yet.</p>
+                            <a href="{% url 'rental_master:add_property' %}?branch={{ branch.id }}" class="btn btn-sm" style="background-color: #d4a373; color: white;">
+                                <i class="fas fa-plus me-1"></i> Add Property
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

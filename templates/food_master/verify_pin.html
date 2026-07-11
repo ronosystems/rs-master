@@ -1,0 +1,342 @@
+<!-- templates/food_master/verify_pin.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Verify PIN - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<style>
+    .verify-container {
+        max-width: 400px;
+        margin: 40px auto;
+    }
+    .verify-card {
+        background: white;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    .verify-card .avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #e67e22, #d35400);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 2.5rem;
+        color: white;
+    }
+    .verify-card h4 {
+        color: #333;
+        margin-bottom: 5px;
+    }
+    .verify-card .subtitle {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 25px;
+    }
+    .verify-card .pin-input {
+        letter-spacing: 10px;
+        font-size: 2rem;
+        text-align: center;
+        font-weight: bold;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        width: 200px;
+        margin: 0 auto 20px;
+        background: #f8f9fa;
+    }
+    .verify-card .pin-input:focus {
+        border-color: #e67e22;
+        box-shadow: 0 0 0 0.2rem rgba(230, 126, 34, 0.25);
+        outline: none;
+    }
+    .verify-card .numpad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        max-width: 280px;
+        margin: 0 auto 20px;
+    }
+    .verify-card .numpad button {
+        padding: 15px;
+        font-size: 1.3rem;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .verify-card .numpad button:hover {
+        background: #f0f0f0;
+        transform: scale(1.02);
+    }
+    .verify-card .numpad button.btn-clear {
+        background: #dc3545;
+        color: white;
+    }
+    .verify-card .numpad button.btn-clear:hover {
+        background: #c82333;
+    }
+    .verify-card .numpad button.btn-enter {
+        background: #28a745;
+        color: white;
+    }
+    .verify-card .numpad button.btn-enter:hover {
+        background: #218838;
+    }
+    .verify-card .error-message {
+        color: #dc3545;
+        font-size: 0.9rem;
+        margin-top: 10px;
+        display: none;
+    }
+    .verify-card .error-message.show {
+        display: block;
+    }
+    .verify-card .attempts-remaining {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 10px;
+    }
+    .verify-card .lockout-message {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        display: none;
+    }
+    .verify-card .lockout-message.show {
+        display: block;
+    }
+    .verify-card .btn-back {
+        margin-top: 15px;
+    }
+    .session-timer {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 10px;
+    }
+</style>
+
+<div class="container">
+    <div class="verify-container">
+        <div class="verify-card">
+            <div class="avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            
+            <h4 id="waiterName">{{ waiter_name|default:"User" }}</h4>
+            <p class="subtitle">Enter your PIN to access the POS system</p>
+            
+            <div class="mb-3">
+                <input type="password" class="pin-input" id="pinInput" 
+                       placeholder="••••" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+                <div class="text-muted small mt-1">
+                    <i class="fas fa-info-circle"></i> Enter your 4-6 digit PIN
+                </div>
+            </div>
+            
+            <div class="numpad">
+                <button onclick="pinInput('1')">1</button>
+                <button onclick="pinInput('2')">2</button>
+                <button onclick="pinInput('3')">3</button>
+                <button onclick="pinInput('4')">4</button>
+                <button onclick="pinInput('5')">5</button>
+                <button onclick="pinInput('6')">6</button>
+                <button onclick="pinInput('7')">7</button>
+                <button onclick="pinInput('8')">8</button>
+                <button onclick="pinInput('9')">9</button>
+                <button class="btn-clear" onclick="pinClear()"><i class="fas fa-backspace"></i></button>
+                <button onclick="pinInput('0')">0</button>
+                <button class="btn-enter" onclick="verifyPin()"><i class="fas fa-check"></i></button>
+            </div>
+            
+            <div class="error-message" id="pinError">
+                <i class="fas fa-exclamation-circle me-1"></i>
+                Invalid PIN. Please try again.
+            </div>
+            
+            <div class="attempts-remaining" id="attemptsDisplay"></div>
+            
+            <div class="lockout-message" id="lockoutMessage">
+                <i class="fas fa-lock me-2"></i>
+                Too many failed attempts. Please wait a moment before trying again.
+            </div>
+            
+            <div class="session-timer" id="sessionTimer"></div>
+            
+            <div class="mt-3">
+                <button class="btn btn-link text-muted btn-sm" onclick="window.location.href='{% url 'food_master:dashboard' %}'">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                </button>
+            </div>
+            
+            <div class="mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    Your PIN is required for security purposes
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let pinAttempts = 0;
+const MAX_ATTEMPTS = 3;
+let lockoutTimer = null;
+let isLocked = false;
+
+// ============================================
+// PIN INPUT FUNCTIONS
+// ============================================
+function pinInput(value) {
+    if (isLocked) return;
+    const pinInput = document.getElementById('pinInput');
+    if (pinInput.value.length < 6) {
+        pinInput.value += value;
+        document.getElementById('pinError').classList.remove('show');
+    }
+}
+
+function pinClear() {
+    if (isLocked) return;
+    const pinInput = document.getElementById('pinInput');
+    pinInput.value = pinInput.value.slice(0, -1);
+    document.getElementById('pinError').classList.remove('show');
+}
+
+// ============================================
+// VERIFY PIN
+// ============================================
+function verifyPin() {
+    if (isLocked) return;
+    
+    const pin = document.getElementById('pinInput').value.trim();
+    const errorDiv = document.getElementById('pinError');
+    const attemptsDisplay = document.getElementById('attemptsDisplay');
+    
+    if (pin.length < 4) {
+        errorDiv.textContent = 'Please enter at least 4 digits.';
+        errorDiv.classList.add('show');
+        return;
+    }
+    
+    // Send PIN to server
+    fetch('/food/api/pos/verify-pin/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ pin: pin })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // PIN verified - redirect to menu order
+            window.location.href = '/food/menu-order/';
+        } else {
+            pinAttempts++;
+            const remaining = MAX_ATTEMPTS - pinAttempts;
+            
+            if (pinAttempts >= MAX_ATTEMPTS) {
+                // Lock out
+                isLocked = true;
+                document.getElementById('lockoutMessage').classList.add('show');
+                document.getElementById('pinInput').disabled = true;
+                attemptsDisplay.textContent = '🔒 Too many failed attempts. Please wait 30 seconds.';
+                
+                // Enable after 30 seconds
+                setTimeout(() => {
+                    isLocked = false;
+                    document.getElementById('lockoutMessage').classList.remove('show');
+                    document.getElementById('pinInput').disabled = false;
+                    document.getElementById('pinInput').value = '';
+                    pinAttempts = 0;
+                    attemptsDisplay.textContent = '';
+                    document.getElementById('pinError').classList.remove('show');
+                }, 30000);
+            } else {
+                errorDiv.textContent = `❌ Invalid PIN. ${remaining} attempt${remaining > 1 ? 's' : ''} remaining.`;
+                errorDiv.classList.add('show');
+                attemptsDisplay.textContent = `⚠️ ${remaining} attempt${remaining > 1 ? 's' : ''} remaining`;
+                document.getElementById('pinInput').value = '';
+                document.getElementById('pinInput').focus();
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Verification error:', error);
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.classList.add('show');
+    });
+}
+
+// ============================================
+// CSRF TOKEN
+// ============================================
+function getCsrfToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    return token ? token.value : '';
+}
+
+// ============================================
+// ENTER KEY SUPPORT
+// ============================================
+document.getElementById('pinInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        verifyPin();
+    }
+});
+
+// ============================================
+// AUTO-FOCUS ON LOAD
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('pinInput').focus();
+    
+    // Check if there's a session active
+    const sessionTimer = document.getElementById('sessionTimer');
+    // You can add session timer logic here if needed
+});
+
+// ============================================
+// KEYBOARD SHORTCUTS
+// ============================================
+document.addEventListener('keydown', function(e) {
+    // ESC to clear PIN
+    if (e.key === 'Escape') {
+        pinClear();
+    }
+});
+</script>
+
+<style>
+/* Additional responsive styles */
+@media (max-width: 576px) {
+    .verify-card {
+        padding: 20px;
+    }
+    .verify-card .pin-input {
+        width: 160px;
+        font-size: 1.5rem;
+    }
+    .verify-card .numpad {
+        max-width: 240px;
+        gap: 8px;
+    }
+    .verify-card .numpad button {
+        padding: 12px;
+        font-size: 1.1rem;
+    }
+}
+</style>
+{% endblock %}

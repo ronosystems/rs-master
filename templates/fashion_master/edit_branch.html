@@ -1,0 +1,88 @@
+<!-- templates/fashion_master/edit_branch.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Edit Fashion Branch{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-store me-2"></i>Edit Fashion Branch
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Branch Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" value="{{ branch.name }}" required>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Branch Code <span class="text-danger">*</span></label>
+                                <input type="text" name="code" class="form-control" value="{{ branch.code }}" required>
+                                <small class="text-muted">Unique identifier for the branch</small>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Address</label>
+                                <input type="text" name="address" class="form-control" value="{{ branch.address }}">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">City</label>
+                                <input type="text" name="city" class="form-control" value="{{ branch.city }}">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone</label>
+                                <input type="text" name="phone" class="form-control" value="{{ branch.phone }}">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Branch Type</label>
+                                <select name="branch_type" class="form-select">
+                                    <option value="sub_branch" {% if branch.branch_type == 'sub_branch' %}selected{% endif %}>Sub-Branch</option>
+                                    <option value="main" {% if branch.branch_type == 'main' %}selected{% endif %}>Main Store</option>
+                                    <option value="warehouse" {% if branch.branch_type == 'warehouse' %}selected{% endif %}>Warehouse</option>
+                                    <option value="outlet" {% if branch.branch_type == 'outlet' %}selected{% endif %}>Outlet</option>
+                                    <option value="kiosk" {% if branch.branch_type == 'kiosk' %}selected{% endif %}>Kiosk</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input type="checkbox" name="is_main_branch" class="form-check-input" id="isMainBranch" {% if branch.is_main_branch %}checked{% endif %}>
+                                    <label class="form-check-label fw-semibold" for="isMainBranch">Main Branch</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="is_active" class="form-check-input" id="isActive" {% if branch.is_active %}checked{% endif %}>
+                                    <label class="form-check-label fw-semibold" for="isActive">Active</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 mt-4">
+                                <hr>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Update Branch
+                                    </button>
+                                    <a href="{% url 'fashion_master:branch_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

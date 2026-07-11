@@ -1,0 +1,96 @@
+<!-- templates/fashion_master/transfer_stock.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Transfer Stock - Fashion Master{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-exchange-alt text-primary me-2"></i>Transfer Stock
+            </h4>
+            <p class="text-muted mb-0">Transfer stock between fashion branches</p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:branch_stock_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Stock
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-exchange-alt me-2"></i>Transfer Stock
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">From Branch <span class="text-danger">*</span></label>
+                                <select name="from_branch" class="form-select" required>
+                                    <option value="">Select Source Branch</option>
+                                    {% for branch in branches %}
+                                    <option value="{{ branch.id }}">{{ branch.name }} ({{ branch.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">To Branch <span class="text-danger">*</span></label>
+                                <select name="to_branch" class="form-select" required>
+                                    <option value="">Select Destination Branch</option>
+                                    {% for branch in branches %}
+                                    <option value="{{ branch.id }}">{{ branch.name }} ({{ branch.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Product <span class="text-danger">*</span></label>
+                                <select name="product" class="form-select" required>
+                                    <option value="">Select Product</option>
+                                    {% for product in products %}
+                                    <option value="{{ product.id }}">
+                                        {{ product.name }} - {{ product.sku_code }} (Stock: {{ product.quantity_in_stock }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                                <input type="number" name="quantity" class="form-control" required placeholder="Enter quantity" min="1">
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Notes</label>
+                                <textarea name="notes" class="form-control" rows="3" placeholder="Reason for transfer..."></textarea>
+                            </div>
+                            
+                            <div class="col-12 mt-4">
+                                <hr>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-exchange-alt me-2"></i>Transfer Stock
+                                    </button>
+                                    <a href="{% url 'fashion_master:branch_stock_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

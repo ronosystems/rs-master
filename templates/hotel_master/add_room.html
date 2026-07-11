@@ -1,0 +1,176 @@
+<!-- templates/hotel_master/add_room.html -->
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="fas fa-plus-circle text-warning me-2"></i>Add Room
+        </h4>
+        <a href="{% url 'hotel_master:rooms' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Rooms
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <!-- Room Details -->
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Room Number <span class="text-danger">*</span></label>
+                        <input type="text" name="room_number" class="form-control" placeholder="e.g., 101, 201, A-101" required>
+                        <small class="text-muted">Unique room identifier</small>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Room Type <span class="text-danger">*</span></label>
+                        <select name="room_type" class="form-select" required>
+                            <option value="">Select Room Type</option>
+                            <option value="standard">Standard</option>
+                            <option value="deluxe">Deluxe</option>
+                            <option value="suite">Suite</option>
+                            <option value="executive">Executive</option>
+                            <option value="presidential">Presidential</option>
+                            <option value="family">Family</option>
+                            <option value="single">Single</option>
+                            <option value="double">Double</option>
+                            <option value="twin">Twin</option>
+                            <option value="studio">Studio</option>
+                            <option value="penthouse">Penthouse</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Floor</label>
+                        <input type="number" name="floor" class="form-control" placeholder="e.g., 1, 2, 3" min="1" max="50">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Capacity (Guests) <span class="text-danger">*</span></label>
+                        <select name="capacity" class="form-select" required>
+                            <option value="1">1 Guest</option>
+                            <option value="2" selected>2 Guests</option>
+                            <option value="3">3 Guests</option>
+                            <option value="4">4 Guests</option>
+                            <option value="5">5 Guests</option>
+                            <option value="6">6 Guests</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Price per Night (KES) <span class="text-danger">*</span></label>
+                        <input type="number" name="price" class="form-control" placeholder="e.g., 5000" step="100" min="0" required>
+                        <small class="text-muted">Standard price for this room</small>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <!-- Room Features -->
+                <h6 class="fw-bold mb-3"><i class="fas fa-check-circle text-success me-2"></i>Room Features</h6>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_ac" id="has_ac" checked>
+                            <label class="form-check-label" for="has_ac">Air Conditioning</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_tv" id="has_tv" checked>
+                            <label class="form-check-label" for="has_tv">TV</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_wifi" id="has_wifi" checked>
+                            <label class="form-check-label" for="has_wifi">WiFi</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_minibar" id="has_minibar">
+                            <label class="form-check-label" for="has_minibar">Mini Bar</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_bathroom" id="has_bathroom" checked>
+                            <label class="form-check-label" for="has_bathroom">Private Bathroom</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_balcony" id="has_balcony">
+                            <label class="form-check-label" for="has_balcony">Balcony</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_kitchenette" id="has_kitchenette">
+                            <label class="form-check-label" for="has_kitchenette">Kitchenette</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_safe" id="has_safe">
+                            <label class="form-check-label" for="has_safe">In-room Safe</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_iron" id="has_iron">
+                            <label class="form-check-label" for="has_iron">Iron & Ironing Board</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_hairdryer" id="has_hairdryer">
+                            <label class="form-check-label" for="has_hairdryer">Hair Dryer</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_phone" id="has_phone">
+                            <label class="form-check-label" for="has_phone">Phone</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="has_smoking" id="has_smoking">
+                            <label class="form-check-label" for="has_smoking">Smoking Allowed</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <!-- Description -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Room Description</label>
+                    <textarea name="description" class="form-control" rows="3" placeholder="Describe the room features, view, special amenities..."></textarea>
+                </div>
+                
+                <!-- Submit Buttons -->
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-2"></i>Add Room
+                    </button>
+                    <button type="reset" class="btn btn-secondary">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </button>
+                    <a href="{% url 'hotel_master:rooms' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

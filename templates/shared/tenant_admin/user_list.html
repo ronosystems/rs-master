@@ -1,4 +1,4 @@
-{% extends 'tech_master/base_tech.html' %}
+{% extends "shared/base_shared.html" %}
 
 {% block title %}Manage Users - {{ tenant.company_name }}{% endblock %}
 
@@ -85,6 +85,7 @@
                                 {% endif %}
                             </td>
                             <td>
+                                {% if user.is_super_admin or user.is_tenant_admin %}
                                 <div class="btn-group btn-group-sm">
                                     <a href="{% url 'users:edit_user' user.id %}" class="btn btn-info">
                                         <i class="fas fa-edit"></i>
@@ -98,6 +99,7 @@
                                     </a>
                                     {% endif %}
                                 </div>
+                                {% endif %} 
                             </td>
                         </tr>
                         {% empty %}

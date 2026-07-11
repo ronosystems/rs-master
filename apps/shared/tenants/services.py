@@ -20,26 +20,30 @@ class TenantLimitService:
         self.branch_limit = 1
         self.storage_limit = 1
         
-        # ✅ Try to get limits from subscription plan
+        # Try to get limits from subscription plan
         try:
             from apps.shared.tenants.models import SubscriptionPlan
-            
-            if self.tenant.subscription_plan:
-                plan = SubscriptionPlan.objects.get(code=self.tenant.subscription_plan)
-                self.user_limit = getattr(plan, 'max_users', 5)
-                self.product_limit = getattr(plan, 'max_products', 100)
-                self.branch_limit = getattr(plan, 'max_branches', 1)
-                self.storage_limit = getattr(plan, 'max_storage_gb', 1)
-                print(f"✅ Loaded plan: {plan.code} - Storage: {self.storage_limit} GB")
-            else:
-                print(f"⚠️ No subscription plan for tenant: {self.tenant.company_name}")
-                # ✅ Try to get from tenant's subscription_plan field
-                if hasattr(self.tenant, 'subscription_plan') and self.tenant.subscription_plan:
+        except Exception:
+            SubscriptionPlan = None
+
+        try:
+            if getattr(self.tenant, 'subscription_plan', None) and SubscriptionPlan:
+                try:
                     plan = SubscriptionPlan.objects.get(code=self.tenant.subscription_plan)
+                    self.user_limit = getattr(plan, 'max_users', 5)
+                    self.product_limit = getattr(plan, 'max_products', 100)
+                    self.branch_limit = getattr(plan, 'max_branches', 1)
                     self.storage_limit = getattr(plan, 'max_storage_gb', 1)
-                    print(f"✅ Loaded from tenant field: {self.storage_limit} GB")
-        except SubscriptionPlan.DoesNotExist:
-            print(f"❌ Plan not found: {self.tenant.subscription_plan}")
+                    print(f"✅ Loaded plan: {plan.code} - Storage: {self.storage_limit} GB")
+                except Exception as e:
+                    # If SubscriptionPlan is available, try to detect DoesNotExist specifically
+                    exc_name = type(e).__name__
+                    if exc_name == 'DoesNotExist':
+                        print(f"❌ Plan not found: {self.tenant.subscription_plan}")
+                    else:
+                        print(f"❌ Error loading plan: {e}")
+            else:
+                print(f"⚠️ No subscription plan for tenant: {getattr(self.tenant, 'company_name', 'unknown')}")
         except Exception as e:
             print(f"❌ Error loading plan: {e}")
     
@@ -78,7 +82,7 @@ class TenantLimitService:
         return self.product_limit
     
     def get_product_count(self):
-        from apps.tech_master.inventory.models import Product
+        from apps.tech_master.models import Product
         return Product.objects.filter(
             tenant=self.tenant,
             is_active=True,
@@ -107,7 +111,7 @@ class TenantLimitService:
         return self.branch_limit
     
     def get_branch_count(self):
-        from apps.tech_master.inventory.models import Branch
+        from apps.tech_master.models import Branch
         return Branch.objects.filter(
             tenant=self.tenant,
             is_active=True
@@ -140,8 +144,8 @@ class TenantLimitService:
         total_bytes = 0
         
         try:
-            from apps.tech_master.inventory.models import Product
-            from apps.tech_master.expenses.models import Expense
+            from apps.tech_master.models import Product
+            from apps.shared.expenses.models import Expense
             
             # 1. Product Images
             products = Product.objects.filter(tenant=self.tenant)

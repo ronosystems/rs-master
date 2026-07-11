@@ -1,0 +1,316 @@
+{% extends "shared/base_shared.html" %}
+{% load static %}
+{% load permission_helpers %}
+
+{% block title %}  {{ tenant.company_name }}  {% endblock %}
+
+{% block extra_css %}
+<style>
+    .permission-group {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 12px;
+        background: white;
+        transition: all 0.2s ease;
+    }
+    .permission-group:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.1);
+    }
+    .permission-group .group-header {
+        cursor: pointer;
+        padding: 5px 0;
+        margin-bottom: 8px;
+    }
+    .permission-group .group-header:hover {
+        color: #0d6efd;
+    }
+    .permission-group .permission-item {
+        padding: 3px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    .permission-group .permission-item:last-child {
+        border-bottom: none;
+    }
+    .permission-group .form-check {
+        margin-bottom: 2px;
+    }
+    .permission-group .form-check-label {
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+    .badge-action {
+        font-size: 0.6rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        margin-left: 4px;
+    }
+    .badge-action.view { background: #0d6efd; color: white; }
+    .badge-action.add { background: #198754; color: white; }
+    .badge-action.change { background: #ffc107; color: #000; }
+    .badge-action.delete { background: #dc3545; color: white; }
+    .badge-action.manage { background: #6f42c1; color: white; }
+    .badge-action.export { background: #17a2b8; color: white; }
+    .badge-action.default { background: #6c757d; color: white; }
+    
+    .permissions-grid {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .permissions-grid::-webkit-scrollbar {
+        width: 5px;
+    }
+    .permissions-grid::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .permissions-grid::-webkit-scrollbar-thumb {
+        background: #0d6efd;
+        border-radius: 10px;
+    }
+    
+    .select-all-container {
+        background: #f8f9fa;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-users-cog text-primary me-2"></i>
+                Add Role
+            </h1>
+            <p class="text-muted small mb-0 mt-1">Manage all roles in your organization</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'users:user_list' %}" class="btn btn-primary">
+                <i class="fas fa-users"></i>Staff Users
+            </a>
+
+            <a href="{% url 'users:user_create' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Add User
+            </a>
+
+            <a href="{% url 'permissions:system_permissions' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>System Permission
+            </a>
+
+            <a href="{% url 'permissions:role_list' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>View Roles
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <!-- Left Column -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Role Name</label>
+                            <input type="text" name="name" class="form-control" 
+                                   value="{{ role.name|default:'' }}" 
+                                   {% if is_system_role %}readonly{% endif %}
+                                   placeholder="e.g., Product Manager" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Codename</label>
+                            <input type="text" name="codename" class="form-control" 
+                                   value="{{ role.codename|default:'' }}" 
+                                   {% if is_system_role %}readonly{% endif %}
+                                   placeholder="e.g., product_manager" required>
+                            <small class="text-muted">Unique identifier (lowercase, underscores)</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea name="description" class="form-control" rows="3">{{ role.description|default:'' }}</textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Role Type</label>
+                            <select name="role_type" class="form-select" {% if is_system_role %}disabled{% endif %}>
+                                <option value="system" {% if role.role_type == 'system' %}selected{% endif %}>System Role</option>
+                                <option value="custom" {% if role.role_type == 'custom' %}selected{% endif %}>Custom Role</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Parent Role (Inheritance)</label>
+                            <select name="parent" class="form-select">
+                                <option value="">None</option>
+                                {% for r in roles %}
+                                <option value="{{ r.id }}" {% if role.parent.id == r.id %}selected{% endif %}>
+                                    {{ r.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">This role inherits permissions from the parent</small>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_active" 
+                                       {% if role.is_active or not is_edit %}checked{% endif %}
+                                       {% if is_system_role %}disabled{% endif %}>
+                                <label class="form-check-label">Active</label>
+                            </div>
+                        </div>
+                        {% if current_project_type %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            This role will be available for <strong>{{ current_project_type.name }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Permissions -->
+                <hr class="my-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-lock me-2 text-danger"></i>Permissions</h5>
+                    <span class="badge bg-primary">{{ total_permissions }} total permissions</span>
+                </div>
+                <p class="text-muted small">Select the permissions this role should have.</p>
+
+                <!-- Select All -->
+                <div class="select-all-container">
+                    <div class="form-check">
+                        <input type="checkbox" id="selectAll" class="form-check-input">
+                        <label class="form-check-label fw-semibold" for="selectAll">
+                            <i class="fas fa-check-double me-1"></i> Select All Permissions
+                        </label>
+                        <span class="text-muted small ms-3" id="selectedCount">0 selected</span>
+                    </div>
+                </div>
+
+                <!-- Permissions Grid -->
+                <div class="permissions-grid">
+                    <div class="row">
+                        {% for model_key, group in grouped_permissions.items %}
+                        <div class="col-md-6 col-lg-2 mb-3">
+                            <div class="permission-group">
+                                <div class="group-header" onclick="toggleGroup('{{ model_key }}')">
+                                    <h6 class="fw-semibold text-primary mb-0">
+                                        <i class="fas fa-table me-1"></i>
+                                        {{ group.model_name|title }}
+                                        <span class="badge bg-secondary float-end">{{ group.permissions|length }}</span>
+                                    </h6>
+                                </div>
+                                <div class="permission-items" id="group-{{ model_key }}">
+                                    {% for perm in group.permissions %}
+                                    <div class="permission-item">
+                                        <div class="form-check">
+                                            <input type="checkbox" name="permissions" class="form-check-input permission-checkbox" 
+                                                   id="perm_{{ perm.id }}" value="{{ perm.id }}"
+                                                   {% if perm.id in role_permission_ids %}checked{% endif %}
+                                                   {% if is_system_role %}disabled{% endif %}>
+                                            <label class="form-check-label" for="perm_{{ perm.id }}">
+                                                {{ perm.name }}
+                                                {% if 'view' in perm.codename %}
+                                                    <span class="badge-action view">View</span>
+                                                {% elif 'add' in perm.codename %}
+                                                    <span class="badge-action add">Add</span>
+                                                {% elif 'change' in perm.codename %}
+                                                    <span class="badge-action change">Change</span>
+                                                {% elif 'delete' in perm.codename %}
+                                                    <span class="badge-action delete">Delete</span>
+                                                {% elif 'manage' in perm.codename %}
+                                                    <span class="badge-action manage">Manage</span>
+                                                {% elif 'export' in perm.codename %}
+                                                    <span class="badge-action export">Export</span>
+                                                {% else %}
+                                                    <span class="badge-action default">{{ perm.codename|cut:"_"|title }}</span>
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-3x d-block mb-2"></i>
+                                <p>No permissions available</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> {% if is_edit %}Update{% else %}Create{% endif %} Role
+                    </button>
+                    <a href="{% url 'permissions:role_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle group visibility
+function toggleGroup(modelKey) {
+    const group = document.getElementById('group-' + modelKey);
+    if (group) {
+        const isHidden = group.style.display === 'none';
+        group.style.display = isHidden ? '' : 'none';
+        const icon = document.querySelector(`[data-group="${modelKey}"] .toggle-icon`);
+        if (icon) {
+            icon.className = isHidden ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
+        }
+    }
+}
+
+// Update selected count
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.permission-checkbox:checked');
+    document.getElementById('selectedCount').textContent = checkboxes.length + ' selected';
+}
+
+// Select All toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.permission-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    
+    if (checkboxes.length > 0) {
+        // Update count initially
+        updateSelectedCount();
+        
+        // Select All functionality
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateSelectedCount();
+        });
+        
+        // Update count when individual checkbox changes
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                updateSelectedCount();
+                // Update select all state
+                const checked = document.querySelectorAll('.permission-checkbox:checked');
+                selectAll.checked = checked.length === checkboxes.length;
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

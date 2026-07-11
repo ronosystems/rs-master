@@ -1,0 +1,141 @@
+<!-- templates/food_master/add_customer.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Add Customer - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-user-plus me-2" style="color: #e67e22;"></i>Add New Customer</h4>
+        <a href="{% url 'food_master:customers' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Customers
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-user me-2" style="color: #e67e22;"></i>
+            Customer Details
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="name" class="form-label">
+                            <i class="fas fa-user me-1" style="color: #e67e22;"></i>
+                            Full Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="e.g., John Doe" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="phone_number" class="form-label">
+                            <i class="fas fa-phone me-1" style="color: #e67e22;"></i>
+                            Phone Number <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="phone_number" name="phone_number" 
+                               placeholder="e.g., 0712345678" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-1" style="color: #e67e22;"></i>
+                            Email Address
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="e.g., john@example.com">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="address" class="form-label">
+                            <i class="fas fa-map-marker-alt me-1" style="color: #e67e22;"></i>
+                            Address
+                        </label>
+                        <input type="text" class="form-control" id="address" name="address" 
+                               placeholder="e.g., Nairobi, Kenya">
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>Customer information will be used for orders and reservations.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <button type="submit" class="btn" style="background-color: #e67e22; color: white; padding: 10px 30px;">
+                            <i class="fas fa-save me-2"></i> Save Customer
+                        </button>
+                        <a href="{% url 'food_master:customers' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Help -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle fa-2x me-2" style="color: #17a2b8;"></i>
+                        <div>
+                            <h6 class="mb-1">Why Add Customers?</h6>
+                            <small class="text-muted">Track customer orders, preferences, and history for better service.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-lightbulb fa-2x me-2" style="color: #ffc107;"></i>
+                        <div>
+                            <h6 class="mb-1">Tip</h6>
+                            <small class="text-muted">Regular customers can get special offers and faster service.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-link fa-2x me-2" style="color: #28a745;"></i>
+                        <div>
+                            <h6 class="mb-1">Next Step</h6>
+                            <small class="text-muted">After adding a customer, you can <a href="{% url 'food_master:create_order' %}">create orders</a> for them.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone_number').value.trim();
+    
+    if (!name) {
+        e.preventDefault();
+        alert('Please enter the customer name.');
+        document.getElementById('name').focus();
+        return false;
+    }
+    
+    if (!phone) {
+        e.preventDefault();
+        alert('Please enter the phone number.');
+        document.getElementById('phone_number').focus();
+        return false;
+    }
+    
+    return true;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,208 @@
+<!-- templates/food_master/add_branch.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Add Branch - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #e67e22;"></i>Add New Branch</h4>
+        <a href="{% url 'food_master:branches' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Branches
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-store me-2" style="color: #e67e22;"></i>
+            Branch Details
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <!-- Branch Name -->
+                    <div class="col-md-6">
+                        <label for="name" class="form-label">
+                            <i class="fas fa-tag me-1" style="color: #e67e22;"></i>
+                            Branch Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="e.g., Downtown Restaurant" required>
+                    </div>
+                    
+                    <!-- Location -->
+                    <div class="col-md-6">
+                        <label for="location" class="form-label">
+                            <i class="fas fa-map-marker-alt me-1" style="color: #e67e22;"></i>
+                            Location <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="location" name="location" 
+                               placeholder="e.g., Kenyatta Avenue, Nairobi" required>
+                    </div>
+                    
+                    <!-- City -->
+                    <div class="col-md-6">
+                        <label for="city" class="form-label">
+                            <i class="fas fa-city me-1" style="color: #e67e22;"></i>
+                            City
+                        </label>
+                        <input type="text" class="form-control" id="city" name="city" 
+                               placeholder="e.g., Nairobi">
+                    </div>
+                    
+                    <!-- County -->
+                    <div class="col-md-6">
+                        <label for="county" class="form-label">
+                            <i class="fas fa-map-pin me-1" style="color: #e67e22;"></i>
+                            County
+                        </label>
+                        <input type="text" class="form-control" id="county" name="county" 
+                               placeholder="e.g., Nairobi County">
+                    </div>
+                    
+                    <!-- Contact Person -->
+                    <div class="col-md-6">
+                        <label for="contact_person" class="form-label">
+                            <i class="fas fa-user me-1" style="color: #e67e22;"></i>
+                            Contact Person
+                        </label>
+                        <input type="text" class="form-control" id="contact_person" name="contact_person" 
+                               placeholder="e.g., John Doe">
+                    </div>
+                    
+                    <!-- Contact Phone -->
+                    <div class="col-md-6">
+                        <label for="contact_phone" class="form-label">
+                            <i class="fas fa-phone me-1" style="color: #e67e22;"></i>
+                            Contact Phone
+                        </label>
+                        <input type="text" class="form-control" id="contact_phone" name="contact_phone" 
+                               placeholder="e.g., 0712345678">
+                    </div>
+                    
+                    <!-- Email -->
+                    <div class="col-md-6">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-1" style="color: #e67e22;"></i>
+                            Email Address
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="e.g., branch@restaurant.com">
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="col-md-6">
+                        <label for="is_active" class="form-label">
+                            <i class="fas fa-power-off me-1" style="color: #e67e22;"></i>
+                            Status
+                        </label>
+                        <select class="form-select" id="is_active" name="is_active">
+                            <option value="on">Active</option>
+                            <option value="off">Inactive</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>Branches represent different restaurant locations. Each branch can have its own menu, tables, and staff.</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit -->
+                    <div class="col-12">
+                        <button type="submit" class="btn" style="background-color: #e67e22; color: white; padding: 10px 30px;">
+                            <i class="fas fa-save me-2"></i> Save Branch
+                        </button>
+                        <a href="{% url 'food_master:branches' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Help -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle fa-2x me-2" style="color: #17a2b8;"></i>
+                        <div>
+                            <h6 class="mb-1">What is a Branch?</h6>
+                            <small class="text-muted">A branch is a physical restaurant location where you serve customers.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-lightbulb fa-2x me-2" style="color: #ffc107;"></i>
+                        <div>
+                            <h6 class="mb-1">Tip</h6>
+                            <small class="text-muted">Each branch can have its own menu items, pricing, and table setup.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-link fa-2x me-2" style="color: #28a745;"></i>
+                        <div>
+                            <h6 class="mb-1">Next Step</h6>
+                            <small class="text-muted">After adding a branch, you can <a href="{% url 'food_master:add_table' %}">add tables</a> and <a href="{% url 'food_master:add_menu_item' %}">menu items</a>.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const location = document.getElementById('location').value.trim();
+    
+    if (!name) {
+        e.preventDefault();
+        alert('Please enter the branch name.');
+        document.getElementById('name').focus();
+        return false;
+    }
+    
+    if (!location) {
+        e.preventDefault();
+        alert('Please enter the branch location.');
+        document.getElementById('location').focus();
+        return false;
+    }
+    
+    return true;
+});
+
+// Preview location on map (optional)
+document.getElementById('location').addEventListener('change', function() {
+    const location = this.value;
+    if (location) {
+        // You can add map preview functionality here
+        console.log('Location entered:', location);
+    }
+});
+</script>
+
+<style>
+.form-control:focus {
+    border-color: #e67e22;
+    box-shadow: 0 0 0 0.2rem rgba(230, 126, 34, 0.25);
+}
+.form-select:focus {
+    border-color: #e67e22;
+    box-shadow: 0 0 0 0.2rem rgba(230, 126, 34, 0.25);
+}
+</style>
+{% endblock %}

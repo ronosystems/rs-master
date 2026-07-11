@@ -1,0 +1,428 @@
+<!-- templates/tech_master/reports.html -->
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Reports Dashboard - Tech Master{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    
+    <!-- ============================================ -->
+    <!-- PAGE HEADER -->
+    <!-- ============================================ -->
+    <div class="d-flex flex-wrap flex-sm-nowrap justify-content-between align-items-center pt-3 pb-2 mb-4 border-bottom">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'tech_master:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Reports</li>
+                </ol>
+            </nav>
+            <h4 class="fw-bold mb-0">
+                <i class="fas fa-chart-bar text-primary me-2"></i>Reports Dashboard
+            </h4>
+            <p class="text-muted small mb-0">View and generate business reports</p>
+        </div>
+        <div class="mt-2 mt-sm-0">
+            <div class="dropdown">
+                <button class="btn btn-primary btn-sm px-4 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-download me-2"></i>Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i>PDF</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2"></i>CSV</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- DATE FILTER -->
+    <!-- ============================================ -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Date From</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Date To</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Report Type</label>
+                    <select name="report_type" class="form-select form-select-sm">
+                        <option value="sales" {% if report_type == 'sales' %}selected{% endif %}>Sales Report</option>
+                        <option value="inventory" {% if report_type == 'inventory' %}selected{% endif %}>Inventory Report</option>
+                        <option value="expenses" {% if report_type == 'expenses' %}selected{% endif %}>Expenses Report</option>
+                        <option value="customers" {% if report_type == 'customers' %}selected{% endif %}>Customers Report</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-filter me-2"></i>Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- REPORT CARDS -->
+    <!-- ============================================ -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">
+                                <i class="fas fa-shopping-cart me-1"></i> Sales
+                            </span>
+                            <h2 class="fw-bold mt-3 mb-0">KES {{ total_sales|default:0|floatformat:0 }}</h2>
+                            <p class="text-muted small mb-0">Total Revenue</p>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-chart-line fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-success">
+                            <i class="fas fa-arrow-up me-1"></i>{{ sales_growth|default:12 }}% this month
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                                <i class="fas fa-boxes me-1"></i> Inventory
+                            </span>
+                            <h2 class="fw-bold mt-3 mb-0">{{ total_products|default:0 }}</h2>
+                            <p class="text-muted small mb-0">Total Products</p>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-box fa-2x text-success"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-warning">
+                            <i class="fas fa-exclamation-triangle me-1"></i>{{ low_stock_count|default:0 }} low stock
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill">
+                                <i class="fas fa-money-bill-wave me-1"></i> Expenses
+                            </span>
+                            <h2 class="fw-bold mt-3 mb-0">KES {{ total_expenses|default:0|floatformat:0 }}</h2>
+                            <p class="text-muted small mb-0">Total Expenses</p>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-receipt fa-2x text-danger"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-danger">
+                            <i class="fas fa-arrow-up me-1"></i>{{ expense_growth|default:8 }}% this month
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-info bg-opacity-10 text-info px-3 py-2 rounded-pill">
+                                <i class="fas fa-users me-1"></i> Customers
+                            </span>
+                            <h2 class="fw-bold mt-3 mb-0">{{ total_customers|default:0 }}</h2>
+                            <p class="text-muted small mb-0">Total Customers</p>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-users fa-2x text-info"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-success">
+                            <i class="fas fa-user-plus me-1"></i>{{ new_customers|default:5 }} new this month
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- REPORT GRID -->
+    <!-- ============================================ -->
+    <div class="row g-4">
+        <!-- Sales Report Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift report-card">
+                <div class="card-body text-center p-4">
+                    <div class="report-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                        <i class="fas fa-shopping-cart fa-2x text-primary"></i>
+                    </div>
+                    <h6 class="fw-bold">Sales Report</h6>
+                    <p class="text-muted small mb-3">View sales statistics, revenue trends, and transaction history</p>
+                    <a href="{% url 'tech_master:sales_report' %}" class="btn btn-outline-primary btn-sm rounded-pill px-4">
+                        <i class="fas fa-arrow-right me-2"></i>View Report
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Inventory Report Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift report-card">
+                <div class="card-body text-center p-4">
+                    <div class="report-icon-wrapper bg-success bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                        <i class="fas fa-boxes fa-2x text-success"></i>
+                    </div>
+                    <h6 class="fw-bold">Inventory Report</h6>
+                    <p class="text-muted small mb-3">Track stock levels, product performance, and low stock alerts</p>
+                    <a href="{% url 'tech_master:inventory_report' %}" class="btn btn-outline-success btn-sm rounded-pill px-4">
+                        <i class="fas fa-arrow-right me-2"></i>View Report
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Expenses Report Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift report-card">
+                <div class="card-body text-center p-4">
+                    <div class="report-icon-wrapper bg-danger bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                        <i class="fas fa-money-bill-wave fa-2x text-danger"></i>
+                    </div>
+                    <h6 class="fw-bold">Expenses Report</h6>
+                    <p class="text-muted small mb-3">Analyze spending patterns and expense categories</p>
+                    <a href="{% url 'tech_master:expense_report' %}" class="btn btn-outline-danger btn-sm rounded-pill px-4">
+                        <i class="fas fa-arrow-right me-2"></i>View Report
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Customer Report Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift report-card">
+                <div class="card-body text-center p-4">
+                    <div class="report-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                        <i class="fas fa-users fa-2x text-info"></i>
+                    </div>
+                    <h6 class="fw-bold">Customer Report</h6>
+                    <p class="text-muted small mb-3">Customer insights, retention, and purchase history</p>
+                    <a href="#" class="btn btn-outline-info btn-sm rounded-pill px-4">
+                        <i class="fas fa-arrow-right me-2"></i>View Report
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profit & Loss Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift report-card">
+                <div class="card-body text-center p-4">
+                    <div class="report-icon-wrapper bg-warning bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                        <i class="fas fa-chart-pie fa-2x text-warning"></i>
+                    </div>
+                    <h6 class="fw-bold">Profit & Loss</h6>
+                    <p class="text-muted small mb-3">Overview of profit margins and financial performance</p>
+                    <a href="#" class="btn btn-outline-warning btn-sm rounded-pill px-4">
+                        <i class="fas fa-arrow-right me-2"></i>View Report
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Custom Report Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift report-card">
+                <div class="card-body text-center p-4">
+                    <div class="report-icon-wrapper bg-secondary bg-opacity-10 rounded-circle p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                        <i class="fas fa-sliders-h fa-2x text-secondary"></i>
+                    </div>
+                    <h6 class="fw-bold">Custom Report</h6>
+                    <p class="text-muted small mb-3">Build custom reports with your own parameters</p>
+                    <a href="#" class="btn btn-outline-secondary btn-sm rounded-pill px-4">
+                        <i class="fas fa-arrow-right me-2"></i>Create
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- RECENT ACTIVITY / QUICK STATS
+    <!-- ============================================ -->
+    <div class="row g-4 mt-2">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 p-4">
+                    <h6 class="fw-bold mb-0">
+                        <i class="fas fa-clock text-primary me-2"></i>Recent Activity
+                    </h6>
+                </div>
+                <div class="card-body p-4 pt-0">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                            <i class="fas fa-shopping-cart text-success"></i>
+                        </div>
+                        <div>
+                            <small class="fw-bold">New Sale</small>
+                            <p class="text-muted small mb-0">Sale #000001 - KES 15,000</p>
+                            <small class="text-muted">2 hours ago</small>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-3">
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                        </div>
+                        <div>
+                            <small class="fw-bold">Low Stock Alert</small>
+                            <p class="text-muted small mb-0">iPhone 15 Pro - Only 2 left</p>
+                            <small class="text-muted">5 hours ago</small>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-start">
+                        <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                            <i class="fas fa-user-plus text-warning"></i>
+                        </div>
+                        <div>
+                            <small class="fw-bold">New Customer</small>
+                            <p class="text-muted small mb-0">John Doe registered</p>
+                            <small class="text-muted">1 day ago</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 p-4">
+                    <h6 class="fw-bold mb-0">
+                        <i class="fas fa-chart-pie text-primary me-2"></i>Quick Summary
+                    </h6>
+                </div>
+                <div class="card-body p-4 pt-0">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                        <span class="text-muted">Today's Sales</span>
+                        <span class="fw-bold">KES {{ todays_sales|default:0|floatformat:0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                        <span class="text-muted">This Month</span>
+                        <span class="fw-bold text-success">KES {{ monthly_sales|default:0|floatformat:0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                        <span class="text-muted">Total Products</span>
+                        <span class="fw-bold">{{ total_products|default:0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Low Stock Items</span>
+                        <span class="fw-bold text-warning">{{ low_stock_count|default:0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- STYLES -->
+<!-- ============================================ -->
+<style>
+    .hover-lift {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: default;
+    }
+    
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.12) !important;
+    }
+    
+    .report-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.12) !important;
+        border-color: var(--bs-primary) !important;
+    }
+    
+    .report-icon-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+    
+    .report-card:hover .report-icon-wrapper {
+        transform: scale(1.1);
+    }
+    
+    .breadcrumb-item a {
+        text-decoration: none;
+        color: #6c757d;
+        transition: color 0.2s;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: #0d6efd;
+    }
+    
+    .breadcrumb-item.active {
+        color: #0d6efd;
+        font-weight: 600;
+    }
+    
+    [data-bs-theme="dark"] .report-card {
+        background: #1a1a2e;
+        border-color: #2d2d44;
+    }
+    
+    [data-bs-theme="dark"] .report-card:hover {
+        border-color: #0d6efd;
+    }
+</style>
+
+<!-- ============================================ -->
+<!-- JAVASCRIPT -->
+<!-- ============================================ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add fade-in animation to cards
+    document.querySelectorAll('.card').forEach(function(card, index) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(function() {
+            card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100 + (index * 50));
+    });
+});
+</script>
+{% endblock %}

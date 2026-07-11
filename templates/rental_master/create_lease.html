@@ -1,0 +1,190 @@
+<!-- apps/rental_master/templates/rental_master/create_lease.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Create Lease - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #d4a373;"></i>Create New Lease</h4>
+        <a href="{% url 'rental_master:leases' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Leases
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-file-signature me-2" style="color: #d4a373;"></i>
+            Lease Agreement Details
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="unit" class="form-label">
+                            <i class="fas fa-door-open me-1" style="color: #d4a373;"></i>
+                            Unit <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="unit" name="unit" required>
+                            <option value="">-- Select Unit --</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.id }}">
+                                    {{ unit.unit_number }} - {{ unit.property.name }} ({{ unit.get_unit_type_display }})
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>No available units</option>
+                            {% endfor %}
+                        </select>
+                        {% if not units %}
+                            <div class="mt-2">
+                                <a href="{% url 'rental_master:add_unit' %}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-plus me-1"></i> Add Unit First
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="tenant" class="form-label">
+                            <i class="fas fa-user me-1" style="color: #d4a373;"></i>
+                            Tenant <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="tenant" name="tenant" required>
+                            <option value="">-- Select Tenant --</option>
+                            {% for tenant_profile in tenants %}
+                                <option value="{{ tenant_profile.id }}">
+                                    {{ tenant_profile.full_name }} ({{ tenant_profile.email }})
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>No tenants registered</option>
+                            {% endfor %}
+                        </select>
+                        {% if not tenants %}
+                            <div class="mt-2">
+                                <a href="{% url 'rental_master:add_tenant' %}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-user-plus me-1"></i> Add Tenant First
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="start_date" class="form-label">
+                            <i class="fas fa-calendar-alt me-1" style="color: #d4a373;"></i>
+                            Start Date <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" 
+                               value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="end_date" class="form-label">
+                            <i class="fas fa-calendar-check me-1" style="color: #d4a373;"></i>
+                            End Date <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="monthly_rent" class="form-label">
+                            <i class="fas fa-money-bill-wave me-1" style="color: #d4a373;"></i>
+                            Monthly Rent (KES) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="monthly_rent" name="monthly_rent" 
+                               step="0.01" placeholder="0.00" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="deposit_amount" class="form-label">
+                            <i class="fas fa-hand-holding-usd me-1" style="color: #d4a373;"></i>
+                            Deposit Amount (KES)
+                        </label>
+                        <input type="number" class="form-control" id="deposit_amount" name="deposit_amount" 
+                               step="0.01" placeholder="0.00">
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                  placeholder="Additional lease terms or notes..."></textarea>
+                    </div>
+                    
+                    <div class="col-12 mt-4">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn" style="background-color: #d4a373; color: white; padding: 10px 30px;">
+                                <i class="fas fa-save me-2"></i> Create Lease
+                            </button>
+                            <a href="{% url 'rental_master:leases' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Help -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle fa-2x me-2" style="color: #17a2b8;"></i>
+                        <div>
+                            <h6 class="mb-1">What is a Lease?</h6>
+                            <small class="text-muted">A lease is a legal agreement between the landlord and tenant for renting a unit.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-lightbulb fa-2x me-2" style="color: #ffc107;"></i>
+                        <div>
+                            <h6 class="mb-1">Tip</h6>
+                            <small class="text-muted">The unit will automatically become "Occupied" when you create an active lease.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-link fa-2x me-2" style="color: #28a745;"></i>
+                        <div>
+                            <h6 class="mb-1">Next Step</h6>
+                            <small class="text-muted">After creating a lease, you can <a href="{% url 'rental_master:record_payment' %}">record payments</a>.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set end date to 1 year from start by default
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+    
+    if (startDate && endDate) {
+        startDate.addEventListener('change', function() {
+            if (!endDate.value) {
+                const date = new Date(this.value);
+                date.setFullYear(date.getFullYear() + 1);
+                endDate.value = date.toISOString().split('T')[0];
+            }
+        });
+        
+        // If start date has value but end date doesn't, set default
+        if (startDate.value && !endDate.value) {
+            const date = new Date(startDate.value);
+            date.setFullYear(date.getFullYear() + 1);
+            endDate.value = date.toISOString().split('T')[0];
+        }
+    }
+});
+</script>
+{% endblock %}

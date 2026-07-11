@@ -1,0 +1,351 @@
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-chart-line me-2 text-success"></i>Revenue Report</h4>
+        <div>
+            <a href="{% url 'hotel_master:report_dashboard' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back to Reports
+            </a>
+            <button onclick="window.print()" class="btn btn-primary btn-sm">
+                <i class="fas fa-print me-1"></i> Print
+            </button>
+        </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Total Revenue</h6>
+                    <h3 class="mb-0 text-success">KES {{ total_revenue|floatformat:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Paid Amount</h6>
+                    <h3 class="mb-0 text-primary">KES {{ paid_amount|floatformat:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100 border-warning">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Pending Amount</h6>
+                    <h3 class="mb-0 text-warning">KES {{ pending_amount|floatformat:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100 border-info">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Avg Daily Revenue</h6>
+                    <h3 class="mb-0 text-info">KES {{ avg_daily_revenue|floatformat:0 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Chart -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <i class="fas fa-chart-bar me-2"></i> Daily Revenue Trend
+        </div>
+        <div class="card-body">
+            <canvas id="revenueChart" height="80"></canvas>
+        </div>
+    </div>
+
+    <!-- Payment Status Breakdown -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <i class="fas fa-pie-chart me-2"></i> Payment Status
+                </div>
+                <div class="card-body">
+                    <canvas id="paymentChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <i class="fas fa-calendar-week me-2"></i> Revenue by Day of Week
+                </div>
+                <div class="card-body">
+                    <canvas id="dayOfWeekChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Type Revenue -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <i class="fas fa-bed me-2"></i> Revenue by Room Type
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Room Type</th>
+                            <th>Bookings</th>
+                            <th>Revenue</th>
+                            <th>Average per Booking</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in room_type_revenue %}
+                        <tr>
+                            <td>{{ item.room_type_display }}</td>
+                            <td>{{ item.count }}</td>
+                            <td><strong>KES {{ item.total|floatformat:0 }}</strong></td>
+                            <td>
+                                {% if item.count > 0 %}
+                                    KES {{ item.total|floatformat:0|divisibleby:item.count }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No revenue data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Revenue -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <i class="fas fa-calendar-alt me-2"></i> Monthly Revenue Breakdown
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Bookings</th>
+                            <th>Revenue</th>
+                            <th>Average per Booking</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in monthly_revenue %}
+                        <tr>
+                            <td>{{ item.month }}</td>
+                            <td>{{ item.count }}</td>
+                            <td><strong>KES {{ item.total|floatformat:0 }}</strong></td>
+                            <td>
+                                {% if item.count > 0 %}
+                                    KES {{ item.total|floatformat:0|divisibleby:item.count }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No monthly data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Revenue Chart
+    const ctx1 = document.getElementById('revenueChart').getContext('2d');
+    
+    const labels = [];
+    const revenueData = [];
+    
+    {% for item in daily_revenue %}
+    labels.push('{{ item.date_label }}');
+    revenueData.push({{ item.total|floatformat:0 }});
+    {% endfor %}
+    
+    new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Daily Revenue (KES)',
+                data: revenueData,
+                backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                borderColor: '#28a745',
+                borderWidth: 1,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'KES ' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Revenue (KES)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return 'KES ' + value.toLocaleString();
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            }
+        }
+    });
+
+    // Payment Status Chart
+    const ctx2 = document.getElementById('paymentChart').getContext('2d');
+    
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: ['Paid', 'Pending', 'Partial'],
+            datasets: [{
+                data: [
+                    {{ paid_amount|floatformat:0 }},
+                    {{ pending_amount|floatformat:0 }},
+                    {{ partial_amount|floatformat:0 }}
+                ],
+                backgroundColor: ['#28a745', '#ffc107', '#17a2b8'],
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': KES ' + context.parsed.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Day of Week Chart
+    const ctx3 = document.getElementById('dayOfWeekChart').getContext('2d');
+    
+    const dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dayData = [
+        {{ day_of_week_revenue.Monday|floatformat:0 }},
+        {{ day_of_week_revenue.Tuesday|floatformat:0 }},
+        {{ day_of_week_revenue.Wednesday|floatformat:0 }},
+        {{ day_of_week_revenue.Thursday|floatformat:0 }},
+        {{ day_of_week_revenue.Friday|floatformat:0 }},
+        {{ day_of_week_revenue.Saturday|floatformat:0 }},
+        {{ day_of_week_revenue.Sunday|floatformat:0 }}
+    ];
+    
+    new Chart(ctx3, {
+        type: 'bar',
+        data: {
+            labels: dayLabels,
+            datasets: [{
+                label: 'Revenue by Day (KES)',
+                data: dayData,
+                backgroundColor: 'rgba(23, 162, 184, 0.6)',
+                borderColor: '#17a2b8',
+                borderWidth: 1,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false,
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'KES ' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Revenue (KES)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return 'KES ' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

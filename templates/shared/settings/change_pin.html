@@ -1,0 +1,87 @@
+<!-- templates/settings/change_pin.html -->
+
+{% extends "shared/base_shared.html" %}
+{% load static %}
+
+{% block title %}Change PIN - {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-key me-2" style="color: #e67e22;"></i>Change PIN</h4>
+        <a href="{% url 'settings:profile_settings' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Profile
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background-color: #f8f4f0;">
+                    <i class="fas fa-lock me-2" style="color: #e67e22;"></i>
+                    {% if has_pin %}Change Your PIN{% else %}Set Your PIN{% endif %}
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>
+                                {% if has_pin %}
+                                    Your PIN is required for POS access. Keep it secure and don't share it.
+                                {% else %}
+                                    You don't have a PIN set. Create a 4-6 digit PIN for POS access.
+                                {% endif %}
+                            </small>
+                        </div>
+                        
+                        {% if has_pin %}
+                        <div class="mb-3">
+                            <label class="form-label">Current PIN</label>
+                            <input type="password" class="form-control" name="current_pin" 
+                                   placeholder="Enter current PIN" maxlength="6" required>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">New PIN</label>
+                            <input type="password" class="form-control" name="new_pin" 
+                                   placeholder="Enter 4-6 digit PIN" maxlength="6" required>
+                            <small class="text-muted">PIN must be 4-6 digits (numbers only)</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Confirm New PIN</label>
+                            <input type="password" class="form-control" name="confirm_pin" 
+                                   placeholder="Confirm your PIN" maxlength="6" required>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn" style="background-color: #e67e22; color: white; padding: 10px 30px;">
+                                <i class="fas fa-save me-2"></i> 
+                                {% if has_pin %}Update PIN{% else %}Set PIN{% endif %}
+                            </button>
+                            <a href="{% url 'settings:profile_settings' %}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h6><i class="fas fa-shield-alt me-2" style="color: #17a2b8;"></i>Security Tips</h6>
+                    <ul class="small text-muted mb-0">
+                        <li>Choose a PIN that is easy for you to remember but hard for others to guess</li>
+                        <li>Don't use obvious numbers like 1234, 0000, or your birth year</li>
+                        <li>Never share your PIN with anyone</li>
+                        <li>Change your PIN regularly for security</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

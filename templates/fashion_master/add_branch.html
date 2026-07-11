@@ -1,0 +1,84 @@
+<!-- templates/fashion_master/add_branch.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Add Fashion Branch{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-store me-2"></i>Add Fashion Branch
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Branch Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required placeholder="e.g., Mombasa Fashion Store">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Branch Code <span class="text-danger">*</span></label>
+                                <input type="text" name="code" class="form-control" required placeholder="e.g., MSA-FSH" maxlength="20">
+                                <small class="text-muted">Unique identifier for the branch</small>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Address</label>
+                                <input type="text" name="address" class="form-control" placeholder="Physical address">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">City</label>
+                                <input type="text" name="city" class="form-control" placeholder="e.g., Mombasa">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone</label>
+                                <input type="text" name="phone" class="form-control" placeholder="0712345678">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Branch Type</label>
+                                <select name="branch_type" class="form-select">
+                                    <option value="sub_branch">Sub-Branch</option>
+                                    <option value="main">Main Store</option>
+                                    <option value="warehouse">Warehouse</option>
+                                    <option value="outlet">Outlet</option>
+                                    <option value="kiosk">Kiosk</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input type="checkbox" name="is_main_branch" class="form-check-input" id="isMainBranch">
+                                    <label class="form-check-label fw-semibold" for="isMainBranch">Main Branch</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 mt-4">
+                                <hr>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Create Branch
+                                    </button>
+                                    <a href="{% url 'fashion_master:branch_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

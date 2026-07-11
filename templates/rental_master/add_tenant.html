@@ -1,0 +1,419 @@
+<!-- apps/rental_master/templates/rental_master/add_tenant.html -->
+
+{% extends "rental_master/base_rental.html" %}
+{% load static %}
+
+{% block title %}Add Tenant - {{ tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-user-plus me-2" style="color: #17a2b8;"></i>Add New Tenant</h4>
+        <a href="{% url 'rental_master:tenants' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Tenants
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-user me-2" style="color: #17a2b8;"></i>
+            Tenant Registration
+        </div>
+        <div class="card-body">
+            <form method="POST" id="tenantForm">
+                {% csrf_token %}
+                
+                <!-- ============================================ -->
+                <!-- BRANCH → PROPERTY → UNIT SELECTION -->
+                <!-- ============================================ -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label for="branch" class="form-label">
+                            <i class="fas fa-store me-1" style="color: #d4a373;"></i>
+                            Select Branch <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="branch" name="branch" required>
+                            <option value="">-- Select Branch --</option>
+                            {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="property" class="form-label">
+                            <i class="fas fa-building me-1" style="color: #d4a373;"></i>
+                            Select Property <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="property" name="property" required disabled>
+                            <option value="">-- Select Branch First --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="unit" class="form-label">
+                            <i class="fas fa-door-open me-1" style="color: #d4a373;"></i>
+                            Select Unit <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="unit" name="unit" required disabled>
+                            <option value="">-- Select Property First --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- UNIT INFO & PAYMENT DETAILS - COMPACT 3 COLUMN -->
+                <!-- ============================================ -->
+                <div class="row g-3 mb-3" id="unitDetails" style="display: none;">
+                    <!-- Unit Info -->
+                    <div class="col-md-4">
+                        <div class="alert alert-info mb-0" style="padding: 8px 12px;">
+                            <small><strong>Unit:</strong> <span id="displayUnitNumber">-</span></small><br>
+                            <small><strong>Type:</strong> <span id="displayUnitType">-</span></small><br>
+                            <small><strong>Property:</strong> <span id="displayPropertyName">-</span></small>
+                        </div>
+                    </div>
+                    
+                    <!-- Rent Payment -->
+                    <div class="col-md-4">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small mb-0">Monthly Rent</label>
+                                <input type="text" class="form-control form-control-sm" id="monthly_rent" readonly>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-0">Amount Paid</label>
+                                <input type="number" class="form-control form-control-sm" id="rent_amount_paid" 
+                                       placeholder="0" oninput="calculateRentMonths()">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small mb-0">Months Paid</label>
+                                <input type="text" class="form-control form-control-sm" id="rent_months_paid" 
+                                       readonly placeholder="0 months" style="background-color: #f8f9fa;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Deposit Details -->
+                    <div class="col-md-4">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small mb-0">Required Deposit</label>
+                                <input type="text" class="form-control form-control-sm" id="deposit_amount" readonly>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-0">Deposit Paid</label>
+                                <input type="number" class="form-control form-control-sm" id="deposit_paid_amount" 
+                                       placeholder="0" oninput="calculateDepositBalance()">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small mb-0">Deposit Balance</label>
+                                <input type="text" class="form-control form-control-sm" id="deposit_balance" 
+                                       readonly placeholder="0.00" style="background-color: #f8f9fa; font-weight: bold;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TENANT PERSONAL DETAILS -->
+                <!-- ============================================ -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-12">
+                        <h6 class="border-bottom pb-2" style="color: #17a2b8;">
+                            <i class="fas fa-user-circle me-2"></i>Tenant Personal Details
+                        </h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="full_name" class="form-label small">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="full_name" name="full_name" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="phone_number" class="form-label small">Phone Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="phone_number" name="phone_number" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="email" class="form-label small">Email Address <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control form-control-sm" id="email" name="email" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_number" class="form-label small">ID Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="id_number" name="id_number" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="start_date" class="form-label small">Lease Start Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control form-control-sm" id="start_date" name="start_date" 
+                               value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="tenant_type" class="form-label small">Tenant Type</label>
+                        <select class="form-select form-select-sm" id="tenant_type" name="tenant_type">
+                            <option value="individual">Individual</option>
+                            <option value="company">Company</option>
+                            <option value="family">Family</option>
+                            <option value="group">Group</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="company_name" class="form-label small">Company Name</label>
+                        <input type="text" class="form-control form-control-sm" id="company_name" name="company_name">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="alternative_phone" class="form-label small">Alternative Phone</label>
+                        <input type="text" class="form-control form-control-sm" id="alternative_phone" name="alternative_phone">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="physical_address" class="form-label small">Physical Address</label>
+                        <input type="text" class="form-control form-control-sm" id="physical_address" name="physical_address">
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- CHECKBOXES - COMPACT ROW -->
+                <!-- ============================================ -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-12">
+                        <div class="d-flex flex-wrap gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="rent_paid" name="rent_paid" onchange="togglePaymentFields()">
+                                <label class="form-check-label small" for="rent_paid">
+                                    <i class="fas fa-money-bill-wave me-1" style="color: #28a745;"></i> Rent Paid
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="deposit_paid" name="deposit_paid" onchange="togglePaymentFields()">
+                                <label class="form-check-label small" for="deposit_paid">
+                                    <i class="fas fa-hand-holding-usd me-1" style="color: #d4a373;"></i> Deposit Paid
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="agreement_signed" name="agreement_signed" required>
+                                <label class="form-check-label small" for="agreement_signed">
+                                    <i class="fas fa-file-signature me-1" style="color: #dc3545;"></i> Agreement Signed <span class="text-danger">*</span>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="terms_accepted" name="terms_accepted" required>
+                                <label class="form-check-label small" for="terms_accepted">
+                                    <i class="fas fa-check-circle me-1" style="color: #dc3545;"></i> Terms Accepted <span class="text-danger">*</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- SUBMIT BUTTONS -->
+                <!-- ============================================ -->
+                <div class="row g-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn" style="background-color: #17a2b8; color: white;">
+                            <i class="fas fa-save me-2"></i> Register Tenant
+                        </button>
+                        <a href="{% url 'rental_master:tenants' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ============================================
+    // BRANCH → PROPERTY → UNIT DYNAMIC LOADING
+    // ============================================
+    
+    const branchSelect = document.getElementById('branch');
+    const propertySelect = document.getElementById('property');
+    const unitSelect = document.getElementById('unit');
+    const unitDetails = document.getElementById('unitDetails');
+    
+    const displayUnitNumber = document.getElementById('displayUnitNumber');
+    const displayUnitType = document.getElementById('displayUnitType');
+    const displayPropertyName = document.getElementById('displayPropertyName');
+    const monthlyRent = document.getElementById('monthly_rent');
+    const depositAmount = document.getElementById('deposit_amount');
+    const rentAmountPaid = document.getElementById('rent_amount_paid');
+    const rentMonthsPaid = document.getElementById('rent_months_paid');
+    const depositPaidAmount = document.getElementById('deposit_paid_amount');
+    const depositBalance = document.getElementById('deposit_balance');
+    
+    let propertiesData = {};
+    let unitsData = {};
+    
+    fetch('/rental/api/units-data/')
+        .then(response => response.json())
+        .then(data => {
+            propertiesData = data.properties || {};
+            unitsData = data.units || {};
+        })
+        .catch(error => console.error('Error loading data:', error));
+    
+    branchSelect.addEventListener('change', function() {
+        const branchId = this.value;
+        propertySelect.innerHTML = '<option value="">-- Select Property --</option>';
+        propertySelect.disabled = true;
+        unitSelect.innerHTML = '<option value="">-- Select Property First --</option>';
+        unitSelect.disabled = true;
+        unitDetails.style.display = 'none';
+        resetPaymentFields();
+        
+        if (branchId) {
+            const properties = propertiesData[branchId] || [];
+            if (properties.length > 0) {
+                properties.forEach(prop => {
+                    const option = document.createElement('option');
+                    option.value = prop.id;
+                    option.textContent = prop.name;
+                    propertySelect.appendChild(option);
+                });
+                propertySelect.disabled = false;
+            }
+        }
+    });
+    
+    propertySelect.addEventListener('change', function() {
+        const propertyId = this.value;
+        unitSelect.innerHTML = '<option value="">-- Select Unit --</option>';
+        unitSelect.disabled = true;
+        unitDetails.style.display = 'none';
+        resetPaymentFields();
+        
+        if (propertyId) {
+            const units = unitsData[propertyId] || [];
+            if (units.length > 0) {
+                units.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.textContent = `${unit.unit_number} - ${unit.unit_type} (KES ${unit.monthly_rent})`;
+                    option.dataset.unitNumber = unit.unit_number;
+                    option.dataset.unitType = unit.unit_type;
+                    option.dataset.monthlyRent = unit.monthly_rent;
+                    option.dataset.depositAmount = unit.deposit_amount || 0;
+                    option.dataset.propertyName = unit.property_name || '';
+                    unitSelect.appendChild(option);
+                });
+                unitSelect.disabled = false;
+            }
+        }
+    });
+    
+    unitSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (this.value) {
+            displayUnitNumber.textContent = selectedOption.dataset.unitNumber || '-';
+            displayUnitType.textContent = selectedOption.dataset.unitType || '-';
+            displayPropertyName.textContent = selectedOption.dataset.propertyName || '-';
+            monthlyRent.value = selectedOption.dataset.monthlyRent || '0';
+            depositAmount.value = selectedOption.dataset.depositAmount || '0';
+            
+            const monthlyRentValue = parseFloat(selectedOption.dataset.monthlyRent) || 0;
+            rentAmountPaid.value = monthlyRentValue;
+            calculateRentMonths();
+            
+            const depositValue = parseFloat(selectedOption.dataset.depositAmount) || 0;
+            depositPaidAmount.value = depositValue;
+            calculateDepositBalance();
+            
+            unitDetails.style.display = 'block';
+        } else {
+            unitDetails.style.display = 'none';
+            resetPaymentFields();
+        }
+    });
+    
+    // ============================================
+    // CALCULATIONS
+    // ============================================
+    window.calculateRentMonths = function() {
+        const monthlyRentValue = parseFloat(monthlyRent.value) || 0;
+        const amountPaid = parseFloat(rentAmountPaid.value) || 0;
+        
+        if (monthlyRentValue > 0 && amountPaid > 0) {
+            const months = amountPaid / monthlyRentValue;
+            const fullMonths = Math.floor(months);
+            const days = Math.round((months - fullMonths) * 30);
+            
+            if (fullMonths > 0) {
+                rentMonthsPaid.value = days > 0 ? `${fullMonths}m ${days}d` : `${fullMonths} months`;
+            } else {
+                rentMonthsPaid.value = `${days} days`;
+            }
+        } else {
+            rentMonthsPaid.value = '0 months';
+        }
+    };
+    
+    window.calculateDepositBalance = function() {
+        const requiredDeposit = parseFloat(depositAmount.value) || 0;
+        const depositPaid = parseFloat(depositPaidAmount.value) || 0;
+        const balance = requiredDeposit - depositPaid;
+        depositBalance.value = balance.toFixed(2);
+        depositBalance.style.color = balance > 0 ? '#dc3545' : balance < 0 ? '#28a745' : '#6c757d';
+    };
+    
+    // ============================================
+    // RESET & TOGGLE
+    // ============================================
+    function resetPaymentFields() {
+        rentAmountPaid.value = '';
+        rentMonthsPaid.value = '0 months';
+        depositPaidAmount.value = '';
+        depositBalance.value = '0.00';
+        depositBalance.style.color = '#6c757d';
+    }
+    
+    window.togglePaymentFields = function() {
+        const rentCheckbox = document.getElementById('rent_paid');
+        const depositCheckbox = document.getElementById('deposit_paid');
+        document.getElementById('rent_amount_paid').disabled = !rentCheckbox.checked;
+        document.getElementById('deposit_paid_amount').disabled = !depositCheckbox.checked;
+    };
+    
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    rentAmountPaid.addEventListener('input', calculateRentMonths);
+    depositPaidAmount.addEventListener('input', calculateDepositBalance);
+});
+
+// ============================================
+// FORM VALIDATION
+// ============================================
+document.getElementById('tenantForm').addEventListener('submit', function(e) {
+    if (!document.getElementById('agreement_signed').checked) {
+        e.preventDefault();
+        alert('Please confirm that the agreement has been signed.');
+        return false;
+    }
+    
+    if (!document.getElementById('terms_accepted').checked) {
+        e.preventDefault();
+        alert('Please accept the terms and conditions.');
+        return false;
+    }
+    
+    if (!document.getElementById('unit').value) {
+        e.preventDefault();
+        alert('Please select a unit.');
+        return false;
+    }
+    
+    return true;
+});
+</script>
+
+<style>
+.form-check-input:checked {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+.form-control-sm {
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

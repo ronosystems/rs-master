@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="card border-0 shadow-lg">
-        <div class="card-header bg-gradient-primary text-white py-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-header bg-gradient-primary text-white py-3" style="background: linear-gradient(135deg, #00bbff 0%, #00c8ff 100%);">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <div>
                     <h5 class="mb-0 fw-bold">
@@ -68,7 +68,7 @@
                         <tr>
                             <th style="width: 5%">#</th>
                             <th style="width: 18%">Company Details</th>
-                            <th style="width: 12%">Project Type</th>  <!-- NEW COLUMN -->
+                            <th style="width: 12%">Project Type</th> 
                             <th style="width: 10%">Contact</th>
                             <th style="width: 10%">Subscription</th>
                             <th style="width: 10%">Status</th>
@@ -88,7 +88,7 @@
                                             <img src="{{ tenant.logo.url }}" alt="{{ tenant.company_name }}" 
                                                  class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
                                         {% else %}
-                                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
+                                            <div class="bg-primary bg-opacity-50 rounded-circle d-flex align-items-center justify-content-center"
                                                  style="width: 40px; height: 40px;">
                                                 <i class="fas fa-building text-primary"></i>
                                             </div>
@@ -96,7 +96,7 @@
                                     </div>
                                     <div class="flex-grow-1 ms-3">
                                         <strong class="d-block">{{ tenant.company_name }}</strong>
-                                        <small class="text-muted">Code: <code>{{ tenant.code }}</code></small>
+                                        <small class="text-dark">Code: <code>{{ tenant.code }}</code></small>
                                     </div>
                                 </div>
                             </td>
@@ -403,14 +403,14 @@
 
 <style>
     .bg-gradient-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #03f498 0%, #03f480 100%);
     }
     .table th {
         font-weight: 600;
         font-size: 0.8rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        border-bottom: 2px solid #e9ecef;
+        border-bottom: 2px solid #000000;
     }
     .table td {
         vertical-align: middle;
@@ -421,15 +421,15 @@
         border-radius: 6px;
     }
     .form-control:focus, .form-select:focus {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+        border-color: #000000;
+        box-shadow: 0 0 0 0.2rem rgb(0, 0, 0);
     }
     .badge {
         font-weight: 500;
         border-radius: 8px;
     }
     code {
-        background: #f8f9fa;
+        background: #00eeff;
         padding: 2px 6px;
         border-radius: 4px;
         font-size: 0.75rem;

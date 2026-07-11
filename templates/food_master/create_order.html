@@ -1,0 +1,188 @@
+<!-- templates/food_master/create_order.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Create Order - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #e67e22;"></i>Create New Order</h4>
+        <a href="{% url 'food_master:orders' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Orders
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-receipt me-2" style="color: #e67e22;"></i>
+            Order Details
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="branch" class="form-label">
+                            <i class="fas fa-store me-1" style="color: #e67e22;"></i>
+                            Branch <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="branch" name="branch" required>
+                            <option value="">-- Select Branch --</option>
+                            {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="order_type" class="form-label">
+                            <i class="fas fa-tag me-1" style="color: #e67e22;"></i>
+                            Order Type <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="order_type" name="order_type" required>
+                            <option value="">-- Select Type --</option>
+                            <option value="dine_in">Dine In</option>
+                            <option value="takeaway">Takeaway</option>
+                            <option value="delivery">Delivery</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="table" class="form-label">
+                            <i class="fas fa-chair me-1" style="color: #e67e22;"></i>
+                            Table (for Dine In)
+                        </label>
+                        <select class="form-select" id="table" name="table">
+                            <option value="">-- Select Table --</option>
+                            {% for table in tables %}
+                                <option value="{{ table.id }}">Table {{ table.table_number }} ({{ table.capacity }} seats)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="customer" class="form-label">
+                            <i class="fas fa-user me-1" style="color: #e67e22;"></i>
+                            Customer
+                        </label>
+                        <select class="form-select" id="customer" name="customer">
+                            <option value="">-- Walk-in Customer --</option>
+                            {% for customer in customers %}
+                                <option value="{{ customer.id }}" {% if request.GET.customer == customer.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ customer.name }} - {{ customer.phone_number }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="notes" class="form-label">
+                            <i class="fas fa-sticky-note me-1" style="color: #e67e22;"></i>
+                            Order Notes
+                        </label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                  placeholder="Any special instructions..."></textarea>
+                    </div>
+                    
+                    <div class="col-12 mt-4">
+                        <button type="submit" class="btn" style="background-color: #e67e22; color: white; padding: 10px 30px;">
+                            <i class="fas fa-save me-2"></i> Create Order
+                        </button>
+                        <a href="{% url 'food_master:orders' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Help -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle fa-2x me-2" style="color: #17a2b8;"></i>
+                        <div>
+                            <h6 class="mb-1">Order Types</h6>
+                            <small class="text-muted">
+                                <strong>Dine In:</strong> Customer eats in restaurant<br>
+                                <strong>Takeaway:</strong> Customer picks up food<br>
+                                <strong>Delivery:</strong> Food delivered to customer
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-lightbulb fa-2x me-2" style="color: #ffc107;"></i>
+                        <div>
+                            <h6 class="mb-1">Tip</h6>
+                            <small class="text-muted">For Dine In orders, select a table. For Takeaway/Delivery, table is optional.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-link fa-2x me-2" style="color: #28a745;"></i>
+                        <div>
+                            <h6 class="mb-1">Next Step</h6>
+                            <small class="text-muted">After creating the order, you can <a href="#" onclick="alert('Add items to the order')">add menu items</a> to it.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-select customer from URL parameter
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const customerId = urlParams.get('customer');
+    if (customerId) {
+        const select = document.getElementById('customer');
+        if (select) {
+            select.value = customerId;
+        }
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const branch = document.getElementById('branch').value;
+    const orderType = document.getElementById('order_type').value;
+    
+    if (!branch) {
+        e.preventDefault();
+        alert('Please select a branch.');
+        document.getElementById('branch').focus();
+        return false;
+    }
+    
+    if (!orderType) {
+        e.preventDefault();
+        alert('Please select an order type.');
+        document.getElementById('order_type').focus();
+        return false;
+    }
+    
+    // Validate table for dine in
+    if (orderType === 'dine_in') {
+        const table = document.getElementById('table').value;
+        if (!table) {
+            e.preventDefault();
+            alert('Please select a table for Dine In orders.');
+            document.getElementById('table').focus();
+            return false;
+        }
+    }
+    
+    return true;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,230 @@
+<!-- templates/tech_master/sales/my_stock.html -->
+{% extends 'tech_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}My Stock | {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <p class="text-muted mb-0">
+            </p>
+        </div>
+        <div class="mt-2 mt-md-0">
+            <a href="#" class="btn btn-warning me-2">
+                <i class="fas fa-boxes me-2"></i>{{ total_units }}
+                <small>Units Assigned</small>
+            </a>
+            <a href="#" class="btn btn-warning me-2">
+                <i class="fas fa-boxes me-2"></i>{{ available_units }}
+                <small>Available Units</small>
+            </a>
+            <a href="#" class="btn btn-secondary me-2">
+                <i class="fas fa-pause-circle me-2"></i>{{ reserved_units }}
+                <small>Reserved Units</small>
+            </a>
+
+            <a href="{% url 'tech_master:agent_sale' %}" class="btn btn-success">
+                <i class="fas fa-plus-circle me-2"></i>Add New Sale
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Products Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i> My Assigned Products
+                    <span class="badge bg-secondary ms-2">{{ total_units }} units</span>
+                </h5>
+                <div class="mt-2 mt-sm-0">
+                    <div class="input-group input-group-sm" style="width: 300px;">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search by name, IMEI, or brand..." onkeyup="filterTable()">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="stockTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>PRODUCT NAME</th>
+                            <th>BRAND / MODEL</th>
+                            <th>IDENTIFIER (IMEI/SERIAL)</th>
+                            <th>STATUS</th>
+                            <th>SELLING PRICE</th>
+                            <th>ASSIGNED DATE</th>
+                            <th class="text-center">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unit in my_units %}
+                        <tr>
+                            <td class="fw-semibold">
+                                <i class="fas fa-mobile-alt text-primary me-2"></i>
+                                <strong>{{ unit.product.name }}</strong>
+                            </td>
+                            <td>
+                                {{ unit.product.brand|default:"—" }} / {{ unit.product.model|default:"—" }}
+                            </td>
+                            <td>
+                                {% if unit.imei_number %}
+                                <code class="bg-light px-2 py-1 rounded" style="font-size: 1.1rem;">
+                                    {{ unit.imei_number }}
+                                </code>
+                                {% elif unit.serial_number %}
+                                <code class="bg-light px-2 py-1 rounded">
+                                    {{ unit.serial_number }}
+                                </code>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if unit.status == 'available' %}
+                                <span class="badge bg-success">Available</span>
+                                {% elif unit.status == 'reserved' %}
+                                <span class="badge bg-warning text-dark">Reserved</span>
+                                {% elif unit.status == 'sold' %}
+                                <span class="badge bg-danger">Sold</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ unit.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-success fw-bold">
+                                KES {{ unit.unit_selling_price|default:unit.product.selling_price|floatformat:2 }}
+                            </td>
+                            <td>
+                                {% if unit.assigned_date %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-clock me-1"></i> {{ unit.assigned_date|timesince }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'tech_master:my_stock_detail' unit.id %}" class="btn btn-info" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if unit.status == 'available' %}
+                                    <a href="{% url 'tech_master:my_stock_sell' unit.id %}" class="btn btn-success" title="Sell This Product">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
+                                <p>No products assigned to you yet</p>
+                                <small class="text-muted">Contact your manager to get products assigned</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Footer with Total Value -->
+        <div class="card-footer bg-white border-0 py-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-success bg-opacity-50 p-3 rounded-circle">
+                            <i class="fas fa-chart-line text-success fs-4"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">TOTAL STOCK VALUE</small>
+                            <h4 class="mb-0 text-success">
+                                KES {{ total_value|floatformat:2 }}
+                            </h4>
+                            <small class="text-muted">
+                                {{ total_units }} units × average price
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <a href="{% url 'tech_master:agent_sale' %}" class="btn btn-primary px-4 py-2">
+                        <i class="fas fa-plus-circle me-2"></i> Create New Sale
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .table td {
+        vertical-align: middle;
+        font-size: 0.85rem;
+    }
+    .card {
+        border-radius: 12px;
+    }
+    .badge {
+        font-weight: 500;
+    }
+    .btn-group .btn {
+        margin: 0 2px;
+    }
+    .badge.bg-info {
+        background-color: #17a2b8 !important;
+        font-size: 0.7rem;
+        padding: 4px 8px;
+    }
+</style>
+
+<script>
+    // Search functionality
+    function filterTable() {
+        const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+        const rows = document.querySelectorAll('#stockTable tbody tr');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            if (row.cells.length > 1) {
+                const text = row.textContent.toLowerCase();
+                const matches = searchTerm === '' || text.includes(searchTerm);
+                row.style.display = matches ? '' : 'none';
+                if (matches) visibleCount++;
+            }
+        });
+        
+        // Show/hide no results message
+        let noResults = document.getElementById('noResultsRow');
+        if (visibleCount === 0 && rows.length > 0) {
+            if (!noResults) {
+                const tbody = document.querySelector('#stockTable tbody');
+                noResults = document.createElement('tr');
+                noResults.id = 'noResultsRow';
+                noResults.innerHTML = '<td colspan="7" class="text-center py-5"><i class="fas fa-search fa-2x text-muted mb-2 d-block"></i><p class="text-muted">No matching products found</p></td>';
+                tbody.appendChild(noResults);
+            }
+            noResults.style.display = '';
+        } else if (noResults) {
+            noResults.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

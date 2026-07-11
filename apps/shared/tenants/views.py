@@ -7,7 +7,9 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta, datetime
 from .models import Tenant, ProjectType, SubscriptionPlan, SubscriptionInvoice
-from apps.tech_master.inventory.models import Product, Branch  # Add this
+from apps.tech_master.models import Product, Branch 
+from django.db.models import Count
+from django.core.paginator import Paginator
 from apps.shared.users.models import User
 import logging
 
@@ -58,9 +60,6 @@ def project_type_toggle(request, pk):
     status = "activated" if project_type.is_active else "deactivated"
     messages.success(request, f'Project type "{project_type.name}" has been {status}!')
     return redirect('tenants:project_type_list')
-
-
-
 
 
 # ============================================
@@ -579,11 +578,36 @@ def project_type_list(request):
         messages.error(request, 'Access denied. Only Super Admins can view project types.')
         return redirect('dashboard')
     
+    # Get all project types
     project_types = ProjectType.objects.all().order_by('name')
     
+    # Calculate statistics
+    total_count = project_types.count()
+    active_count = project_types.filter(is_active=True).count()
+    inactive_count = project_types.filter(is_active=False).count()
+    
+    # Get total tenants count
+    total_tenants = Tenant.objects.count()
+    
+    # Get last updated time
+    last_updated = ProjectType.objects.order_by('-updated_at').first()
+    last_updated_time = last_updated.updated_at if last_updated else None
+    
+    # Annotate each project type with tenant count
+    project_types = project_types.annotate(tenant_count=Count('tenants'))
+    
+    # Pagination
+    paginator = Paginator(project_types, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
     context = {
-        'project_types': project_types,
-        'total_count': project_types.count(),
+        'project_types': page_obj,
+        'total_count': total_count,
+        'active_count': active_count,
+        'inactive_count': inactive_count,
+        'total_tenants': total_tenants,
+        'last_updated': last_updated_time,
         'is_super_admin': True,
     }
     return render(request, 'shared/project_type_list.html', context)
@@ -709,7 +733,7 @@ def project_type_delete(request, pk):
 
 
 # ============================================
-# SUBSCRIPTION VIEWS
+# SUBSCRIPTION PLANS VIEWS - Super Admin Only
 # ============================================
 
 @login_required
@@ -719,10 +743,47 @@ def subscription_plans_list(request):
         messages.error(request, 'Access denied. Only Super Admins can manage subscription plans.')
         return redirect('dashboard')
     
+    # Get all plans ordered by price
     plans = SubscriptionPlan.objects.all().order_by('price_monthly')
     
+    # Calculate statistics
+    total_plans = plans.count()
+    active_plans_count = plans.filter(is_active=True).count()
+    inactive_plans_count = plans.filter(is_active=False).count()
+    
+    # Get total tenants and active tenants
+    total_tenants = Tenant.objects.count()
+    active_tenants_count = Tenant.objects.filter(status='active').count()
+    
+    # ✅ For each plan, calculate directly
+    total_monthly_revenue = 0
+    for plan in plans:
+        # Direct query for tenant count
+        plan.tenant_count = Tenant.objects.filter(
+            subscription_plan=plan.code,
+            status='active'
+        ).count()
+        
+        # Calculate monthly revenue
+        plan.monthly_revenue = plan.tenant_count * plan.price_monthly
+        
+        # Add to total revenue if plan is active
+        if plan.is_active:
+            total_monthly_revenue += plan.monthly_revenue
+    
+    # Pagination
+    paginator = Paginator(plans, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
     context = {
-        'plans': plans,
+        'plans': page_obj,
+        'total_plans': total_plans,
+        'active_plans_count': active_plans_count,
+        'inactive_plans_count': inactive_plans_count,
+        'total_tenants': total_tenants,
+        'active_tenants_count': active_tenants_count,
+        'total_monthly_revenue': total_monthly_revenue,
         'is_super_admin': True,
     }
     return render(request, 'shared/subscription_plans_list.html', context)
@@ -846,6 +907,9 @@ def subscription_plan_delete(request, pk):
         'is_super_admin': True,
     }
     return render(request, 'shared/subscription_plan_confirm_delete.html', context)
+
+
+
 
 
 # ============================================

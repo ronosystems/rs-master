@@ -1,0 +1,409 @@
+<!-- templates/fashion_master/sale_form.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}New Fashion Sale{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-cash-register text-primary me-2"></i>New Fashion Sale
+            </h4>
+            <p class="text-muted mb-0">Create a new fashion sale transaction</p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:sale_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Sales
+            </a>
+        </div>
+    </div>
+
+    <!-- CSRF Token -->
+    <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-shopping-bag me-2"></i>Products</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <input type="text" id="productSearch" class="form-control" placeholder="Search products by name or SKU..." onkeypress="if(event.key==='Enter') searchProducts()">
+                            <button class="btn btn-primary" onclick="searchProducts()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="productResults" style="max-height: 400px; overflow-y: auto;">
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-search fa-2x mb-2 d-block"></i>
+                            <p>Search for products to add to sale</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-shopping-cart me-2"></i>Cart</h6>
+                    <span class="badge bg-primary" id="cartCount">0 items</span>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    <div id="cartItems">
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-shopping-cart fa-2x mb-2 d-block"></i>
+                            <p>Cart is empty</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between">
+                        <span>Subtotal:</span>
+                        <strong id="cartSubtotal">KES 0.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Tax (16%):</span>
+                        <strong id="cartTax">KES 0.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between border-top pt-2 mt-2">
+                        <span>Total:</span>
+                        <strong id="cartTotal" class="text-success">KES 0.00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-user me-2"></i>Customer Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Customer Name</label>
+                        <input type="text" id="customerName" class="form-control" placeholder="Walk-in Customer">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Phone Number</label>
+                        <input type="text" id="customerPhone" class="form-control" placeholder="0712345678">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Payment Method</label>
+                        <select id="paymentMethod" class="form-select">
+                            <option value="cash">Cash</option>
+                            <option value="mpesa">M-Pesa</option>
+                            <option value="card">Card</option>
+                            <option value="bank">Bank Transfer</option>
+                            <option value="credit">Credit</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Amount Paid</label>
+                        <input type="number" id="amountPaid" class="form-control" placeholder="0.00" step="0.01">
+                    </div>
+                    <div id="changeDisplay" style="display: none;">
+                        <div class="alert alert-success py-1 small">
+                            <strong>Change:</strong> KES <span id="changeAmount">0.00</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-success w-100 mt-2" onclick="processSale()" id="checkoutBtn" disabled>
+                        <i class="fas fa-check-circle me-2"></i>Complete Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// Cart state
+let cart = [];
+
+// DOM Elements - Cache them
+const productSearch = document.getElementById('productSearch');
+const productResults = document.getElementById('productResults');
+const cartItems = document.getElementById('cartItems');
+const cartCount = document.getElementById('cartCount');
+const cartSubtotal = document.getElementById('cartSubtotal');
+const cartTax = document.getElementById('cartTax');
+const cartTotal = document.getElementById('cartTotal');
+const checkoutBtn = document.getElementById('checkoutBtn');
+const customerName = document.getElementById('customerName');
+const customerPhone = document.getElementById('customerPhone');
+const paymentMethod = document.getElementById('paymentMethod');
+const amountPaid = document.getElementById('amountPaid');
+const changeDisplay = document.getElementById('changeDisplay');
+const changeAmount = document.getElementById('changeAmount');
+
+function searchProducts() {
+    const query = productSearch.value.trim();
+    if (!query) {
+        productResults.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-search fa-2x mb-2 d-block"></i>
+                <p>Enter search term to find products</p>
+            </div>
+        `;
+        return;
+    }
+
+    fetch(`/fashion/api/search-products/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.products && data.products.length > 0) {
+                let html = '<div class="row g-2">';
+                data.products.forEach(product => {
+                    const inCart = cart.some(item => item.id === product.id);
+                    html += `
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                <div>
+                                    <strong>${escapeHtml(product.name)}</strong>
+                                    <br>
+                                    <small class="text-muted">SKU: ${escapeHtml(product.sku_code)} | Stock: ${product.quantity_in_stock}</small>
+                                    <br>
+                                    <span class="text-success">KES ${product.selling_price}</span>
+                                </div>
+                                <div>
+                                    <input type="number" id="qty_${product.id}" class="form-control form-control-sm" value="1" min="1" max="${product.quantity_in_stock}" style="width: 60px; display: inline-block;">
+                                    <button class="btn btn-sm btn-primary ms-1" onclick="addToCart(${product.id}, '${escapeHtml(product.name)}', ${product.selling_price})" ${inCart ? 'disabled' : ''}>
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                productResults.innerHTML = html;
+            } else {
+                productResults.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
+                        <p>No products found</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(() => {
+            productResults.innerHTML = `
+                <div class="text-center py-4 text-danger">
+                    <i class="fas fa-exclamation-circle fa-2x mb-2 d-block"></i>
+                    <p>Error searching products</p>
+                </div>
+            `;
+        });
+}
+
+function addToCart(id, name, price) {
+    const qtyInput = document.getElementById(`qty_${id}`);
+    const quantity = parseInt(qtyInput ? qtyInput.value : 1);
+    
+    if (cart.some(item => item.id === id)) {
+        showToast('Product already in cart', 'warning');
+        return;
+    }
+    
+    cart.push({ id, name, price, quantity });
+    updateCart();
+    productSearch.value = '';
+    productResults.innerHTML = `
+        <div class="text-center py-4 text-muted">
+            <i class="fas fa-check-circle fa-2x mb-2 d-block text-success"></i>
+            <p>Product added to cart!</p>
+        </div>
+    `;
+    showToast(`${name} added to cart`, 'success');
+}
+
+function updateCart() {
+    cartCount.textContent = `${cart.length} items`;
+    
+    if (cart.length === 0) {
+        cartItems.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-shopping-cart fa-2x mb-2 d-block"></i>
+                <p>Cart is empty</p>
+            </div>
+        `;
+        cartSubtotal.textContent = 'KES 0.00';
+        cartTax.textContent = 'KES 0.00';
+        cartTotal.textContent = 'KES 0.00';
+        checkoutBtn.disabled = true;
+        return;
+    }
+    
+    let html = '';
+    let subtotal = 0;
+    cart.forEach((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        html += `
+            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                <div>
+                    <strong>${escapeHtml(item.name)}</strong>
+                    <br>
+                    <small class="text-muted">Qty: ${item.quantity} x KES ${item.price}</small>
+                </div>
+                <div>
+                    <span class="fw-bold text-success">KES ${itemTotal.toFixed(2)}</span>
+                    <button class="btn btn-sm btn-danger ms-2" onclick="removeFromCart(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    cartItems.innerHTML = html;
+    
+    const tax = subtotal * 0.16;
+    const total = subtotal + tax;
+    
+    cartSubtotal.textContent = `KES ${subtotal.toFixed(2)}`;
+    cartTax.textContent = `KES ${tax.toFixed(2)}`;
+    cartTotal.textContent = `KES ${total.toFixed(2)}`;
+    checkoutBtn.disabled = false;
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    updateCart();
+    showToast('Item removed from cart', 'info');
+}
+
+function calculateChange() {
+    const totalText = cartTotal ? cartTotal.textContent : 'KES 0.00';
+    const total = parseFloat(totalText.replace(/[^0-9.]/g, '')) || 0;
+    const paid = parseFloat(amountPaid ? amountPaid.value : 0) || 0;
+    
+    if (changeDisplay && changeAmount) {
+        if (paid >= total && total > 0) {
+            changeAmount.textContent = (paid - total).toFixed(2);
+            changeDisplay.style.display = 'block';
+        } else {
+            changeDisplay.style.display = 'none';
+        }
+    }
+}
+
+// Add event listener for amount paid
+if (amountPaid) {
+    amountPaid.addEventListener('input', calculateChange);
+}
+
+function processSale() {
+    if (cart.length === 0) {
+        showToast('Cart is empty', 'error');
+        return;
+    }
+    
+    const custName = customerName ? customerName.value || 'Walk-in Customer' : 'Walk-in Customer';
+    const custPhone = customerPhone ? customerPhone.value || '' : '';
+    const payMethod = paymentMethod ? paymentMethod.value : 'cash';
+    const paid = parseFloat(amountPaid ? amountPaid.value : 0) || 0;
+    
+    // Calculate total
+    let subtotal = 0;
+    cart.forEach(item => { subtotal += item.price * item.quantity; });
+    const tax = subtotal * 0.16;
+    const total = subtotal + tax;
+    
+    if (paid < total) {
+        showToast(`Insufficient payment. Total: KES ${total.toFixed(2)}`, 'error');
+        return;
+    }
+    
+    const saleData = {
+        items: cart,
+        customer_name: custName,
+        customer_phone: custPhone,
+        payment_method: payMethod,
+        amount_paid: paid,
+        subtotal: subtotal,
+        tax: tax,
+        total: total
+    };
+    
+    checkoutBtn.disabled = true;
+    checkoutBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+    
+    fetch('/fashion/api/process-sale/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(saleData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        checkoutBtn.disabled = false;
+        checkoutBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Complete Sale';
+        
+        if (data.success) {
+            Swal.fire({
+                title: '✅ Sale Complete!',
+                html: `
+                    <strong>${data.receipt_number}</strong><br>
+                    Total: KES ${data.total.toFixed(2)}<br>
+                    Paid: KES ${data.amount_paid.toFixed(2)}<br>
+                    Change: KES ${data.change.toFixed(2)}
+                `,
+                icon: 'success',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                window.location.href = `/fashion/sales/${data.sale_id}/`;
+            });
+        } else {
+            showToast(data.error || 'Sale failed', 'error');
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        checkoutBtn.disabled = false;
+        checkoutBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Complete Sale';
+        showToast('Error processing sale', 'error');
+    });
+}
+
+// Enter key for search
+if (productSearch) {
+    productSearch.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchProducts();
+        }
+    });
+}
+
+function showToast(message, type) {
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        icon: type,
+        title: message
+    });
+}
+
+function getCsrfToken() {
+    return document.getElementById('csrfToken')?.value ||
+           document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1];
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

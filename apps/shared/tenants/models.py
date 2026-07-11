@@ -109,6 +109,14 @@ class Tenant(models.Model):
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
+    till_number = models.CharField(max_length=50, blank=True, null=True)
+    paybill_number = models.CharField(max_length=50, blank=True, null=True)
+    account_number = models.CharField(max_length=50, blank=True, null=True)
+    show_till_number = models.BooleanField(default=True)
+    show_paybill = models.BooleanField(default=True)
+    show_account_number = models.BooleanField(default=True)
+
+
     # ✅ SUBSCRIPTION FIELDS
     subscription_plan = models.CharField(
         max_length=50,
@@ -130,7 +138,7 @@ class Tenant(models.Model):
         default=False,
         help_text="Automatically renew subscription"
     )
-
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -274,6 +282,7 @@ class SubscriptionPlan(models.Model):
     max_products = models.IntegerField(default=100)
     max_branches = models.IntegerField(default=1)
     max_storage_gb = models.IntegerField(default=1)
+    max_rooms = models.IntegerField(default=20, help_text="Maximum rooms for Hotel Master")
     
     # Features as JSON
     features = models.JSONField(default=dict)
@@ -336,6 +345,31 @@ class SubscriptionPlan(models.Model):
             except Exception as e:
                 logger.error(f"Failed to queue SubscriptionPlan sync: {e}")
 
+    # ✅ Add helper methods
+    def get_active_tenant_count(self):
+        """Get count of active tenants using this plan"""
+        from .models import Tenant  # Import here to avoid circular imports
+        return Tenant.objects.filter(
+            subscription_plan=self.code,
+            status='active'
+        ).count()
+    
+    def get_monthly_revenue(self):
+        """Calculate monthly revenue from active tenants"""
+        return self.get_active_tenant_count() * self.price_monthly
+    
+    def get_tenants(self):
+        """Get all tenants using this plan"""
+        from .models import Tenant
+        return Tenant.objects.filter(subscription_plan=self.code)
+    
+    def has_active_tenants(self):
+        """Check if this plan has any active tenants"""
+        return self.get_active_tenant_count() > 0
+    
+    def can_delete(self):
+        """Check if plan can be deleted (no active tenants)"""
+        return not self.has_active_tenants()
 
 # ============================================
 # SUBSCRIPTION INVOICE MODEL
@@ -436,9 +470,6 @@ class SubscriptionInvoice(models.Model):
                 logger.debug(f"✅ Queued SubscriptionInvoice sync: {self.invoice_number}")
             except Exception as e:
                 logger.error(f"Failed to queue SubscriptionInvoice sync: {e}")
-
-
-
 
 
 # ============================================

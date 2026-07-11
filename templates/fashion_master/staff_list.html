@@ -1,0 +1,160 @@
+<!-- templates/fashion_master/staff_list.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Fashion Staff List{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-users text-primary me-2"></i>Fashion Staff
+            </h4>
+            <p class="text-muted mb-0">Manage your fashion store staff</p>
+        </div>
+        <div>
+            <a href="#" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i>Add Staff
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="Search staff..." value="{{ search|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="role" class="form-select">
+                        <option value="">All Roles</option>
+                        {% for role_code, role_name in roles %}
+                        <option value="{{ role_code }}" {% if role_filter == role_code %}selected{% endif %}>
+                            {{ role_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="branch" class="form-select">
+                        <option value="">All Branches</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.id }}" {% if branch_filter == branch.id|stringformat:"s" %}selected{% endif %}>
+                            {{ branch.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search me-2"></i>Filter
+                        </button>
+                        <a href="{% url 'fashion_master:staff_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Staff Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Branch</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for staff_member in staff %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ staff_member.name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ staff_member.email|default:"No email" }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ staff_member.get_role_display }}</span>
+                                {% if staff_member.expertise %}
+                                <br>
+                                <small class="text-muted">{{ staff_member.expertise }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ staff_member.branch.name|default:"Not Assigned" }}</td>
+                            <td>{{ staff_member.phone_number }}</td>
+                            <td>
+                                {% if staff_member.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'fashion_master:staff_detail' staff_member.id %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-outline-info">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
+                                <h5 class="text-muted">No staff found</h5>
+                                <p class="text-muted small">Add your first fashion staff member</p>
+                                <a href="#" class="btn btn-primary mt-2">
+                                    <i class="fas fa-plus-circle me-2"></i>Add Staff
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if staff.has_other_pages %}
+        <div class="card-footer bg-white">
+            <nav>
+                <ul class="pagination mb-0 justify-content-center">
+                    {% if staff.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ staff.previous_page_number }}">&laquo;</a>
+                    </li>
+                    {% endif %}
+                    {% for num in staff.paginator.page_range %}
+                    <li class="page-item {% if staff.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    {% if staff.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ staff.next_page_number }}">&raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

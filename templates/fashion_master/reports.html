@@ -1,0 +1,208 @@
+<!-- templates/fashion_master/reports.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Fashion Reports{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-chart-bar text-primary me-2"></i>Fashion Reports
+            </h4>
+            <p class="text-muted mb-0">View fashion store analytics and reports</p>
+        </div>
+        <div>
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card card-fashion">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Total Revenue</h6>
+                            <h3 class="mb-0 text-success">KES {{ total_revenue|default:0|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-fashion">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Total Orders</h6>
+                            <h3 class="mb-0">{{ total_orders|default:0 }}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-shopping-bag fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-fashion">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Average Order Value</h6>
+                            <h3 class="mb-0">KES {{ average_order|default:0|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-calculator fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-fashion">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Products Sold</h6>
+                            <h3 class="mb-0">{{ total_items_sold|default:0 }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-boxes fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Products -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-star text-warning me-2"></i>Top Selling Products</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th>Units Sold</th>
+                                    <th class="text-end">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_products %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ product.product_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ product.product_sku|default:"" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ product.total_sold|default:0 }}</span>
+                                    </td>
+                                    <td class="text-end fw-bold text-success">
+                                        KES {{ product.total_revenue|default:0|floatformat:0 }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-3 text-muted">
+                                        No products sold yet
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-chart-pie text-primary me-2"></i>Category Breakdown</h6>
+                </div>
+                <div class="card-body">
+                    {% for category in category_breakdown %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ category.category_name|default:"Uncategorized" }}</span>
+                            <span class="fw-bold">{{ category.total|default:0|floatformat:0 }}%</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-primary" style="width: {{ category.total|default:0 }}%;"></div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center py-3">No data available</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sales -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-clock text-primary me-2"></i>Recent Sales</h6>
+                    <a href="{% url 'fashion_master:sale_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Invoice</th>
+                                    <th>Customer</th>
+                                    <th>Items</th>
+                                    <th class="text-end">Total</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in recent_sales %}
+                                <tr>
+                                    <td>
+                                        <code>{{ sale.invoice_no }}</code>
+                                    </td>
+                                    <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+                                    <td>{{ sale.items.count }}</td>
+                                    <td class="text-end fw-bold text-success">
+                                        KES {{ sale.total|floatformat:0 }}
+                                    </td>
+                                    <td>
+                                        <small>{{ sale.sale_date|date:"M d, Y H:i" }}</small>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-3 text-muted">
+                                        No recent sales
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

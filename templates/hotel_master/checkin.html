@@ -1,0 +1,174 @@
+<!-- templates/hotel_master/checkin.html -->
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="fas fa-user-check text-success me-2"></i>Check In
+        </h4>
+        <a href="{% url 'hotel_master:dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <!-- Booking Selection -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-8">
+                    <label class="form-label fw-bold">Select Booking <span class="text-danger">*</span></label>
+                    <select id="bookingSelect" class="form-select" onchange="loadBooking(this.value)">
+                        <option value="">-- Select a booking --</option>
+                        {% for booking in pending_checkins %}
+                        <option value="{{ booking.id }}">
+                            {{ booking.booking_number }} - {{ booking.guest_name }} (Room {{ booking.room.room_number }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Only confirmed bookings not yet checked in</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Search Guest</label>
+                    <div class="input-group">
+                        <input type="text" id="searchGuest" class="form-control" placeholder="Search by name or booking #">
+                        <button class="btn btn-primary" onclick="searchBooking()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Details -->
+            <div id="bookingDetails" style="display: none;">
+                <hr>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light p-3">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-user text-primary me-2"></i>Guest Information</h6>
+                            <p class="mb-1"><strong>Name:</strong> <span id="guestName"></span></p>
+                            <p class="mb-1"><strong>Phone:</strong> <span id="guestPhone"></span></p>
+                            <p class="mb-1"><strong>Email:</strong> <span id="guestEmail"></span></p>
+                            <p class="mb-1"><strong>ID Number:</strong> <span id="guestId"></span></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light p-3">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-calendar text-warning me-2"></i>Booking Details</h6>
+                            <p class="mb-1"><strong>Booking #:</strong> <span id="bookingNumber"></span></p>
+                            <p class="mb-1"><strong>Room:</strong> <span id="roomNumber"></span></p>
+                            <p class="mb-1"><strong>Check In:</strong> <span id="checkInDate"></span></p>
+                            <p class="mb-1"><strong>Check Out:</strong> <span id="checkOutDate"></span></p>
+                            <p class="mb-1"><strong>Guests:</strong> <span id="guestCount"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Check In Form -->
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="booking_id" id="bookingId">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Check In Time</label>
+                            <input type="datetime-local" name="checkin_time" class="form-control" id="checkinTime" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Payment Status</label>
+                            <select name="payment_status" class="form-select">
+                                <option value="paid">Paid</option>
+                                <option value="pending">Pending</option>
+                                <option value="deposit">Deposit Paid</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Check In Notes</label>
+                            <textarea name="checkin_notes" class="form-control" rows="2" placeholder="Any special notes..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check-circle me-2"></i>Complete Check In
+                        </button>
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- No Bookings Message -->
+            {% if not pending_checkins %}
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle fa-4x text-muted opacity-25 mb-3"></i>
+                <h5>No Pending Check-ins</h5>
+                <p class="text-muted">All bookings have been checked in.</p>
+                <a href="{% url 'hotel_master:new_booking' %}" class="btn btn-success mt-2">
+                    <i class="fas fa-plus-circle me-2"></i>Create New Booking
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function loadBooking(bookingId) {
+    if (!bookingId) {
+        document.getElementById('bookingDetails').style.display = 'none';
+        return;
+    }
+    
+    fetch(`/hotel/api/booking/${bookingId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const booking = data.booking;
+                document.getElementById('bookingId').value = booking.id;
+                document.getElementById('guestName').textContent = booking.guest_name;
+                document.getElementById('guestPhone').textContent = booking.guest_phone;
+                document.getElementById('guestEmail').textContent = booking.guest_email || 'N/A';
+                document.getElementById('guestId').textContent = booking.guest_id || 'N/A';
+                document.getElementById('bookingNumber').textContent = booking.booking_number;
+                document.getElementById('roomNumber').textContent = booking.room_number;
+                document.getElementById('checkInDate').textContent = booking.check_in;
+                document.getElementById('checkOutDate').textContent = booking.check_out;
+                document.getElementById('guestCount').textContent = booking.guests;
+                
+                // Set default check in time to now
+                const now = new Date();
+                const formatted = now.toISOString().slice(0, 16);
+                document.getElementById('checkinTime').value = formatted;
+                
+                document.getElementById('bookingDetails').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading booking details');
+        });
+}
+
+function searchBooking() {
+    const query = document.getElementById('searchGuest').value.trim();
+    if (!query) return;
+    
+    const select = document.getElementById('bookingSelect');
+    for (let i = 0; i < select.options.length; i++) {
+        const text = select.options[i].text.toLowerCase();
+        if (text.includes(query.toLowerCase())) {
+            select.value = select.options[i].value;
+            loadBooking(select.value);
+            break;
+        }
+    }
+}
+</script>
+{% endblock %}

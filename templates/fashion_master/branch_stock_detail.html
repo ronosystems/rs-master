@@ -1,0 +1,140 @@
+<!-- templates/fashion_master/branch_stock_detail.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Branch Stock Detail - {{ branch.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-clipboard-list text-primary me-2"></i>{{ branch.name }} - Stock Detail
+            </h4>
+            <p class="text-muted mb-0">
+                <i class="fas fa-code me-1"></i>{{ branch.code }}
+                {% if branch.is_main_branch %}
+                <span class="badge bg-warning text-dark ms-1">Main</span>
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:branch_stock_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Stock
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card card-fashion">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Total Products</h6>
+                            <h3 class="mb-0 text-primary">{{ total_products|default:0 }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-boxes fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-fashion">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Total Stock</h6>
+                            <h3 class="mb-0 text-success">{{ total_stock|default:0 }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-boxes fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-fashion">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">Total Value</h6>
+                            <h3 class="mb-0 text-warning">KES {{ total_value|default:0|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-money-bill-wave fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Product</th>
+                            <th>SKU</th>
+                            <th>Size</th>
+                            <th>Color</th>
+                            <th>Stock</th>
+                            <th>Selling Price</th>
+                            <th>Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ product.name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ product.category.name|default:"Uncategorized" }}</small>
+                            </td>
+                            <td><code>{{ product.sku_code }}</code></td>
+                            <td>{{ product.size|default:"-" }}</td>
+                            <td>{{ product.color|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-{% if product.quantity_in_stock > 10 %}success{% elif product.quantity_in_stock > 5 %}warning{% else %}danger{% endif %}">
+                                    {{ product.quantity_in_stock }}
+                                </span>
+                            </td>
+                            <td>KES {{ product.selling_price|floatformat:0 }}</td>
+                            <td>KES {{ product.total_value|floatformat:0 }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'fashion_master:product_detail' product.id %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'fashion_master:transfer_stock' %}?product={{ product.id }}" class="btn btn-outline-info">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
+                                <h5 class="text-muted">No products in this branch</h5>
+                                <p class="text-muted small">Add products or transfer stock to this branch</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

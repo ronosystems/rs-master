@@ -1,3 +1,5 @@
+# apps/shared/portal/views.py
+
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -6,12 +8,18 @@ from django.contrib.auth import update_session_auth_hash
 from django.db.models import Sum, F
 from django.utils import timezone
 from apps.shared.users.models import User
-from apps.tech_master.inventory.models import Product, Category, Branch
-from apps.tech_master.sales.models import Sale
+from apps.tech_master.models import Product, Category, Branch
+from apps.tech_master.models import Sale
 from apps.shared.customers.models import Customer
+from apps.shared.permissions.models import UserRoleAssignment
 from django.http import JsonResponse
 from django.core.cache import cache
 import logging
+from apps.shared.portal.project_router import get_project_redirect, DEFAULT_REDIRECT
+from apps.shared.utils.project_helpers import (
+    PROJECT_ROLE_MAPPINGS,
+    PROJECT_DASHBOARDS,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -34,16 +42,50 @@ def portal_login(request):
         if user is not None:
             login(request, user)
             
-            # Set tenant in session
-            if hasattr(user, 'tenant') and user.tenant:
-                request.session['tenant_id'] = user.tenant.id
-            
             messages.success(request, f'Welcome back {user.username}!')
-            return redirect('portal:dashboard')
+            
+            # ✅ Get tenant and project type
+            tenant = user.tenant
+            project_type = None
+            project_code = None
+            
+            if tenant:
+                project_type = getattr(tenant, 'project_type', None)
+                if project_type:
+                    project_code = project_type.code.upper()
+            
+            # ✅ If user is Super Admin, redirect to Super Admin dashboard
+            if user.is_super_admin:
+                return redirect('portal:super_admin_dashboard')
+            
+            # ✅ If user has project type, redirect to the correct project
+            if project_code:
+                project_redirects = {
+                    'TECH_MASTER': 'tech_master:dashboard',
+                    'HOTEL_MASTER': 'hotel_master:dashboard',
+                    'FOOD_MASTER': 'food_master:dashboard',
+                    'RETAIL_MASTER': 'retail_master:dashboard',
+                    'HEALTH_MASTER': 'health_master:dashboard',
+                    'FASHION_MASTER': 'fashion_master:dashboard',
+                    'RENTAL_MASTER': 'rental_master:dashboard',
+                }
+                redirect_url = project_redirects.get(project_code)
+                if redirect_url:
+                    return redirect(redirect_url)
+            
+            # ✅ PROFESSIONAL FALLBACK - No project assigned
+            messages.info(
+                request, 
+                'Welcome! Your account is being configured. '
+                'Please connect with our support team to get started.'
+            )
+            return redirect('portal:support')
+            
         else:
             messages.error(request, 'Invalid username or password.')
     
     return render(request, 'shared/login.html')
+
 
 
 def portal_logout(request):
@@ -51,6 +93,12 @@ def portal_logout(request):
     logout(request)
     messages.success(request, 'You have been logged out.')
     return redirect('portal:login')
+
+
+@login_required
+def no_project_assigned(request):
+    """Professional fallback page for users with no project assigned"""
+    return redirect('portal:support')
 
 
 @login_required
@@ -81,6 +129,7 @@ def profile(request):
     return render(request, 'shared/profile.html', context)
 
 
+
 @login_required
 def change_password(request):
     """Change password"""
@@ -91,15 +140,15 @@ def change_password(request):
         
         if not request.user.check_password(current_password):
             messages.error(request, 'Current password is incorrect.')
-            return redirect('change_password')
+            return redirect('portal:change_password')
         
         if new_password != confirm_password:
             messages.error(request, 'Passwords do not match.')
-            return redirect('change_password')
+            return redirect('portal:change_password')
         
         if len(new_password) < 6:
             messages.error(request, 'Password must be at least 6 characters.')
-            return redirect('change_password')
+            return redirect('portal:change_password')
         
         request.user.set_password(new_password)
         request.user.save()
@@ -108,7 +157,58 @@ def change_password(request):
         messages.success(request, 'Password changed successfully!')
         return redirect('portal:profile')
     
-    return render(request, 'shared/change_password.html')
+    # ✅ Add company_settings to context
+    context = {
+        'tenant': request.user.tenant,
+        'user': request.user,
+        'company_settings': None,  # Add this
+    }
+    
+    # Get company settings if tenant exists
+    from apps.shared.settings.models import CompanySetting
+    if request.user.tenant:
+        try:
+            context['company_settings'] = CompanySetting.objects.get(tenant=request.user.tenant)
+        except CompanySetting.DoesNotExist:
+            pass
+    
+    return render(request, 'shared/change_password.html', context)
+
+
+def debug_redirect(request):
+    """Debug view to show current project type"""
+    user = request.user
+    print("=" * 60)
+    print("🔍 DEBUG_REDIRECT VIEW")
+    print(f"👤 User: {user.username}")
+    print(f"🔑 Role: {user.role}")
+    print(f"🏢 Tenant: {user.tenant}")
+    
+    if user.tenant:
+        print(f"📋 Tenant Name: {user.tenant.company_name}")
+        print(f"📋 Tenant ID: {user.tenant.id}")
+        project_type = getattr(user.tenant, 'project_type', None)
+        print(f"📋 Project Type Object: {project_type}")
+        
+        if project_type:
+            print(f"📋 Project Code: {project_type.code}")
+            print(f"📋 Project Name: {project_type.name}")
+            print(f"📋 Project Code Upper: {project_type.code.upper()}")
+        else:
+            print("❌ project_type is None!")
+    else:
+        print("❌ No tenant!")
+    
+    print("=" * 60)
+    
+    return JsonResponse({
+        'username': user.username,
+        'role': user.role,
+        'tenant': str(user.tenant),
+        'tenant_name': user.tenant.company_name if user.tenant else None,
+        'project_type': str(getattr(user.tenant, 'project_type', None)) if user.tenant else None,
+        'project_code': getattr(user.tenant, 'project_type', None).code if user.tenant and getattr(user.tenant, 'project_type', None) else None,
+    })
 
 
 # ============================================
@@ -117,74 +217,138 @@ def change_password(request):
 
 @login_required
 def project_dashboard(request):
-    """Route to the correct project dashboard based on user role"""
+    """Route to the correct project dashboard based on user role and tenant project type."""
     user = request.user
     
-    # ✅ SUPER ADMIN - Go to super admin dashboard FIRST (no tenant check)
-    if user.is_superuser or user.role == 'super_admin':
+    # Super Admin
+    if user.is_super_admin:
         return redirect('portal:super_admin_dashboard')
     
-    # ✅ For all other users, check tenant
     tenant = getattr(user, 'tenant', None)
     if not tenant:
         messages.error(request, 'No tenant assigned to your account')
-        return redirect('portal:login')
+        return redirect(DEFAULT_REDIRECT)
     
-    # ✅ CASHIER - Redirect to POS directly
-    if user.role == 'cashier':
-        return redirect('tech_master:pos')
+    project_type = getattr(tenant, 'project_type', None)
+    if not project_type:
+        messages.error(request, 'No project type assigned to your tenant')
+        return redirect(DEFAULT_REDIRECT)
     
-    # ✅ SALES AGENT - Redirect to Sales Agent dashboard
-    if user.role == 'sales_agent':
-        return redirect('tech_master:my_sales')
+    project_code = project_type.code.upper()
     
-    # ✅ MANAGER - Redirect to Manager dashboard
-    if user.role == 'manager':
-        return redirect('tech_master:dashboard')
+    # ✅ Get the redirect URL (always returns a string)
+    redirect_url = get_project_redirect(project_code, 'dashboard')
+    return redirect(redirect_url)
+
+
+# ============================================
+# Helper function to show available project mappings
+# ============================================
+
+def get_project_roles(request):
+    """
+    API endpoint to get available roles for a project (for debugging/admin)
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Access denied'}, status=403)
     
-    # ✅ ADMIN / TENANT_ADMIN - Redirect to Admin dashboard
-    if user.role == 'admin' or user.role == 'tenant_admin':
-        project_type = getattr(tenant, 'project_type', None)
-        if not project_type:
-            return redirect('admin_dashboard')
-        
-        code = project_type.code.upper()
-        
-        # Route to project-specific dashboard
-        if code in ['TECH_MASTER', 'TECHMASTER', 'PRJ-001']:
-            return redirect('tech_master:dashboard')
-        elif code in ['HOTEL_MASTER', 'HOTELMASTER', 'PRJ-003']:
-            return redirect('hotel_master:dashboard')
-        elif code in ['FOOD_MASTER', 'FOODMASTER', 'PRJ-002']:
-            return redirect('food_master:dashboard')
-        elif code in ['RETAIL_MASTER', 'RETAILMASTER', 'PRJ-004']:
-            return redirect('retail_master:dashboard')
-        elif code in ['HEALTH_MASTER', 'HEALTHMASTER', 'PRJ-005']:
-            return redirect('health_master:dashboard')
-        elif code in ['FASHION_MASTER', 'FASHIONMASTER', 'PRJ-006']:
-            return redirect('fashion_master:dashboard')
-        else:
-            return redirect('admin_dashboard')
+    project_code = request.GET.get('project_code')
+    if not project_code:
+        return JsonResponse({'error': 'project_code required'}, status=400)
     
-    # Fallback
-    return redirect('portal:dashboard')
+    project_config = PROJECT_ROLE_MAPPINGS.get(project_code.upper(), {})
+    
+    return JsonResponse({
+        'project_code': project_code,
+        'roles': project_config,
+        'dashboard': PROJECT_DASHBOARDS.get(project_code.upper()),
+    })
+
+
+@login_required
+def support(request):
+    """Support page showing project information"""
+    from apps.shared.tenants.models import Tenant
+    from apps.shared.users.models import User
+    from apps.tech_master.models import Sale
+    from apps.tech_master.models import Product
+    from apps.shared.settings.models import SystemSetting
+    
+    # Get platform stats
+    total_tenants = Tenant.objects.filter(status='active').count()
+    total_users = User.objects.filter(is_active=True).count()
+    total_sales = Sale.objects.filter(status='completed').count()
+    total_products = Product.objects.filter(is_active=True).count()
+    
+    # Get platform settings
+    platform_name = SystemSetting.get('platform_name', 'RS Master Africa')
+    platform_description = SystemSetting.get('platform_description', 
+        'RS Master Africa is a comprehensive business management platform designed to help businesses streamline their operations, manage inventory, process sales, and grow their customer base.'
+    )
+    support_email = SystemSetting.get('support_email', 'support@rsmaster.com')
+    sales_email = SystemSetting.get('sales_email', 'sales@rsmaster.com')
+    support_phone = SystemSetting.get('support_phone', '+254 722 527 955')
+    support_hours = SystemSetting.get('support_hours', 'Monday - Friday, 8:00 AM - 6:00 PM EAT')
+    company_address = SystemSetting.get('company_address', 'Nairobi, Kenya')
+    whatsapp_number = SystemSetting.get('whatsapp_number', '254722527955')
+    
+    # Social media links
+    social_facebook = SystemSetting.get('social_facebook', '#')
+    social_twitter = SystemSetting.get('social_twitter', '#')
+    social_linkedin = SystemSetting.get('social_linkedin', '#')
+    social_youtube = SystemSetting.get('social_youtube', '#')
+    social_instagram = SystemSetting.get('social_instagram', '#')
+    social_whatsapp = SystemSetting.get('social_whatsapp', '#')
+    
+    # Documentation and tutorial URLs
+    docs_url = SystemSetting.get('docs_url', '/docs/')
+    tutorials_url = SystemSetting.get('tutorials_url', '/tutorials/')
+    tickets_url = SystemSetting.get('tickets_url', '/support/tickets/')
+    
+    context = {
+        'user': request.user,
+        'tenant': request.user.tenant,
+        # Platform stats
+        'total_tenants': total_tenants,
+        'total_users': total_users,
+        'total_sales': total_sales,
+        'total_products': total_products,
+        # Platform info
+        'platform_name': platform_name,
+        'platform_description': platform_description,
+        # Contact info
+        'support_email': support_email,
+        'sales_email': sales_email,
+        'support_phone': support_phone,
+        'support_hours': support_hours,
+        'company_address': company_address,
+        'whatsapp_number': whatsapp_number,
+        # Social media
+        'social_facebook': social_facebook,
+        'social_twitter': social_twitter,
+        'social_linkedin': social_linkedin,
+        'social_youtube': social_youtube,
+        'social_instagram': social_instagram,
+        'social_whatsapp': social_whatsapp,
+        # Docs
+        'docs_url': docs_url,
+        'tutorials_url': tutorials_url,
+        'tickets_url': tickets_url,
+    }
+    return render(request, 'shared/support.html', context)
 
 
 # ============================================
 # SUPER ADMIN DASHBOARD
 # ============================================
 
-
 @login_required
 def super_admin_dashboard(request):
     """Super Admin Dashboard - Platform Overview"""
     
-    # ✅ Super Admin check ONLY - NO tenant check
     if not request.user.is_superuser:
         messages.error(request, 'Access denied. Super Admin only.')
-        return redirect('dashboard')
-    
-    # ✅ Skip tenant check completely
+        return redirect('portal:dashboard')
     
     from apps.shared.tenants.models import Tenant
     from apps.shared.users.models import User
@@ -220,71 +384,6 @@ def super_admin_dashboard(request):
 # ============================================
 
 @login_required
-def verify_pin(request):
-    """Verify user PIN before accessing POS"""
-    if request.method == 'POST':
-        pin = request.POST.get('pin', '').strip()
-        
-        if not pin:
-            messages.error(request, 'Please enter your PIN')
-            return redirect('tech_master:verify_pin')
-        
-        # Check if PIN matches
-        if request.user.pin_code and pin == request.user.pin_code:
-            # Store PIN verification in session
-            request.session['pos_pin_verified'] = True
-            request.session['pos_pin_verified_at'] = timezone.now().isoformat()
-            messages.success(request, 'PIN verified successfully!')
-            return redirect('tech_master:pos')
-        else:
-            messages.error(request, 'Invalid PIN. Please try again.')
-            return redirect('tech_master:verify_pin')
-    
-    # GET request - show PIN form
-    return render(request, 'tech_master/verify_pin.html', {
-        'tenant': request.user.tenant,
-        'user': request.user,
-    })
-
-
-@login_required
-def verify_pin_ajax(request):
-    """AJAX endpoint for PIN verification"""
-    import json
-    from django.http import JsonResponse
-    
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            pin = data.get('pin', '').strip()
-        except:
-            return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
-        
-        if not pin:
-            return JsonResponse({'success': False, 'error': 'PIN is required'})
-        
-        if request.user.pin_code and pin == request.user.pin_code:
-            request.session['pos_pin_verified'] = True
-            request.session['pos_pin_verified_at'] = timezone.now().isoformat()
-            return JsonResponse({'success': True})
-        else:
-            return JsonResponse({'success': False, 'error': 'Invalid PIN'})
-    
-    return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
-
-
-@login_required
-def clear_pin_verification(request):
-    """Clear PIN verification (logout from POS)"""
-    if 'pos_pin_verified' in request.session:
-        del request.session['pos_pin_verified']
-    if 'pos_pin_verified_at' in request.session:
-        del request.session['pos_pin_verified_at']
-    messages.info(request, 'PIN verification cleared')
-    return redirect('tech_master:pos')
-
-
-@login_required
 def tech_pos(request):
     """TECH MASTER Point of Sale - Requires PIN verification"""
     tenant = request.user.tenant
@@ -293,17 +392,27 @@ def tech_pos(request):
         messages.error(request, 'No tenant assigned')
         return redirect('portal:dashboard')
     
-    # ✅ Check if PIN is required and verified
-    # Check if user has a PIN set
+    # ✅ Check if user has cashier project role
+    has_cashier_role = UserRoleAssignment.objects.filter(
+        user=request.user,
+        role__codename='cashier',
+        is_active=True
+    ).exists()
+    
+    if not has_cashier_role:
+        messages.error(request, 'You do not have permission to access POS. Cashier role required.')
+        return redirect('tech_master:dashboard')
+    
+    # ✅ Check if PIN is set
     if not request.user.pin_code:
         messages.warning(request, 'Please set a PIN code in your profile settings before accessing POS.')
         return redirect('settings:profile_settings')
     
-    # Check if PIN is verified in session
+    # ✅ Check if PIN is verified in session
     if not request.session.get('pos_pin_verified', False):
         return redirect('tech_master:verify_pin')
     
-    # Optional: Check if PIN verification expired (e.g., after 30 minutes)
+    # ✅ Check if PIN verification expired (e.g., after 30 minutes)
     verified_at = request.session.get('pos_pin_verified_at')
     if verified_at:
         from datetime import datetime, timedelta
@@ -326,76 +435,260 @@ def tech_pos(request):
 
 
 @login_required
+def verify_pin(request):
+    """Verify user PIN before accessing POS"""
+    # Check if user has a PIN set
+    if not request.user.pin_code:
+        messages.warning(request, 'Please set a PIN code in your profile settings first.')
+        return redirect('settings:profile_settings')
+    
+    # Check if user has cashier role
+    has_cashier_role = UserRoleAssignment.objects.filter(
+        user=request.user,
+        role__codename='cashier',
+        is_active=True
+    ).exists()
+    
+    if not has_cashier_role:
+        messages.error(request, 'You do not have permission to access POS.')
+        return redirect('tech_master:dashboard')
+    
+    if request.method == 'POST':
+        pin = request.POST.get('pin', '').strip()
+        
+        if not pin:
+            messages.error(request, 'Please enter your PIN')
+            return redirect('tech_master:verify_pin')
+        
+        # Check if PIN matches
+        if request.user.pin_code and pin == request.user.pin_code:
+            request.session['pos_pin_verified'] = True
+            request.session['pos_pin_verified_at'] = timezone.now().isoformat()
+            messages.success(request, 'PIN verified successfully!')
+            return redirect('tech_master:pos')
+        else:
+            messages.error(request, 'Invalid PIN. Please try again.')
+            return redirect('tech_master:verify_pin')
+    
+    # GET request - show PIN form
+    return render(request, 'tech_master/verify_pin.html', {
+        'tenant': request.user.tenant,
+        'user': request.user,
+    })
+
+
+@login_required
+def verify_pin_ajax(request):
+    """AJAX endpoint for PIN verification - DEPRECATED"""
+    return JsonResponse({'success': False, 'error': 'PIN verification is no longer supported'}, status=400)
+
+
+@login_required
+def clear_pin_verification(request):
+    """Clear PIN verification - DEPRECATED"""
+    messages.info(request, 'PIN verification cleared')
+    return redirect('tech_master:pos')
+
+
+@login_required
 def tech_dashboard(request):
-    """TECH MASTER Dashboard - Only for Admin, Tenant Admin, and Manager"""
+    """TECH MASTER Dashboard - Check for system role and project role"""
     user = request.user
     
-    # ✅ Cashiers and Sales Agents should not access this page
-    if user.role == 'cashier':
-        messages.error(request, 'Cashiers are redirected to POS.')
+    # ✅ Super Admin and Tenant Admin have full access
+    if user.is_super_admin or user.is_tenant_admin:
+        tenant = user.tenant
+        if not tenant:
+            messages.error(request, 'No tenant assigned')
+            return redirect('portal:dashboard')
+        
+        # Get stats
+        total_products = Product.objects.filter(tenant=tenant, is_active=True).count()
+        total_categories = Category.objects.filter(tenant=tenant, is_active=True).count()
+        total_branches = Branch.objects.filter(tenant=tenant, is_active=True).count()
+        total_users = User.objects.filter(tenant=tenant, is_active=True).count()
+        total_customers = Customer.objects.filter(tenant=tenant).count()
+        total_suppliers = 0
+        
+        # Today's sales
+        today = timezone.now().date()
+        today_sales = Sale.objects.filter(
+            tenant=tenant,
+            created_at__date=today,
+            status='completed'
+        ).aggregate(total=Sum('total'))['total'] or 0
+        
+        recent_sales = Sale.objects.filter(
+            tenant=tenant,
+            status='completed'
+        ).order_by('-created_at')[:5]
+        
+        low_stock_count = Product.objects.filter(
+            tenant=tenant,
+            available_quantity__lte=F('reorder_level'),
+            is_active=True
+        ).count()
+        
+        context = {
+            'tenant': tenant,
+            'active_tab': 'dashboard',
+            'total_products': total_products,
+            'total_categories': total_categories,
+            'total_branches': total_branches,
+            'total_users': total_users,
+            'total_customers': total_customers,
+            'total_suppliers': total_suppliers,
+            'today_sales': today_sales,
+            'recent_sales': recent_sales,
+            'low_stock_count': low_stock_count,
+        }
+        return render(request, 'tech_master/dashboard_tech.html', context)
+    
+    # ✅ Regular users - Check project roles
+    has_manager_role = UserRoleAssignment.objects.filter(
+        user=user,
+        role__codename='manager',
+        is_active=True
+    ).exists()
+    
+    has_cashier_role = UserRoleAssignment.objects.filter(
+        user=user,
+        role__codename='cashier',
+        is_active=True
+    ).exists()
+    
+    has_sales_agent_role = UserRoleAssignment.objects.filter(
+        user=user,
+        role__codename='sales_agent',
+        is_active=True
+    ).exists()
+    
+    if has_manager_role:
+        # Manager dashboard
+        tenant = user.tenant
+        context = {
+            'tenant': tenant,
+            'active_tab': 'dashboard',
+        }
+        return render(request, 'tech_master/manager_dashboard.html', context)
+    
+    if has_cashier_role:
+        messages.info(request, 'Redirecting to POS...')
         return redirect('tech_master:pos')
     
-    if user.role == 'sales_agent':
-        messages.error(request, 'Sales Agents are redirected to their dashboard.')
+    if has_sales_agent_role:
+        messages.info(request, 'Redirecting to Sales Dashboard...')
         return redirect('tech_master:my_sales')
+    
+    # No project role assigned
+    messages.warning(request, 'You have not been assigned a project role. Please contact your administrator.')
+    return redirect('portal:dashboard')
+
+
+@login_required
+def report_dashboard(request):
+    """Reports dashboard - Admin only"""
+    user = request.user
+    
+    # Only Super Admin and Tenant Admin can access reports
+    if not (user.is_super_admin or user.is_tenant_admin):
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('portal:dashboard')
     
     tenant = request.user.tenant
     
     if not tenant:
         messages.error(request, 'No tenant assigned')
-        return redirect('portal:dashboard')
+        return redirect('dashboard')
     
-    # Get stats
-    total_products = Product.objects.filter(tenant=tenant, is_active=True).count()
-    total_categories = Category.objects.filter(tenant=tenant, is_active=True).count()
-    total_branches = Branch.objects.filter(tenant=tenant, is_active=True).count()
-    total_users = User.objects.filter(tenant=tenant, is_active=True).count()
-    total_customers = Customer.objects.filter(tenant=tenant).count()
-    total_suppliers = 0
+    from django.db.models import Sum
+    from apps.tech_master.models import Sale
+    from apps.tech_master.models import Product
+    from apps.shared.expenses.models import Expense
+    from apps.shared.customers.models import Customer
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Date range
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if date_from:
+        date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d').date()
+    else:
+        date_from = timezone.now().date() - timedelta(days=30)
+    
+    if date_to:
+        date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d').date()
+    else:
+        date_to = timezone.now().date()
+    
+    # Sales stats
+    sales = Sale.objects.filter(
+        tenant=tenant,
+        status='completed',
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to
+    )
+    total_sales = sales.aggregate(total=Sum('total'))['total'] or 0
     
     # Today's sales
     today = timezone.now().date()
-    today_sales = Sale.objects.filter(
+    todays_sales = Sale.objects.filter(
         tenant=tenant,
-        created_at__date=today,
-        status='completed'
+        status='completed',
+        created_at__date=today
     ).aggregate(total=Sum('total'))['total'] or 0
     
-    recent_sales = Sale.objects.filter(
+    # Monthly sales
+    start_of_month = today.replace(day=1)
+    monthly_sales = Sale.objects.filter(
         tenant=tenant,
-        status='completed'
-    ).order_by('-created_at')[:5]
+        status='completed',
+        created_at__date__gte=start_of_month
+    ).aggregate(total=Sum('total'))['total'] or 0
     
+    # Products
+    total_products = Product.objects.filter(tenant=tenant, is_active=True).count()
     low_stock_count = Product.objects.filter(
         tenant=tenant,
-        available_quantity__lte=F('reorder_level'),
+        available_quantity__lte=5,
         is_active=True
+    ).count()
+    
+    # Expenses
+    total_expenses = Expense.objects.filter(
+        tenant=tenant,
+        status='paid',
+        date__gte=date_from,
+        date__lte=date_to
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Customers
+    total_customers = Customer.objects.filter(tenant=tenant).count()
+    new_customers = Customer.objects.filter(
+        tenant=tenant,
+        created_at__date__gte=start_of_month
     ).count()
     
     context = {
         'tenant': tenant,
-        'active_tab': 'dashboard',
+        'date_from': date_from,
+        'date_to': date_to,
+        'total_sales': total_sales,
+        'todays_sales': todays_sales,
+        'monthly_sales': monthly_sales,
         'total_products': total_products,
-        'total_categories': total_categories,
-        'total_branches': total_branches,
-        'total_users': total_users,
-        'total_customers': total_customers,
-        'total_suppliers': total_suppliers,
-        'today_sales': today_sales,
-        'recent_sales': recent_sales,
         'low_stock_count': low_stock_count,
-    }
-    return render(request, 'tech_master/dashboard_tech.html', context)
-
-
-@login_required
-def report_dashboard(request):
-    """Reports dashboard"""
-    context = {
-        'tenant': request.user.tenant,
+        'total_expenses': total_expenses,
+        'total_customers': total_customers,
+        'new_customers': new_customers,
+        'sales_growth': 12,
+        'expense_growth': 8,
         'active_tab': 'reports',
     }
     return render(request, 'tech_master/reports.html', context)
+
 
 @login_required
 def platform_analytics(request):
@@ -460,89 +753,47 @@ def platform_analytics(request):
 
 
 # ============================================
-# HOTEL MASTER VIEWS
-# ============================================
-
-@login_required
-def hotel_dashboard(request):
-    """HOTEL MASTER Dashboard"""
-    context = {
-        'tenant': request.user.tenant,
-        'active_tab': 'dashboard',
-        'total_rooms': 0,
-        'available_rooms': 0,
-        'today_bookings': 0,
-        'occupancy_rate': 0,
-    }
-    return render(request, 'hotel_master/dashboard_hotel.html', context)
-
-
-@login_required
-def hotel_rooms(request):
-    """Hotel rooms management"""
-    context = {'active_tab': 'rooms', 'tenant': request.user.tenant}
-    return render(request, 'hotel_master/rooms.html', context)
-
-
-@login_required
-def hotel_add_room(request):
-    """Add hotel room"""
-    context = {'tenant': request.user.tenant}
-    return render(request, 'hotel_master/add_room.html', context)
-
-
-@login_required
-def hotel_bookings(request):
-    """Hotel bookings management"""
-    context = {'active_tab': 'bookings', 'tenant': request.user.tenant}
-    return render(request, 'hotel_master/bookings.html', context)
-
-
-@login_required
-def hotel_new_booking(request):
-    """Create new hotel booking"""
-    context = {'tenant': request.user.tenant}
-    return render(request, 'hotel_master/new_booking.html', context)
-
-
-@login_required
-def hotel_guests(request):
-    """Hotel guests management"""
-    context = {'active_tab': 'guests', 'tenant': request.user.tenant}
-    return render(request, 'hotel_master/guests.html', context)
-
-
-@login_required
-def hotel_checkin(request):
-    """Check in guest"""
-    context = {'tenant': request.user.tenant}
-    return render(request, 'hotel_master/checkin.html', context)
-
-
-@login_required
-def hotel_checkout(request):
-    """Check out guest"""
-    context = {'tenant': request.user.tenant}
-    return render(request, 'hotel_master/checkout.html', context)
-
-
-# ============================================
 # FOOD MASTER VIEWS
 # ============================================
 
 @login_required
 def food_dashboard(request):
     """FOOD MASTER Dashboard"""
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+    
+    # Check for project roles
+    has_manager_role = UserRoleAssignment.objects.filter(
+        user=request.user,
+        role__codename='manager',
+        is_active=True
+    ).exists()
+    
+    has_waiter_role = UserRoleAssignment.objects.filter(
+        user=request.user,
+        role__codename='waiter',
+        is_active=True
+    ).exists()
+    
     context = {
-        'tenant': request.user.tenant,
+        'tenant': tenant,
         'active_tab': 'dashboard',
+        'is_manager': has_manager_role,
+        'is_waiter': has_waiter_role,
     }
     return render(request, 'food_master/dashboard_food.html', context)
 
 
 @login_required
 def food_menu(request):
-    """Restaurant menu management"""
+    """Restaurant menu management - Admin only"""
+    if not (request.user.is_super_admin or request.user.is_tenant_admin):
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('food_master:dashboard')
+    
     context = {'active_tab': 'menu', 'tenant': request.user.tenant}
     return render(request, 'food_master/menu.html', context)
 
@@ -556,14 +807,28 @@ def food_orders(request):
 
 @login_required
 def food_tables(request):
-    """Restaurant tables management"""
+    """Restaurant tables management - Admin only"""
+    if not (request.user.is_super_admin or request.user.is_tenant_admin):
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('food_master:dashboard')
+    
     context = {'active_tab': 'tables', 'tenant': request.user.tenant}
     return render(request, 'food_master/tables.html', context)
 
 
 @login_required
 def food_kitchen(request):
-    """Kitchen display"""
+    """Kitchen display - Check for kitchen staff role"""
+    has_kitchen_role = UserRoleAssignment.objects.filter(
+        user=request.user,
+        role__codename='kitchen',
+        is_active=True
+    ).exists()
+    
+    if not has_kitchen_role:
+        messages.error(request, 'Access denied. Kitchen staff only.')
+        return redirect('food_master:dashboard')
+    
     context = {'active_tab': 'kitchen', 'tenant': request.user.tenant}
     return render(request, 'food_master/kitchen.html', context)
 
@@ -575,8 +840,14 @@ def food_kitchen(request):
 @login_required
 def retail_dashboard(request):
     """RETAIL MASTER Dashboard"""
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+    
     context = {
-        'tenant': request.user.tenant,
+        'tenant': tenant,
         'active_tab': 'dashboard',
     }
     return render(request, 'retail_master/dashboard_retail.html', context)
@@ -589,8 +860,14 @@ def retail_dashboard(request):
 @login_required
 def health_dashboard(request):
     """HEALTH MASTER Dashboard"""
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+    
     context = {
-        'tenant': request.user.tenant,
+        'tenant': tenant,
         'active_tab': 'dashboard',
     }
     return render(request, 'health_master/dashboard_health.html', context)
@@ -603,82 +880,38 @@ def health_dashboard(request):
 @login_required
 def fashion_dashboard(request):
     """FASHION MASTER Dashboard"""
-    context = {
-        'tenant': request.user.tenant,
-        'active_tab': 'dashboard',
-    }
-    return render(request, 'fashion_master/dashboard_fashion.html', context)
-
-
-# ============================================
-# USER MANAGEMENT VIEWS
-# ============================================
-
-@login_required
-def user_list(request):
-    """List all users"""
     tenant = request.user.tenant
     
     if not tenant:
         messages.error(request, 'No tenant assigned')
         return redirect('portal:dashboard')
     
-    users = User.objects.filter(tenant=tenant).order_by('-created_at')
-    
     context = {
         'tenant': tenant,
-        'users': users,
-        'active_tab': 'users',
+        'active_tab': 'dashboard',
     }
-    return render(request, 'shared/user_list.html', context)
+    return render(request, 'fashion_master/dashboard_fashion.html', context)
+
+
+# ============================================
+# USER MANAGEMENT VIEWS (Deprecated - use apps.shared.users.views)
+# ============================================
+
+@login_required
+def user_list(request):
+    """List all users - Deprecated, redirect to users:user_list"""
+    return redirect('users:user_list')
 
 
 @login_required
 def add_user(request):
-    """Add new user"""
-    tenant = request.user.tenant
-    
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        role = request.POST.get('role', 'cashier')
-        phone_number = request.POST.get('phone_number', '')
-        pin_code = request.POST.get('pin_code', '')
-        
-        if not username or not password:
-            messages.error(request, 'Username and password are required')
-            return redirect('add_user')
-        
-        if User.objects.filter(tenant=tenant, username=username).exists():
-            messages.error(request, f'User {username} already exists')
-            return redirect('add_user')
-        
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            tenant=tenant,
-            role=role,
-            phone_number=phone_number,
-            pin_code=pin_code,
-            is_active=True
-        )
-        
-        messages.success(request, f'User {username} created successfully!')
-        return redirect('user_list')
-    
-    context = {
-        'tenant': tenant,
-        'roles': User.ROLE_CHOICES,
-        'active_tab': 'users',
-    }
-    return render(request, 'shared/add_user.html', context)
+    """Add new user - Deprecated, redirect to users:user_create"""
+    return redirect('users:user_create')
+
 
 # ============================================
 # PLATFORM SETTINGS
 # ============================================
-
 
 @login_required
 def platform_settings(request):
@@ -689,7 +922,7 @@ def platform_settings(request):
     
     from apps.shared.tenants.models import Tenant, ProjectType, SubscriptionPlan
     from apps.shared.users.models import User
-    from apps.tech_master.inventory.models import Product, Branch
+    from apps.tech_master.models import Product, Branch
     from apps.shared.settings.models import SystemSetting
     from django.core.cache import cache
     
@@ -736,7 +969,7 @@ def platform_settings_stats(request):
     
     from apps.shared.tenants.models import Tenant, ProjectType, SubscriptionPlan
     from apps.shared.users.models import User
-    from apps.tech_master.inventory.models import Product, Branch
+    from apps.tech_master.models import Product, Branch
     
     return JsonResponse({
         'total_tenants': Tenant.objects.count(),
@@ -850,15 +1083,53 @@ def maintenance_page(request):
 
 @login_required
 def manager_dashboard(request):
-    """Manager Dashboard"""
-    tenant = request.user.tenant
-    
-    if not tenant:
-        messages.error(request, 'No tenant assigned')
+    """Manager Dashboard - Deprecated, redirect to tech_dashboard"""
+    return redirect('tech_master:dashboard')
+
+
+@login_required
+def live_chat(request):
+    """Live Chat page - Super Admin only"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Access denied. Only Super Admins can access live chat.')
         return redirect('portal:dashboard')
     
     context = {
-        'tenant': tenant,
-        'active_tab': 'dashboard',
+        'conversations': [],
+        'online_count': 0,
+        'is_super_admin': True,
     }
-    return render(request, 'tech_master/manager_dashboard.html', context)
+    return render(request, 'shared/live_chat.html', context)
+
+
+@login_required
+def documentation(request):
+    """Documentation page"""
+    context = {
+        'user': request.user,
+        'tenant': request.user.tenant,
+        'active_tab': 'documentation',
+    }
+    return render(request, 'shared/documentation.html', context)
+
+
+@login_required
+def tutorials(request):
+    """Video tutorials page"""
+    context = {
+        'user': request.user,
+        'tenant': request.user.tenant,
+        'active_tab': 'tutorials',
+    }
+    return render(request, 'shared/tutorials.html', context)
+
+
+@login_required
+def support_tickets(request):
+    """Support tickets page"""
+    context = {
+        'user': request.user,
+        'tenant': request.user.tenant,
+        'active_tab': 'tickets',
+    }
+    return render(request, 'shared/support_tickets.html', context)

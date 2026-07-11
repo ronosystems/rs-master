@@ -1,0 +1,321 @@
+<!-- templates/tech_master/expenses_report.html -->
+{% extends "tech_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Expense Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-chart-pie text-primary me-2"></i>Expense Report
+            </h4>
+            <p class="text-muted mb-0">View detailed expense analytics and reports</p>
+        </div>
+        <div>
+            <a href="{% url 'tech_master:expense_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Expenses
+            </a>
+        </div>
+    </div>
+
+    <!-- Period Filter -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Period</label>
+                    <select name="period" class="form-select" onchange="this.form.submit()">
+                        <option value="week" {% if period == 'week' %}selected{% endif %}>This Week</option>
+                        <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+                        <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>This Quarter</option>
+                        <option value="year" {% if period == 'year' %}selected{% endif %}>This Year</option>
+                        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date From</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date To</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Expenses</h6>
+                            <h3 class="fw-bold mb-0">KES {{ total|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 rounded p-3">
+                            <i class="fas fa-money-bill-wave text-danger fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Transactions</h6>
+                            <h3 class="fw-bold mb-0">{{ expense_count }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-receipt text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Average Per Day</h6>
+                            <h3 class="fw-bold mb-0">KES {{ average_per_day|floatformat:0|default:"0" }}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded p-3">
+                            <i class="fas fa-calendar-day text-info fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Status</h6>
+                            <div>
+                                <span class="badge bg-warning text-dark me-1">Pending: {{ status_counts.pending|default:0 }}</span>
+                                <span class="badge bg-success me-1">Approved: {{ status_counts.approved|default:0 }}</span>
+                                <span class="badge bg-primary">Paid: {{ status_counts.paid|default:0 }}</span>
+                            </div>
+                        </div>
+                        <div class="bg-secondary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-chart-bar text-secondary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">Expenses by Category</h6>
+                </div>
+                <div class="card-body">
+                    {% if category_data %}
+                    <canvas id="categoryChart" height="250"></canvas>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-chart-pie fa-3x d-block mb-2 opacity-25"></i>
+                        <p>No category data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">Daily Expenses</h6>
+                </div>
+                <div class="card-body">
+                    {% if daily_expenses %}
+                    <canvas id="dailyChart" height="250"></canvas>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-chart-bar fa-3x d-block mb-2 opacity-25"></i>
+                        <p>No daily data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">Payment Methods</h6>
+                </div>
+                <div class="card-body">
+                    {% if payment_methods %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for method, amount in payment_methods.items %}
+                                <tr>
+                                    <td>{{ method }}</td>
+                                    <td class="text-end fw-bold">KES {{ amount|floatformat:0 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <p>No payment method data</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">Recent Expenses</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_expenses %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Title</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for expense in recent_expenses %}
+                                <tr>
+                                    <td>{{ expense.date|date:"Y-m-d" }}</td>
+                                    <td>{{ expense.title|truncatechars:20 }}</td>
+                                    <td class="text-end fw-bold">KES {{ expense.amount|floatformat:0 }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if expense.status == 'approved' %}bg-success
+                                            {% elif expense.status == 'paid' %}bg-primary
+                                            {% elif expense.status == 'pending' %}bg-warning text-dark
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ expense.get_status_display|default:expense.status|title }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <p>No recent expenses</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if category_data or daily_expenses %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Category Chart
+    {% if category_data %}
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [{% for cat in category_data %}'{{ cat.name }}',{% endfor %}],
+            datasets: [{
+                data: [{% for cat in category_data %}{{ cat.total }},{% endfor %}],
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                    '#FF9F40', '#FF6384', '#C9CBCF', '#FFB1C1', '#9AD0F5'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            let percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': KES ' + context.parsed.toFixed(0) + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    // Daily Chart
+    {% if daily_expenses %}
+    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+    new Chart(dailyCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for day in daily_expenses %}'{{ day.date }}',{% endfor %}],
+            datasets: [{
+                label: 'Daily Expenses',
+                data: [{% for day in daily_expenses %}{{ day.total }},{% endfor %}],
+                backgroundColor: '#36A2EB',
+                borderColor: '#2C7BE5',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'KES ' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endif %}
+{% endblock %}

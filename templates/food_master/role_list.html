@@ -1,0 +1,112 @@
+<!-- templates/food_master/role_list.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Roles & Permissions - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-user-shield me-2" style="color: #e67e22;"></i>Roles & Permissions</h4>
+        <div>
+            <a href="{% url 'food_master:create_role' %}" class="btn" style="background-color: #e67e22; color: white;">
+                <i class="fas fa-plus me-1"></i> Create Role
+            </a>
+            <a href="{% url 'food_master:assign_role' %}" class="btn btn-info text-white">
+                <i class="fas fa-user-plus me-1"></i> Assign Role
+            </a>
+        </div>
+    </div>
+
+    {% if roles %}
+        <div class="row g-4">
+            {% for role in roles %}
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user-tag me-2" style="color: #e67e22;"></i>
+                                {{ role.name }}
+                            </h6>
+                            <span class="badge {% if role.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ role.is_active|yesno:"Active,Inactive" }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            {% if role.description %}
+                                <p class="card-text small text-muted">{{ role.description }}</p>
+                            {% endif %}
+                            
+                            <div class="mb-3">
+                                <strong class="small">Permissions:</strong>
+                                <div class="mt-1">
+                                    {# Use role.permissions.all() - the ManyToMany field #}
+                                    {% for perm in role.permissions.all %}
+                                        <span class="badge bg-secondary me-1 mb-1">{{ perm.name }}</span>
+                                    {% empty %}
+                                        <span class="text-muted small">No permissions assigned</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <strong class="small">Users:</strong>
+                                <span class="badge bg-primary ms-2">
+                                    {{ role.assignments.filter.is_active.count }} users
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-flex gap-2">
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <a href="{% url 'food_master:edit_role' role.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteRole({{ role.id }}, '{{ role.name }}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-user-shield fa-4x text-muted mb-3" style="color: #e67e22;"></i>
+                <h4>No Roles Created</h4>
+                <p class="text-muted">Create your first role and assign permissions.</p>
+                <a href="{% url 'food_master:create_role' %}" class="btn" style="background-color: #e67e22; color: white;">
+                    <i class="fas fa-plus me-1"></i> Create Role
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function deleteRole(roleId, roleName) {
+    if (confirm(`Are you sure you want to delete role "${roleName}"?`)) {
+        fetch(`/food/roles/${roleId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'Error deleting role');
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

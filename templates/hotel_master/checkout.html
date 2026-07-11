@@ -1,0 +1,212 @@
+<!-- templates/hotel_master/checkout.html -->
+{% extends "hotel_master/base_hotel.html" %}
+{% load static %}
+
+{% block title %}  {{ company_settings.company_name|default:tenant.company_name }}  {% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="fas fa-user-minus text-danger me-2"></i>Check Out
+        </h4>
+        <a href="{% url 'hotel_master:dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <!-- Booking Selection -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-8">
+                    <label class="form-label fw-bold">Select Checked In Guest <span class="text-danger">*</span></label>
+                    <select id="checkoutSelect" class="form-select" onchange="loadCheckoutBooking(this.value)">
+                        <option value="">-- Select a guest --</option>
+                        {% for booking in checked_in_bookings %}
+                        <option value="{{ booking.id }}">
+                            {{ booking.booking_number }} - {{ booking.guest_name }} (Room {{ booking.room.room_number }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Only guests currently checked in</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Search Guest</label>
+                    <div class="input-group">
+                        <input type="text" id="searchCheckoutGuest" class="form-control" placeholder="Search by name or booking #">
+                        <button class="btn btn-primary" onclick="searchCheckoutBooking()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guest Details -->
+            <div id="checkoutDetails" style="display: none;">
+                <hr>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light p-3">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-user text-primary me-2"></i>Guest Information</h6>
+                            <p class="mb-1"><strong>Name:</strong> <span id="checkoutGuestName"></span></p>
+                            <p class="mb-1"><strong>Phone:</strong> <span id="checkoutGuestPhone"></span></p>
+                            <p class="mb-1"><strong>Email:</strong> <span id="checkoutGuestEmail"></span></p>
+                            <p class="mb-1"><strong>Check In:</strong> <span id="checkoutCheckIn"></span></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light p-3">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-money-bill-wave text-success me-2"></i>Payment Summary</h6>
+                            <p class="mb-1"><strong>Room Price:</strong> KES <span id="roomPrice"></span></p>
+                            <p class="mb-1"><strong>Nights Stayed:</strong> <span id="nightsStayed"></span></p>
+                            <p class="mb-1"><strong>Total Amount:</strong> KES <span id="totalAmount"></span></p>
+                            <p class="mb-1"><strong>Paid:</strong> KES <span id="paidAmount"></span></p>
+                            <p class="mb-1"><strong>Balance:</strong> KES <span id="balanceAmount"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Extra Charges -->
+                <h6 class="fw-bold mb-3"><i class="fas fa-plus-circle text-warning me-2"></i>Extra Charges</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Room Service</label>
+                        <input type="number" name="room_service" class="form-control" placeholder="0.00" step="0.01" onchange="calculateCheckoutTotal()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Mini Bar</label>
+                        <input type="number" name="mini_bar" class="form-control" placeholder="0.00" step="0.01" onchange="calculateCheckoutTotal()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Other Charges</label>
+                        <input type="number" name="other_charges" class="form-control" placeholder="0.00" step="0.01" onchange="calculateCheckoutTotal()">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Extra Charges Description</label>
+                        <input type="text" name="charges_description" class="form-control" placeholder="Describe extra charges...">
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Check Out Form -->
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="booking_id" id="checkoutBookingId">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Check Out Time</label>
+                            <input type="datetime-local" name="checkout_time" class="form-control" id="checkoutTime" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Final Amount</label>
+                            <input type="number" name="final_amount" class="form-control" id="finalAmount" readonly>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Check Out Notes</label>
+                            <textarea name="checkout_notes" class="form-control" rows="2" placeholder="Any notes..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-check-circle me-2"></i>Complete Check Out
+                        </button>
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- No Checked In Guests -->
+            {% if not checked_in_bookings %}
+            <div class="text-center py-5">
+                <i class="fas fa-user-check fa-4x text-muted opacity-25 mb-3"></i>
+                <h5>No Guests Checked In</h5>
+                <p class="text-muted">All guests have been checked out.</p>
+                <a href="{% url 'hotel_master:checkin' %}" class="btn btn-success mt-2">
+                    <i class="fas fa-user-plus me-2"></i>Check In Guest
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function loadCheckoutBooking(bookingId) {
+    if (!bookingId) {
+        document.getElementById('checkoutDetails').style.display = 'none';
+        return;
+    }
+    
+    fetch(`/hotel/api/booking/${bookingId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const booking = data.booking;
+                document.getElementById('checkoutBookingId').value = booking.id;
+                document.getElementById('checkoutGuestName').textContent = booking.guest_name;
+                document.getElementById('checkoutGuestPhone').textContent = booking.guest_phone;
+                document.getElementById('checkoutGuestEmail').textContent = booking.guest_email || 'N/A';
+                document.getElementById('checkoutCheckIn').textContent = booking.check_in;
+                
+                // Calculate payment summary
+                const price = parseFloat(booking.room_price) || 0;
+                const nights = booking.nights || 1;
+                const total = price * nights;
+                const paid = parseFloat(booking.paid_amount) || 0;
+                const balance = total - paid;
+                
+                document.getElementById('roomPrice').textContent = price.toFixed(2);
+                document.getElementById('nightsStayed').textContent = nights;
+                document.getElementById('totalAmount').textContent = total.toFixed(2);
+                document.getElementById('paidAmount').textContent = paid.toFixed(2);
+                document.getElementById('balanceAmount').textContent = balance.toFixed(2);
+                document.getElementById('finalAmount').value = balance.toFixed(2);
+                
+                // Set default check out time to now
+                const now = new Date();
+                const formatted = now.toISOString().slice(0, 16);
+                document.getElementById('checkoutTime').value = formatted;
+                
+                document.getElementById('checkoutDetails').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading booking details');
+        });
+}
+
+function calculateCheckoutTotal() {
+    const totalAmount = parseFloat(document.getElementById('totalAmount').textContent) || 0;
+    const roomService = parseFloat(document.querySelector('input[name="room_service"]').value) || 0;
+    const miniBar = parseFloat(document.querySelector('input[name="mini_bar"]').value) || 0;
+    const otherCharges = parseFloat(document.querySelector('input[name="other_charges"]').value) || 0;
+    
+    const finalTotal = totalAmount + roomService + miniBar + otherCharges;
+    document.getElementById('finalAmount').value = finalTotal.toFixed(2);
+}
+
+function searchCheckoutBooking() {
+    const query = document.getElementById('searchCheckoutGuest').value.trim();
+    if (!query) return;
+    
+    const select = document.getElementById('checkoutSelect');
+    for (let i = 0; i < select.options.length; i++) {
+        const text = select.options[i].text.toLowerCase();
+        if (text.includes(query.toLowerCase())) {
+            select.value = select.options[i].value;
+            loadCheckoutBooking(select.value);
+            break;
+        }
+    }
+}
+</script>
+{% endblock %}

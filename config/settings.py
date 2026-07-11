@@ -61,7 +61,7 @@ PROJECT_TYPES = {
         'code': 'HOTEL_MASTER',
         'icon': 'fa-hotel',
         'color': '#fd7e14',
-        'active': False,
+        'active': True,
         'description': 'Hotel & Booking Management'
     },
     'FOOD_MASTER': {
@@ -69,7 +69,7 @@ PROJECT_TYPES = {
         'code': 'FOOD_MASTER',
         'icon': 'fa-utensils',
         'color': '#198754',
-        'active': False,
+        'active': True,
         'description': 'Restaurant & Kitchen Management'
     },
     'RETAIL_MASTER': {
@@ -77,7 +77,7 @@ PROJECT_TYPES = {
         'code': 'RETAIL_MASTER',
         'icon': 'fa-store',
         'color': '#6f42c1',
-        'active': False,
+        'active': True,
         'description': 'General Retail Management'
     },
     'HEALTH_MASTER': {
@@ -85,7 +85,7 @@ PROJECT_TYPES = {
         'code': 'HEALTH_MASTER',
         'icon': 'fa-heartbeat',
         'color': '#dc3545',
-        'active': False,
+        'active': True,
         'description': 'Pharmacy & Health Management'
     },
     'FASHION_MASTER': {
@@ -93,8 +93,16 @@ PROJECT_TYPES = {
         'code': 'FASHION_MASTER',
         'icon': 'fa-tshirt',
         'color': '#e83e8c',
-        'active': False,
+        'active': True,
         'description': 'Fashion & Clothing Management'
+    },
+    'RENTAL_MASTER': {
+        'name': 'RENTAL MASTER',
+        'code': 'RENTAL_MASTER',
+        'icon': 'fa-rental',
+        'color': "#ffee00",
+        'active': True,
+        'description': 'Rental & Apartments Management'
     }
 }
 
@@ -108,7 +116,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_extensions', 
+    'django_extensions',
+    'django.contrib.humanize', 
     
     # Third party apps
     'corsheaders',
@@ -117,6 +126,7 @@ INSTALLED_APPS = [
     
     # Shared apps
     'apps.shared',
+    'apps.shared.roles',
     'apps.shared.tenants',
     'apps.shared.users',
     'apps.shared.customers',
@@ -124,15 +134,26 @@ INSTALLED_APPS = [
     'apps.shared.payments',
     'apps.shared.audit_log', 
     'apps.shared.portal',
+    'apps.shared.permissions',
     'apps.shared.settings',
     'apps.shared.powersync',
+    'apps.shared.chats',
+    'apps.shared.expenses',
+    'apps.shared.reports',
 
-    # Project apps
-    'apps.tech_master.inventory',
-    'apps.tech_master.sales',
-    'apps.tech_master.cashier',
-    'apps.tech_master.expenses',
-    'apps.tech_master.reports',
+    # Tech_master apps
+    'apps.tech_master',
+    
+    # Hotel_master apps
+    'apps.hotel_master',
+
+    # Rental master apps
+    'apps.rental_master',
+    
+    'apps.food_master',
+    'apps.retail_master',
+    'apps.health_master',
+    'apps.fashion_master',
 ]
 
 # ============================================
@@ -148,8 +169,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    # Your custom middleware - order matters!
+    'apps.shared.middleware.TenantMiddleware',        
+    'apps.shared.middleware.OfflineSyncMiddleware',    
+    'apps.shared.portal.middleware.ProjectTypeMiddleware', 
     'apps.shared.portal.middleware.MaintenanceModeMiddleware',
-    'apps.shared.middleware.offline_sync.OfflineSyncMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -157,6 +182,7 @@ ROOT_URLCONF = 'config.urls'
 # ============================================
 # TEMPLATES
 # ============================================
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -168,15 +194,33 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                
+                # Your custom context processors
+                'apps.shared.context_processors.tenant_logo_context',
+                'apps.shared.context_processors.offline_mode',      
+                'apps.shared.context_processors.tenant_settings',     
+                
+                # Other existing ones from your config
                 'apps.shared.portal.context_processors.user_role',
                 'apps.shared.portal.context_processors.tenant_context',
                 'apps.shared.portal.context_processors.user_role_context',
-                'apps.shared.context_processors.tenant_logo_context',
-                'apps.shared.context_processors.offline_mode', 
+                'apps.shared.portal.context_processors.project_context',
+                'apps.shared.settings.context_processors.company_settings',
+                'apps.shared.portal.context_processors.permissions_context',
+                'apps.food_master.context_processors.user_permissions',
             ],
         },
     },
 ]
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
@@ -405,45 +449,119 @@ if not DEBUG:
     CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(',') if origin.strip()]
 
 # ============================================
-# LOGGING
+# LOGGING - CLEAN VERSION (Only INFO and above)
 # ============================================
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
-        'simple': {
-            'format': '{levelname} {message}',
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose' if DEBUG else 'simple',
+            'formatter': 'simple',
+            'level': 'INFO',  # ✅ Only show INFO and above
         },
         'file': {
             'class': 'logging.FileHandler',
             'filename': str(BASE_DIR / 'logs' / 'django.log'),
             'formatter': 'verbose',
+            'level': 'INFO',  # ✅ Only show INFO and above in file
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'DEBUG' if DEBUG else 'INFO',
+        'level': 'INFO',  # ✅ Root logger at INFO level
     },
     'loggers': {
+        # Django core loggers - INFO and above only
         'django': {
             'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': False,
         },
+        'django.request': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',  # Only show database errors
+            'propagate': False,
+        },
+        'django.template': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',  # Only show template errors
+            'propagate': False,
+        },
+        'django.utils.autoreload': {
+            'handlers': ['console', 'file'],
+            'level': 'WARNING',  # Only show warnings and above
+            'propagate': False,
+        },
+        
+        # Suppress context processors debug messages
+        'apps.shared.portal.context_processors': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',  # ✅ Suppress "Company name loaded" messages
+            'propagate': False,
+        },
+        
+        # App loggers - INFO and above
         'apps.shared.sync': {
             'handlers': ['console', 'file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.shared.middleware': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.shared.chats': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.tech_master': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.fashion_master': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.hotel_master': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.food_master': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        
+        # Suppress template loader debug messages
+        'django.template.loaders': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.template.backends.django': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
             'propagate': False,
         },
     },

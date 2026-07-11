@@ -1,0 +1,757 @@
+<!-- templates/food_master/order_receipt.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Order Receipt - {{ receipt_settings.business_name|default:company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<style>
+    .receipt-wrapper {
+        max-width: 400px;
+        margin: 20px auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .receipt-container {
+        padding: 25px 20px 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #1a1a2e;
+    }
+    
+    /* Header */
+    .receipt-header {
+        text-align: center;
+        border-bottom: 2px solid #e67e22;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+    .receipt-header .company-name {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1a1a2e;
+        letter-spacing: 0.5px;
+    }
+    .receipt-header .company-details {
+        font-size: 11px;
+        color: #666;
+        margin-top: 4px;
+        line-height: 1.6;
+    }
+    .receipt-header .receipt-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e67e22;
+        margin-top: 8px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+    
+    /* Order Info */
+    .order-info {
+        background: #f8f9fa;
+        padding: 12px 15px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #e9ecef;
+    }
+    .order-info .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        font-size: 12px;
+        border-bottom: 1px dotted #e9ecef;
+    }
+    .order-info .info-row:last-child {
+        border-bottom: none;
+    }
+    .order-info .info-row .label {
+        color: #888;
+    }
+    .order-info .info-row .value {
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+    .order-info .info-row .value.order-number {
+        color: #e67e22;
+        font-size: 14px;
+    }
+    
+    /* Items */
+    .items-header {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0 8px;
+        font-weight: 700;
+        font-size: 12px;
+        color: #666;
+        border-bottom: 2px solid #e9ecef;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .items-header .col-qty { width: 15%; text-align: center; }
+    .items-header .col-name { width: 55%; }
+    .items-header .col-price { width: 30%; text-align: right; }
+    
+    .receipt-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 13px;
+        border-bottom: 1px dotted #f0f0f0;
+    }
+    .receipt-item:last-child {
+        border-bottom: none;
+    }
+    .receipt-item .col-qty {
+        width: 15%;
+        text-align: center;
+        color: #888;
+    }
+    .receipt-item .col-name {
+        width: 55%;
+        padding-left: 5px;
+    }
+    .receipt-item .col-price {
+        width: 30%;
+        text-align: right;
+        font-weight: 500;
+    }
+    
+    /* Totals */
+    .totals-section {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 2px solid #e9ecef;
+    }
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        font-size: 13px;
+    }
+    .total-row .label {
+        color: #666;
+    }
+    .total-row .amount {
+        font-weight: 600;
+    }
+    .grand-total {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0 8px;
+        margin-top: 8px;
+        border-top: 2px solid #e67e22;
+        font-size: 18px;
+        font-weight: 700;
+    }
+    .grand-total .label {
+        color: #1a1a2e;
+    }
+    .grand-total .amount {
+        color: #e67e22;
+    }
+    
+    /* Served By */
+    .served-by {
+        text-align: center;
+        padding: 8px 0;
+        margin: 10px 0;
+        font-size: 12px;
+        color: #888;
+        border-top: 1px dashed #e9ecef;
+    }
+    .served-by .name {
+        font-weight: 600;
+        color: #1a1a2e;
+        font-size: 14px;
+    }
+    
+    /* ============================================ */
+    /* PAYMENT SECTION - BIG & CLEAR FOR CUSTOMER */
+    /* ============================================ */
+    .payment-section {
+        margin: 15px 0 10px;
+        padding: 20px;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px;
+        border: 3px solid #28a745;
+        text-align: center;
+    }
+    .payment-section .payment-label {
+        font-size: 11px;
+        color: #000000;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    .payment-section .payment-method {
+        font-size: 22px;
+        font-weight: 700;
+        color: #28a745;
+        margin: 5px 0;
+    }
+    .payment-section .payment-amount {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a2e;
+        margin: 5px 0;
+    }
+    .payment-section .payment-status {
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 5px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        display: inline-block;
+    }
+    .payment-section .payment-status.paid {
+        background: #d4edda;
+        color: #155724;
+    }
+    .payment-section .payment-status.pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    /* Payment Details - Where to Pay */
+    .payment-details {
+        margin: 12px 0;
+        padding: 15px;
+        background: #686868;
+        border-radius: 10px;
+        border: 2px solid #e67e22;
+        text-align: center;
+    }
+    .payment-details .details-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #000000;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+    }
+    .payment-details .detail-item {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 0;
+        font-size: 14px;
+    }
+    .payment-details .detail-item .detail-label {
+        color: #000000;
+        font-weight: 500;
+    }
+    .payment-details .detail-item .detail-value {
+        font-weight: 700;
+        color: #1a1a2e;
+        font-size: 16px;
+        background: rgb(255, 255, 255);
+        padding: 2px 12px;
+        border-radius: 4px;
+        border: 1px solid #000000;
+    }
+    .payment-details .detail-divider {
+        border-top: 1px dashed #dee2e6;
+        margin: 8px 0;
+    }
+    
+    /* Footer */
+    .receipt-footer {
+        text-align: center;
+        border-top: 2px dashed #e9ecef;
+        padding-top: 15px;
+        margin-top: 15px;
+        font-size: 12px;
+        color: #000000;
+    }
+    .receipt-footer .thank-you {
+        font-size: 16px;
+        font-weight: 700;
+        color: #28a745;
+        margin-bottom: 3px;
+    }
+    .receipt-footer .system-note {
+        font-size: 9px;
+        color: #000000;
+        margin-top: 5px;
+    }
+    
+    /* Logo */
+    .logo-container {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .logo-container img {
+        max-height: 50px;
+        max-width: 150px;
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+        max-width: 400px;
+        margin: 15px auto 30px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .action-buttons .btn {
+        font-size: 0.85rem;
+        padding: 8px 20px;
+        border-radius: 8px;
+    }
+    
+    @media (max-width: 480px) {
+        .receipt-container {
+            padding: 15px 12px;
+        }
+        .receipt-header .company-name {
+            font-size: 17px;
+        }
+        .payment-section .payment-method {
+            font-size: 18px;
+        }
+        .grand-total {
+            font-size: 16px;
+        }
+        .payment-details .detail-item {
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+        .action-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+        .action-buttons .btn {
+            width: 100%;
+            max-width: 300px;
+        }
+    }
+    
+    /* Print Styles */
+    @media print {
+        .action-buttons { display: none; }
+        .receipt-wrapper { box-shadow: none; border: 1px solid #ddd; }
+        body { background: white; }
+        .no-print { display: none; }
+    }
+</style>
+
+<div class="container">
+    <div class="receipt-wrapper">
+        <div class="receipt-container" id="receiptContent">
+            
+            <!-- ============================================ -->
+            <!-- HEADER -->
+            <!-- ============================================ -->
+            <div class="receipt-header">
+                {% if receipt_settings.show_logo_on_receipts and receipt_settings.logo_url %}
+                    <div class="logo-container">
+                        <img src="{{ receipt_settings.logo_url }}" alt="Logo">
+                    </div>
+                {% endif %}
+                
+                <div class="company-name">
+                    {{ receipt_settings.business_name|default:tenant.company_name }}
+                </div>
+                
+                <div class="company-details">
+                    {% if receipt_settings.show_address and receipt_settings.business_address %}
+                        <div>{{ receipt_settings.business_address }}</div>
+                    {% endif %}
+                    
+                    {% if receipt_settings.show_phone and receipt_settings.business_phone %}
+                        <div>📞 {{ receipt_settings.business_phone }}</div>
+                    {% endif %}
+                    
+                    {% if receipt_settings.show_email and receipt_settings.business_email %}
+                        <div>✉ {{ receipt_settings.business_email }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="receipt-title">Order Receipt</div>
+            </div>
+            
+            <!-- ============================================ -->
+            <!-- ORDER INFO -->
+            <!-- ============================================ -->
+            <div class="order-info">
+                <div class="info-row">
+                    <span class="label">Order #</span>
+                    <span class="value order-number">{{ order.order_number }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Date</span>
+                    <span class="value">{{ order.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Table</span>
+                    <span class="value">{{ order.table.table_number|default:"N/A" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Guests</span>
+                    <span class="value">{{ order.guest_count|default:"1" }}</span>
+                </div>
+            </div>
+            
+            <!-- ============================================ -->
+            <!-- ITEMS -->
+            <!-- ============================================ -->
+            <div class="items-header">
+                <span class="col-qty">Qty</span>
+                <span class="col-name">Item</span>
+                <span class="col-price">Amount</span>
+            </div>
+            
+            {% for item in order.items.all %}
+                <div class="receipt-item">
+                    <span class="col-qty">{{ item.quantity }}</span>
+                    <span class="col-name">{{ item.menu_item.name }}</span>
+                    <span class="col-price">KES {{ item.subtotal|floatformat:0 }}</span>
+                </div>
+            {% endfor %}
+            
+            <!-- ============================================ -->
+            <!-- TOTALS - CORRECT VAT DISPLAY -->
+            <!-- ============================================ -->
+            <div class="totals-section">
+                <!-- Show VAT breakdown based on settings -->
+                {% if receipt_settings.show_vat_on_receipt %}
+                    
+                    <!-- If tax type is INCLUSIVE (VAT included in price) -->
+                    {% if receipt_settings.tax_type == 'inclusive' %}
+                        <div class="total-row">
+                            <span class="label">Subtotal (excl. VAT)</span>
+                            <span class="amount">KES {{ receipt_settings.subtotal_display|floatformat:0 }}</span>
+                        </div>
+                        <div class="total-row" style="color: #888; font-size: 12px; border-bottom: 1px dashed #e9ecef; padding-bottom: 8px;">
+                            <span class="label">
+                                <i class="fas fa-info-circle me-1"></i>
+                                {{ receipt_settings.vat_label|default:"VAT" }} ({{ receipt_settings.vat_rate|default:16 }}%) included
+                            </span>
+                            <span class="amount">KES {{ receipt_settings.tax_display|floatformat:0 }}</span>
+                        </div>
+                        <div class="grand-total">
+                            <span class="label">TOTAL (Inc. VAT)</span>
+                            <span class="amount">KES {{ receipt_settings.total_display|floatformat:0 }}</span>
+                        </div>
+                        <div style="text-align: center; font-size: 10px; color: #888; margin-top: 5px;">
+                            <i class="fas fa-check-circle me-1" style="color: #28a745;"></i>
+                            All prices include {{ receipt_settings.vat_label|default:"VAT" }}
+                        </div>
+                        
+                    <!-- If tax type is EXCLUSIVE (VAT added to price) -->
+                    {% else %}
+                        <div class="total-row">
+                            <span class="label">Subtotal (excl. VAT)</span>
+                            <span class="amount">KES {{ order.subtotal|floatformat:0 }}</span>
+                        </div>
+                        <div class="total-row">
+                            <span class="label">{{ receipt_settings.vat_label|default:"VAT" }} ({{ receipt_settings.vat_rate|default:16 }}%)</span>
+                            <span class="amount">KES {{ order.tax|floatformat:0 }}</span>
+                        </div>
+                        <div class="grand-total">
+                            <span class="label">TOTAL (Inc. VAT)</span>
+                            <span class="amount">KES {{ order.total_amount|floatformat:0 }}</span>
+                        </div>
+                    {% endif %}
+                    
+                <!-- If VAT is disabled - show only total -->
+                {% else %}
+                    <div class="grand-total">
+                        <span class="label">TOTAL</span>
+                        <span class="amount">KES {{ order.total_amount|floatformat:0 }}</span>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- ============================================ -->
+            <!-- WHERE TO PAY - Payment Details -->
+            <!-- ============================================ -->
+            <div class="payment-details">
+                <div class="details-title">📌 BUY GOODS TILL</div>
+                
+                {% if receipt_settings.show_till_number and receipt_settings.till_number %}
+                    <div class="detail-item">
+                        <span class="detail-label">Buy Goods Till:</span>
+                        <span class="detail-value">{{ receipt_settings.till_number }}</span>
+                    </div>
+                {% endif %}
+
+                <div class="detail-divider"></div>
+
+                <div class="details-title">📌 PAYBILL ACCOUNT</div>
+                {% if receipt_settings.show_paybill and receipt_settings.paybill %}
+                    <div class="detail-item">
+                        <span class="detail-label">Paybill:</span>
+                        <span class="detail-value">{{ receipt_settings.paybill }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Account:</span>
+                        <span class="detail-value">{{ receipt_settings.account_number }}</span>
+                    </div>
+                {% endif %}
+                
+                <div class="detail-divider"></div>
+                
+                <div style="font-size: 11px; color: #888; margin-top: 5px;">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Please make payment at the counter
+                </div>
+            </div>
+            
+            <!-- ============================================ -->
+            <!-- SERVED BY -->
+            <!-- ============================================ -->
+            <div class="served-by">
+                Served By: <span class="name">{{ waiter_name|default:"N/A" }}</span>
+            </div>
+            
+            <!-- ============================================ -->
+            <!-- FOOTER -->
+            <!-- ============================================ -->
+            <div class="receipt-footer">
+                <div class="thank-you">Thank You!</div>
+                <div>We appreciate your business</div>
+                <div class="system-note">This is a system generated receipt</div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- ============================================ -->
+    <!-- ACTION BUTTONS -->
+    <!-- ============================================ -->
+    <div class="action-buttons">
+        <button class="btn btn-primary" onclick="printReceipt()">
+            <i class="fas fa-print me-2"></i> Print
+        </button>
+        <a href="{% url 'food_master:menu_order' %}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i> New Order
+        </a>
+    </div>
+</div>
+
+<script>
+function printReceipt() {
+    const content = document.getElementById('receiptContent').innerHTML;
+    const win = window.open('', '', 'width=420,height=700');
+    win.document.write(`
+        <html>
+            <head>
+                <title>Receipt #{{ order.order_number }}</title>
+                <style>
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        padding: 20px;
+                        margin: 0;
+                        background: white;
+                    }
+                    .receipt-wrapper {
+                        max-width: 400px;
+                        margin: 0 auto;
+                        background: white;
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                        overflow: hidden;
+                    }
+                    .receipt-container {
+                        padding: 20px;
+                        color: #1a1a2e;
+                    }
+                    .receipt-header {
+                        text-align: center;
+                        border-bottom: 2px solid #e67e22;
+                        padding-bottom: 12px;
+                        margin-bottom: 12px;
+                    }
+                    .receipt-header .company-name {
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: #1a1a2e;
+                    }
+                    .receipt-header .company-details {
+                        font-size: 11px;
+                        color: #666;
+                        margin-top: 4px;
+                    }
+                    .receipt-header .receipt-title {
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: #e67e22;
+                        margin-top: 6px;
+                        letter-spacing: 2px;
+                        text-transform: uppercase;
+                    }
+                    .order-info {
+                        background: #f8f9fa;
+                        padding: 10px 12px;
+                        border-radius: 8px;
+                        margin-bottom: 12px;
+                        border: 1px solid #e9ecef;
+                    }
+                    .order-info .info-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 3px 0;
+                        font-size: 12px;
+                        border-bottom: 1px dotted #e9ecef;
+                    }
+                    .order-info .info-row:last-child { border-bottom: none; }
+                    .order-info .info-row .label { color: #888; }
+                    .order-info .info-row .value { font-weight: 600; }
+                    .order-info .info-row .value.order-number { color: #e67e22; }
+                    .items-header {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 5px 0;
+                        font-weight: 700;
+                        font-size: 11px;
+                        color: #666;
+                        border-bottom: 2px solid #e9ecef;
+                        text-transform: uppercase;
+                    }
+                    .receipt-item {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 5px 0;
+                        font-size: 12px;
+                        border-bottom: 1px dotted #f0f0f0;
+                    }
+                    .receipt-item:last-child { border-bottom: none; }
+                    .receipt-item .col-qty { width: 15%; text-align: center; color: #888; }
+                    .receipt-item .col-name { width: 55%; padding-left: 5px; }
+                    .receipt-item .col-price { width: 30%; text-align: right; font-weight: 500; }
+                    .totals-section {
+                        margin-top: 10px;
+                        padding-top: 10px;
+                        border-top: 2px solid #e9ecef;
+                    }
+                    .total-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 3px 0;
+                        font-size: 12px;
+                    }
+                    .total-row .label { color: #666; }
+                    .total-row .amount { font-weight: 600; }
+                    .grand-total {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 8px 0;
+                        margin-top: 5px;
+                        border-top: 2px solid #e67e22;
+                        font-size: 16px;
+                        font-weight: 700;
+                    }
+                    .grand-total .amount { color: #e67e22; }
+                    .payment-section {
+                        margin: 12px 0 10px;
+                        padding: 15px;
+                        background: #f8f9fa;
+                        border-radius: 10px;
+                        border: 3px solid #28a745;
+                        text-align: center;
+                    }
+                    .payment-section .payment-method {
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: #28a745;
+                        margin: 5px 0;
+                    }
+                    .payment-section .payment-amount {
+                        font-size: 15px;
+                        font-weight: 600;
+                    }
+                    .payment-section .payment-status {
+                        font-size: 12px;
+                        font-weight: 600;
+                        padding: 3px 10px;
+                        border-radius: 20px;
+                        display: inline-block;
+                    }
+                    .payment-section .payment-status.paid { background: #d4edda; color: #155724; }
+                    .payment-section .payment-status.pending { background: #fff3cd; color: #856404; }
+                    .payment-details {
+                        margin: 10px 0;
+                        padding: 12px;
+                        background: #f8f9fa;
+                        border-radius: 10px;
+                        border: 2px solid #e67e22;
+                        text-align: center;
+                    }
+                    .payment-details .details-title {
+                        font-size: 11px;
+                        font-weight: 700;
+                        color: #666;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        margin-bottom: 6px;
+                    }
+                    .payment-details .detail-item {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 3px 0;
+                        font-size: 13px;
+                    }
+                    .payment-details .detail-item .detail-label { color: #888; font-weight: 500; }
+                    .payment-details .detail-item .detail-value { font-weight: 700; }
+                    .payment-details .detail-divider {
+                        border-top: 1px dashed #dee2e6;
+                        margin: 6px 0;
+                    }
+                    .served-by {
+                        text-align: center;
+                        padding: 6px 0;
+                        margin: 8px 0;
+                        font-size: 12px;
+                        color: #888;
+                        border-top: 1px dashed #e9ecef;
+                    }
+                    .served-by .name { font-weight: 600; color: #1a1a2e; }
+                    .receipt-footer {
+                        text-align: center;
+                        border-top: 2px dashed #e9ecef;
+                        padding-top: 12px;
+                        margin-top: 12px;
+                        font-size: 11px;
+                        color: #888;
+                    }
+                    .receipt-footer .thank-you {
+                        font-size: 15px;
+                        font-weight: 700;
+                        color: #28a745;
+                    }
+                    .receipt-footer .system-note { font-size: 9px; color: #bbb; }
+                    .logo-container { text-align: center; margin-bottom: 8px; }
+                    .logo-container img { max-height: 50px; max-width: 150px; }
+                    @media print {
+                        body { padding: 0; margin: 0; }
+                        .receipt-wrapper { border: none; border-radius: 0; }
+                        .receipt-container { padding: 15px; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="receipt-wrapper">
+                    <div class="receipt-container">${content}</div>
+                </div>
+                <script>
+                    window.onload = function() { 
+                        window.print(); 
+                        setTimeout(function() { window.close(); }, 500);
+                    }
+                <\/script>
+            </body>
+        </html>
+    `);
+    win.document.close();
+}
+</script>
+{% endblock %}

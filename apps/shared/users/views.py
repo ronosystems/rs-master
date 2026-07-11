@@ -3,598 +3,743 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.conf import settings
-from django.db.models import Q
-from django.db.models import Sum
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth import get_user_model
+from apps.shared.tenants.models import Tenant
+from apps.shared.permissions.models import Role, UserRoleAssignment
+from django.utils import timezone
+from django.db import models
 import logging
 
-from .models import User, UserActivityLog
-from apps.shared.tenants.models import Tenant, SyncQueue
-
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
-def has_user_management_access(user):
-    """Check if user has permission to manage users"""
-    # Super Admin has FULL access to everything
-    if user.is_superuser:
-        return True, 'full'
-    # Tenant Admin has full access to their tenant
-    if user.role in ['admin', 'tenant_admin']:
-        return True, 'full'
-    # Manager has limited access (only agents and cashiers)
-    elif user.role == 'manager':
-        return True, 'limited'
-    return False, None
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+
+def check_super_admin(view_func):
+    """Decorator to check if user is super admin"""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.is_super_admin:
+            messages.error(request, 'Access denied. Super Admin only.')
+            return redirect('portal:dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 
-def get_accessible_tenants(user):
-    """Get tenants the user can manage"""
-    if user.is_superuser:
-        return Tenant.objects.all().order_by('company_name')
-    elif user.role in ['admin', 'tenant_admin', 'manager'] and user.tenant:
-        return Tenant.objects.filter(id=user.tenant.id)
-    return Tenant.objects.none()
+def check_tenant_admin(view_func):
+    """Decorator to check if user is tenant admin"""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.error(request, 'Please login first.')
+            return redirect('login')
+        
+        if not (request.user.is_super_admin or request.user.is_tenant_admin):
+            messages.error(request, 'Access denied. Tenant Admin only.')
+            return redirect('portal:dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def get_available_roles(user):
+    """Get available roles for the user's tenant project type"""
+    from apps.shared.permissions.models import Role
+    
+    if user.is_super_admin:
+        return Role.objects.filter(is_active=True)
+    
+    tenant = user.tenant
+    if not tenant:
+        return Role.objects.none()
+    
+    project_type = tenant.project_type
+    if project_type:
+        # Get roles that apply to this project type OR all projects
+        return Role.objects.filter(
+            models.Q(project_types=project_type) | models.Q(project_types__isnull=True)
+        ).distinct().filter(is_active=True)
+    else:
+        # If no project type, show only global roles
+        return Role.objects.filter(project_types__isnull=True, is_active=True)
+
+
+# ============================================
+# SUPER ADMIN VIEWS - Full System Access
+# ============================================
+
+@login_required
+@check_super_admin
+def super_admin_dashboard(request):
+    """Super Admin Dashboard"""
+    context = {
+        'total_tenants': Tenant.objects.count(),
+        'active_tenants': Tenant.objects.filter(status='active').count(),
+        'total_users': User.objects.count(),
+        'total_super_admins': User.objects.filter(role='super_admin').count(),
+        'total_tenant_admins': User.objects.filter(role='admin').count(),
+        'active_tab': 'dashboard',
+    }
+    return render(request, 'shared/super_admin/dashboard.html', context)
+
+
+# ============================================
+# TENANT MANAGEMENT (Super Admin Only)
+# ============================================
+
+@login_required
+@check_super_admin
+def tenant_list(request):
+    """List all tenants"""
+    tenants = Tenant.objects.all().order_by('-created_at')
+    
+    search_query = request.GET.get('q', '')
+    if search_query:
+        tenants = tenants.filter(company_name__icontains=search_query)
+    
+    paginator = Paginator(tenants, 20)
+    page = request.GET.get('page')
+    tenants_page = paginator.get_page(page)
+    
+    context = {
+        'tenants': tenants_page,
+        'total_tenants': tenants.count(),
+        'search_query': search_query,
+        'active_tab': 'tenants',
+    }
+    return render(request, 'shared/super_admin/tenant_list.html', context)
 
 
 @login_required
-def user_list(request):
-    """List all users - Super Admin sees all, others see their tenant"""
-    has_access, access_type = has_user_management_access(request.user)
+@check_super_admin
+def tenant_create(request):
+    """Create a new tenant"""
+    from apps.shared.tenants.models import ProjectType, SubscriptionPlan
     
-    if not has_access:
-        messages.error(request, 'Access denied. Only Admins and Managers can manage users.')
-        return redirect('dashboard')
-    
-    # ✅ SUPER ADMIN - See ALL users across ALL tenants
-    if request.user.is_superuser:
-        users = User.objects.all().order_by('-created_at')
-        tenant = None
-        is_admin = True
-        is_manager = False
-        is_super_admin = True
-    else:
-        # ✅ Regular users - only see their tenant
-        tenant = request.user.tenant
-        if not tenant:
-            messages.error(request, 'No tenant assigned to your account.')
-            return redirect('dashboard')
+    if request.method == 'POST':
+        company_name = request.POST.get('company_name')
+        company_address = request.POST.get('company_address')
+        company_phone = request.POST.get('company_phone')
+        company_email = request.POST.get('company_email')
+        project_type_id = request.POST.get('project_type')
+        subscription_plan_id = request.POST.get('subscription_plan')
         
-        if access_type == 'full':
-            users = User.objects.filter(tenant=tenant).order_by('-created_at')
-            is_admin = True
-            is_manager = False
-        else:
-            users = User.objects.filter(
-                tenant=tenant,
-                role__in=['cashier', 'sales_agent']
-            ).order_by('-created_at')
-            is_admin = False
-            is_manager = True
-        is_super_admin = False
-    
-    # ✅ Search functionality
-    search_query = request.GET.get('q', '')
-    if search_query:
-        users = users.filter(
-            Q(username__icontains=search_query) |
-            Q(email__icontains=search_query) |
-            Q(first_name__icontains=search_query) |
-            Q(last_name__icontains=search_query) |
-            Q(phone_number__icontains=search_query)
+        if not company_name:
+            messages.error(request, 'Company name is required.')
+            return redirect('tenants:tenant_create')
+        
+        # Create tenant
+        tenant = Tenant.objects.create(
+            company_name=company_name,
+            company_address=company_address,
+            company_phone=company_phone,
+            company_email=company_email,
+            status='active',
         )
+        
+        # Assign project type
+        if project_type_id:
+            project_type = get_object_or_404(ProjectType, id=project_type_id)
+            tenant.project_type = project_type
+            tenant.save()
+        
+        # Assign subscription plan
+        if subscription_plan_id:
+            plan = get_object_or_404(SubscriptionPlan, id=subscription_plan_id)
+            tenant.subscription_plan = plan.code
+            tenant.subscription_start = timezone.now()
+            tenant.subscription_end = timezone.now() + timezone.timedelta(days=30)
+            tenant.save()
+        
+        # Create default tenant admin user
+        admin_username = f"admin_{tenant.code.lower()}"
+        admin_email = f"admin@{tenant.code.lower()}.com"
+        admin_password = Tenant.objects.make_random_password(length=12)
+        
+        admin_user = User.objects.create_user(
+            username=admin_username,
+            email=admin_email,
+            password=admin_password,
+            tenant=tenant,
+            role='admin',
+            is_active=True,
+            is_staff=True,
+        )
+        
+        messages.success(
+            request, 
+            f'Tenant "{company_name}" created successfully! '
+            f'Admin user: {admin_username} (Password: {admin_password})'
+        )
+        return redirect('tenants:tenant_list')
     
-    # ✅ Role filter
-    role_filter = request.GET.get('role', '')
-    if role_filter:
-        users = users.filter(role=role_filter)
+    from apps.shared.tenants.models import ProjectType, SubscriptionPlan
+    project_types = ProjectType.objects.filter(is_active=True)
+    subscription_plans = SubscriptionPlan.objects.filter(is_active=True)
+    
+    context = {
+        'project_types': project_types,
+        'subscription_plans': subscription_plans,
+        'active_tab': 'tenants',
+    }
+    return render(request, 'shared/super_admin/tenant_create.html', context)
+
+
+@login_required
+@check_super_admin
+def tenant_edit(request, tenant_id):
+    """Edit tenant"""
+    tenant = get_object_or_404(Tenant, id=tenant_id)
+    from apps.shared.tenants.models import ProjectType, SubscriptionPlan
+    
+    if request.method == 'POST':
+        tenant.company_name = request.POST.get('company_name', tenant.company_name)
+        tenant.company_address = request.POST.get('company_address', tenant.company_address)
+        tenant.company_phone = request.POST.get('company_phone', tenant.company_phone)
+        tenant.company_email = request.POST.get('company_email', tenant.company_email)
+        tenant.status = request.POST.get('status', tenant.status)
+        
+        project_type_id = request.POST.get('project_type')
+        if project_type_id:
+            tenant.project_type = get_object_or_404(ProjectType, id=project_type_id)
+        else:
+            tenant.project_type = None
+        
+        subscription_plan_id = request.POST.get('subscription_plan')
+        if subscription_plan_id:
+            plan = get_object_or_404(SubscriptionPlan, id=subscription_plan_id)
+            tenant.subscription_plan = plan.code
+        else:
+            tenant.subscription_plan = None
+        
+        tenant.save()
+        messages.success(request, f'Tenant "{tenant.company_name}" updated successfully!')
+        return redirect('tenants:tenant_list')
+    
+    project_types = ProjectType.objects.filter(is_active=True)
+    subscription_plans = SubscriptionPlan.objects.filter(is_active=True)
     
     context = {
         'tenant': tenant,
-        'users': users,
-        'active_tab': 'users',
-        'access_type': access_type,
-        'is_admin': is_admin,
-        'is_manager': is_manager,
-        'is_super_admin': is_super_admin,
-        'search_query': search_query,
-        'role_filter': role_filter,
-        'total_users': users.count(),
+        'project_types': project_types,
+        'subscription_plans': subscription_plans,
+        'active_tab': 'tenants',
     }
-    return render(request, 'shared/user_list.html', context)
+    return render(request, 'shared/super_admin/tenant_edit.html', context)
 
 
 @login_required
-def add_user(request):
-    """Add new user - Super Admin can add to any tenant"""
-    has_access, access_type = has_user_management_access(request.user)
+@check_super_admin
+@require_http_methods(["POST"])
+def tenant_delete(request, tenant_id):
+    """Delete tenant"""
+    tenant = get_object_or_404(Tenant, id=tenant_id)
     
-    if not has_access:
-        messages.error(request, 'Access denied. Only Admins and Managers can add users.')
-        return redirect('dashboard')
+    # Prevent deleting tenants with users
+    if User.objects.filter(tenant=tenant).exists():
+        messages.error(request, f'Cannot delete tenant "{tenant.company_name}" as it has users.')
+        return redirect('tenants:tenant_list')
     
-    # ✅ SUPER ADMIN - Can add users to ANY tenant
-    if request.user.is_superuser:
-        # Get selected tenant from GET or POST
-        selected_tenant_id = request.GET.get('tenant_id') or request.POST.get('tenant_id')
-        
-        if request.method == 'POST':
-            if selected_tenant_id:
-                tenant = get_object_or_404(Tenant, id=selected_tenant_id)
-            else:
-                messages.error(request, 'Please select a tenant.')
-                return redirect('users:add_user')
-        elif request.method == 'GET' and not selected_tenant_id:
-            # Show tenant selection for Super Admin
-            tenants = Tenant.objects.all().order_by('company_name')
-            context = {
-                'tenants': tenants,
-                'is_super_admin': True,
-                'active_tab': 'users',
-            }
-            return render(request, 'shared/select_tenant_for_user.html', context)
+    tenant.delete()
+    messages.success(request, f'Tenant "{tenant.company_name}" deleted successfully!')
+    return redirect('tenants:tenant_list')
+
+
+@login_required
+@check_super_admin
+def tenant_assign_project(request, tenant_id):
+    """Assign project type to tenant"""
+    tenant = get_object_or_404(Tenant, id=tenant_id)
+    from apps.shared.tenants.models import ProjectType
+    
+    if request.method == 'POST':
+        project_type_id = request.POST.get('project_type')
+        if project_type_id:
+            project_type = get_object_or_404(ProjectType, id=project_type_id)
+            tenant.project_type = project_type
+            tenant.save()
+            messages.success(request, f'Project type assigned to "{tenant.company_name}" successfully!')
         else:
-            tenant = get_object_or_404(Tenant, id=selected_tenant_id)
+            messages.error(request, 'Please select a project type.')
+        return redirect('tenants:tenant_list')
+    
+    project_types = ProjectType.objects.filter(is_active=True)
+    
+    context = {
+        'tenant': tenant,
+        'project_types': project_types,
+        'active_tab': 'tenants',
+    }
+    return render(request, 'shared/super_admin/tenant_assign_project.html', context)
+
+
+@login_required
+@check_super_admin
+def tenant_assign_subscription(request, tenant_id):
+    """Assign subscription plan to tenant"""
+    tenant = get_object_or_404(Tenant, id=tenant_id)
+    from apps.shared.tenants.models import SubscriptionPlan
+    
+    if request.method == 'POST':
+        subscription_plan_id = request.POST.get('subscription_plan')
+        if subscription_plan_id:
+            plan = get_object_or_404(SubscriptionPlan, id=subscription_plan_id)
+            tenant.subscription_plan = plan.code
+            tenant.subscription_start = timezone.now()
+            tenant.subscription_end = timezone.now() + timezone.timedelta(days=30)
+            tenant.save()
+            messages.success(request, f'Subscription assigned to "{tenant.company_name}" successfully!')
+        else:
+            messages.error(request, 'Please select a subscription plan.')
+        return redirect('tenants:tenant_list')
+    
+    subscription_plans = SubscriptionPlan.objects.filter(is_active=True)
+    
+    context = {
+        'tenant': tenant,
+        'subscription_plans': subscription_plans,
+        'active_tab': 'tenants',
+    }
+    return render(request, 'shared/super_admin/tenant_assign_subscription.html', context)
+
+
+# ============================================
+# USER MANAGEMENT (Super Admin & Tenant Admin)
+# ============================================
+
+@login_required
+@check_tenant_admin
+def user_list(request):
+    """List users - Super Admin sees all, Tenant Admin sees their tenant"""
+    user = request.user
+    
+    if user.is_super_admin:
+        users = User.objects.all().order_by('-created_at')
+        tenant = None
+        is_super_admin = True
     else:
-        # ✅ Regular users - add to their own tenant
-        tenant = request.user.tenant
+        tenant = user.tenant
         if not tenant:
-            messages.error(request, 'No tenant assigned to your account.')
-            return redirect('dashboard')
+            messages.error(request, 'No tenant assigned.')
+            return redirect('portal:dashboard')
+        users = User.objects.filter(tenant=tenant).order_by('-created_at')
+        is_super_admin = False
+    
+    search_query = request.GET.get('q', '')
+    if search_query:
+        users = users.filter(
+            models.Q(username__icontains=search_query) |
+            models.Q(email__icontains=search_query) |
+            models.Q(first_name__icontains=search_query) |
+            models.Q(last_name__icontains=search_query)
+        )
+    
+    paginator = Paginator(users, 20)
+    page = request.GET.get('page')
+    users_page = paginator.get_page(page)
+    
+    context = {
+        'users': users_page,
+        'tenant': tenant,
+        'total_users': users.count(),
+        'is_super_admin': is_super_admin,
+        'search_query': search_query,
+        'active_tab': 'users',
+    }
+    return render(request, 'shared/users/user_list.html', context)
+
+@login_required
+@check_tenant_admin
+def user_edit(request, user_id):
+    """Edit a user"""
+    user = request.user
+    edit_user = get_object_or_404(User, id=user_id)
+    
+    # Get available project roles for the tenant
+    available_roles = get_available_roles(user)
+    
+    # Check if user can edit this user
+    if not user.is_super_admin:
+        if edit_user.tenant != user.tenant:
+            messages.error(request, 'You cannot edit users from other tenants.')
+            return redirect('users:user_list')
+        if edit_user.role == 'super_admin':
+            messages.error(request, 'You cannot edit Super Admin users.')
+            return redirect('users:user_list')
+    
+    # Get current assigned project role
+    current_assignment = UserRoleAssignment.objects.filter(
+        user=edit_user,
+        is_active=True
+    ).first()
+    current_role_id = current_assignment.role_id if current_assignment else None
+    
+    if request.method == 'POST':
+        # Get all form data
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        role = request.POST.get('role', edit_user.role)
+        selected_role_id = request.POST.get('selected_role')
+        
+        # Update basic info
+        edit_user.first_name = first_name
+        edit_user.last_name = last_name
+        edit_user.email = email
+        edit_user.phone_number = phone_number
+        edit_user.is_active = is_active
+        
+        # Update system role (if allowed)
+        if not user.is_super_admin:
+            if role == 'super_admin':
+                messages.error(request, 'Only Super Admin can assign Super Admin role.')
+                return redirect('users:user_edit', user_id=edit_user.id)
+            if edit_user.id == user.id and role != edit_user.role:
+                messages.error(request, 'You cannot change your own system role.')
+                return redirect('users:user_edit', user_id=edit_user.id)
+        edit_user.role = role
+        
+        # ✅ FIX: Update project role - Handle duplicate properly
+        if selected_role_id:
+            try:
+                role_obj = Role.objects.get(id=selected_role_id)
+                
+                # ✅ First, deactivate ALL existing assignments for this user
+                UserRoleAssignment.objects.filter(user=edit_user, is_active=True).update(is_active=False)
+                
+                # ✅ Then create a new one or reactivate existing
+                assignment, created = UserRoleAssignment.objects.get_or_create(
+                    user=edit_user,
+                    role=role_obj,
+                    defaults={
+                        'assigned_by': request.user,
+                        'is_active': True,
+                        'notes': f'Assigned by {request.user.username}'
+                    }
+                )
+                
+                # If it already exists but is inactive, reactivate it
+                if not created and not assignment.is_active:
+                    assignment.is_active = True
+                    assignment.assigned_by = request.user
+                    assignment.notes = f'Reactivated by {request.user.username}'
+                    assignment.save()
+                    messages.info(request, f'Reactivated project role: {role_obj.name}')
+                elif created:
+                    messages.success(request, f'Assigned project role: {role_obj.name}')
+                else:
+                    messages.info(request, f'Project role {role_obj.name} already assigned')
+                    
+            except Role.DoesNotExist:
+                messages.warning(request, 'Selected role not found.')
+        else:
+            # ✅ No role selected - deactivate all active assignments
+            UserRoleAssignment.objects.filter(user=edit_user, is_active=True).update(is_active=False)
+            messages.info(request, 'Removed project role assignment.')
+        
+        # Update password if provided
+        new_password = request.POST.get('new_password', '')
+        if new_password:
+            confirm_password = request.POST.get('confirm_password', '')
+            if new_password != confirm_password:
+                messages.error(request, 'Passwords do not match.')
+                return redirect('users:user_edit', user_id=edit_user.id)
+            if len(new_password) < 6:
+                messages.error(request, 'Password must be at least 6 characters.')
+                return redirect('users:user_edit', user_id=edit_user.id)
+            edit_user.set_password(new_password)
+            messages.info(request, 'Password updated successfully!')
+        
+        # Save the user
+        edit_user.save()
+        
+        messages.success(request, f'User "{edit_user.username}" updated successfully!')
+        return redirect('users:user_list')
+    
+    # Prepare project role choices for the form
+    role_choices = []
+    for role_obj in available_roles:
+        role_choices.append({
+            'id': role_obj.id,
+            'name': role_obj.name,
+            'codename': role_obj.codename,
+            'is_system': role_obj.is_system_role,
+            'selected': role_obj.id == current_role_id,
+        })
+    
+    # System roles for the dropdown
+    if user.is_super_admin:
+        system_roles = [
+            ('super_admin', 'Super Admin'),
+            ('admin', 'Admin'),
+            ('user', 'User'),
+        ]
+    else:
+        system_roles = [
+            ('admin', 'Admin'),
+            ('user', 'User'),
+        ]
+    
+    context = {
+        'edit_user': edit_user,
+        'system_roles': system_roles,
+        'available_roles': role_choices,
+        'current_role_id': current_role_id,
+        'is_super_admin': user.is_super_admin,
+        'active_tab': 'users',
+    }
+    return render(request, 'shared/users/user_edit.html', context)
+
+
+@login_required
+@check_tenant_admin
+def user_create(request):
+    """Create a new user"""
+    user = request.user
+    selected_tenant_id = None
+    
+    # Get available project roles for the tenant
+    available_roles = get_available_roles(user)
+    
+    if user.is_super_admin:
+        # Super Admin can choose tenant
+        tenants = Tenant.objects.filter(is_active=True)
+        selected_tenant_id = request.POST.get('tenant') or request.GET.get('tenant')
+        if selected_tenant_id:
+            tenant = get_object_or_404(Tenant, id=selected_tenant_id)
+            if tenant and tenant.project_type:
+                available_roles = Role.objects.filter(
+                    models.Q(project_types=tenant.project_type) | models.Q(project_types__isnull=True)
+                ).distinct().filter(is_active=True)
+            else:
+                available_roles = Role.objects.filter(project_types__isnull=True, is_active=True)
+        else:
+            tenant = None
+    else:
+        tenant = user.tenant
+        if not tenant:
+            messages.error(request, 'No tenant assigned.')
+            return redirect('portal:dashboard')
+        tenants = None
     
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
         password = request.POST.get('password')
-        confirm_password = request.POST.get('confirm_password')
-        role = request.POST.get('role', 'cashier')
-        phone_number = request.POST.get('phone_number', '')
-        pin_code = request.POST.get('pin_code', '')
+        password_confirm = request.POST.get('password_confirm')
+        role = request.POST.get('role', 'user')
         first_name = request.POST.get('first_name', '')
         last_name = request.POST.get('last_name', '')
-        require_pin = request.POST.get('require_pin_for_pos') == 'on'
+        phone_number = request.POST.get('phone_number', '')
         is_active = request.POST.get('is_active') == 'on'
+        selected_role_id = request.POST.get('selected_role')
         
-        # Validate
-        if not username or not password:
-            messages.error(request, 'Username and password are required')
-            return redirect('users:add_user')
+        # Validation
+        if not username or not email or not password:
+            messages.error(request, 'Username, email, and password are required.')
+            return redirect('users:user_create')
         
-        if password != confirm_password:
+        if password != password_confirm:
             messages.error(request, 'Passwords do not match.')
-            return redirect('users:add_user')
+            return redirect('users:user_create')
         
         if len(password) < 6:
             messages.error(request, 'Password must be at least 6 characters.')
-            return redirect('users:add_user')
+            return redirect('users:user_create')
         
-        # Manager can only add cashiers and sales_agents
-        if access_type == 'limited' and role not in ['cashier', 'sales_agent']:
-            messages.error(request, 'Managers can only add Cashiers and Sales Agents.')
-            return redirect('users:add_user')
-        
-        if User.objects.filter(tenant=tenant, username=username).exists():
-            messages.error(request, f'User {username} already exists')
-            return redirect('users:add_user')
-        
-        # Create user
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-        )
-        user.tenant = tenant
-        user.role = role
-        user.phone_number = phone_number
-        user.pin_code = pin_code
-        user.require_pin_for_pos = require_pin
-        user.is_active = is_active
-        user.save()
-        
-        # Log activity
-        UserActivityLog.log_activity(
-            user=request.user,
-            action='user_created',
-            details={
-                'created_user': username,
-                'role': role,
-                'tenant': tenant.company_name,
-            },
-            request=request
-        )
-        
-        # Queue sync if offline
-        if getattr(settings, 'OFFLINE_MODE', False):
-            try:
-                SyncQueue.objects.create(
-                    tenant_id=tenant.id,
-                    model_name='User',
-                    object_id=str(user.id),
-                    operation='CREATE',
-                    data={
-                        'id': user.id,
-                        'username': username,
-                        'email': email,
-                        'first_name': first_name,
-                        'last_name': last_name,
-                        'role': role,
-                        'phone_number': phone_number,
-                        'pin_code': pin_code,
-                        'require_pin_for_pos': require_pin,
-                        'is_active': is_active,
-                        'tenant_id': tenant.id,
-                    },
-                    priority=7
-                )
-                logger.debug(f"✅ Queued User creation sync: {username}")
-            except Exception as e:
-                logger.error(f"Failed to queue User creation sync: {e}")
-        
-        messages.success(request, f'User {username} created successfully!')
-        return redirect('users:user_list')
-    
-    # Role choices based on access type
-    if access_type == 'full':
-        roles = [
-            ('admin', 'Tenant Admin'),
-            ('manager', 'Manager'),
-            ('cashier', 'Cashier'),
-            ('sales_agent', 'Sales Agent'),
-        ]
-    else:
-        roles = [
-            ('cashier', 'Cashier'),
-            ('sales_agent', 'Sales Agent'),
-        ]
-    
-    context = {
-        'tenant': tenant,
-        'roles': roles,
-        'active_tab': 'users',
-        'access_type': access_type,
-        'is_admin': access_type == 'full',
-        'is_manager': access_type == 'limited',
-        'is_super_admin': request.user.is_superuser,
-        'all_tenants': Tenant.objects.all() if request.user.is_superuser else [],
-    }
-    return render(request, 'shared/add_user.html', context)
-
-
-@login_required
-def edit_user(request, user_id):
-    """Edit user"""
-    has_access, access_type = has_user_management_access(request.user)
-    
-    if not has_access:
-        messages.error(request, 'Access denied. Only Admins and Managers can edit users.')
-        return redirect('dashboard')
-    
-    # Super Admin can edit ANY user
-    if request.user.is_superuser:
-        edit_user = get_object_or_404(User, id=user_id)
-        tenant = edit_user.tenant
-    else:
-        tenant = request.user.tenant
-        if not tenant:
-            messages.error(request, 'No tenant assigned')
-            return redirect('dashboard')
-        edit_user = get_object_or_404(User, id=user_id, tenant=tenant)
-    
-    # Manager can only edit cashiers and sales_agents
-    if access_type == 'limited' and edit_user.role not in ['cashier', 'sales_agent']:
-        messages.error(request, 'Managers can only edit Cashiers and Sales Agents.')
-        return redirect('users:user_list')
-    
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        first_name = request.POST.get('first_name', '')
-        last_name = request.POST.get('last_name', '')
-        phone_number = request.POST.get('phone_number', '')
-        pin_code = request.POST.get('pin_code', '')
-        role = request.POST.get('role', edit_user.role)
-        is_active = request.POST.get('is_active') == 'on'
-        require_pin = request.POST.get('require_pin_for_pos') == 'on'
-        
-        old_data = {
-            'username': edit_user.username,
-            'email': edit_user.email,
-            'role': edit_user.role,
-            'phone_number': edit_user.phone_number,
-            'is_active': edit_user.is_active,
-        }
-        
-        if access_type == 'limited':
-            if role not in ['cashier', 'sales_agent']:
-                messages.error(request, 'Managers can only assign Cashier or Sales Agent roles.')
-                return redirect('users:edit_user', user_id=edit_user.id)
-        
-        if User.objects.filter(tenant=tenant, username=username).exclude(id=edit_user.id).exists():
+        if User.objects.filter(username=username).exists():
             messages.error(request, f'Username "{username}" is already taken.')
-            return redirect('users:edit_user', user_id=edit_user.id)
+            return redirect('users:user_create')
         
-        edit_user.username = username
-        edit_user.email = email
-        edit_user.first_name = first_name
-        edit_user.last_name = last_name
-        edit_user.phone_number = phone_number
-        edit_user.pin_code = pin_code
-        edit_user.role = role
-        edit_user.is_active = is_active
-        edit_user.require_pin_for_pos = require_pin
+        if User.objects.filter(email=email).exists():
+            messages.error(request, f'Email "{email}" is already registered.')
+            return redirect('users:user_create')
         
-        if request.POST.get('password'):
-            password = request.POST.get('password')
-            confirm_password = request.POST.get('confirm_password')
-            if password != confirm_password:
-                messages.error(request, 'Passwords do not match.')
-                return redirect('users:edit_user', user_id=edit_user.id)
-            if len(password) < 6:
-                messages.error(request, 'Password must be at least 6 characters.')
-                return redirect('users:edit_user', user_id=edit_user.id)
-            edit_user.set_password(password)
+        # Prevent non-super-admin from creating super_admin or admin
+        if role in ['super_admin', 'admin'] and not user.is_super_admin:
+            messages.error(request, 'Only Super Admin can create Admin or Super Admin users.')
+            return redirect('users:user_create')
         
-        edit_user.save()
+        # If tenant not set, use user's tenant
+        if not tenant and not user.is_super_admin:
+            tenant = user.tenant
         
-        UserActivityLog.log_activity(
-            user=request.user,
-            action='user_updated',
-            details={
-                'updated_user': username,
-                'changes': old_data,
-                'tenant': tenant.company_name if tenant else 'System',
-            },
-            request=request
-        )
+        if not tenant:
+            messages.error(request, 'Please select a tenant.')
+            return redirect('users:user_create')
         
-        if getattr(settings, 'OFFLINE_MODE', False):
-            try:
-                SyncQueue.objects.create(
-                    tenant_id=tenant.id if tenant else None,
-                    model_name='User',
-                    object_id=str(edit_user.id),
-                    operation='UPDATE',
-                    data={
-                        'id': edit_user.id,
-                        'username': username,
-                        'email': email,
-                        'first_name': first_name,
-                        'last_name': last_name,
-                        'role': role,
-                        'phone_number': phone_number,
-                        'pin_code': pin_code,
-                        'require_pin_for_pos': require_pin,
-                        'is_active': is_active,
-                        'previous_data': old_data,
-                        'tenant_id': tenant.id if tenant else None,
-                    },
-                    priority=7
+        try:
+            with transaction.atomic():
+                # Create user with system role
+                new_user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone_number=phone_number,
+                    tenant=tenant,
+                    role=role,
+                    is_active=is_active,
+                    is_staff=True if role in ['super_admin', 'admin'] else False,
+                    is_superuser=True if role == 'super_admin' else False,
                 )
-                logger.debug(f"✅ Queued User update sync: {username}")
-            except Exception as e:
-                logger.error(f"Failed to queue User update sync: {e}")
-        
-        messages.success(request, f'User {edit_user.username} updated successfully!')
-        return redirect('users:user_list')
+                
+                # ✅ Assign project role - Use get_or_create
+                if selected_role_id:
+                    try:
+                        role_obj = Role.objects.get(id=selected_role_id)
+                        # ✅ Use get_or_create to avoid duplicate
+                        assignment, created = UserRoleAssignment.objects.get_or_create(
+                            user=new_user,
+                            role=role_obj,
+                            defaults={
+                                'assigned_by': request.user,
+                                'is_active': True,
+                                'notes': f'Assigned by {request.user.username}'
+                            }
+                        )
+                        if created:
+                            logger.info(f"Assigned project role {role_obj.name} to {new_user.username}")
+                        else:
+                            # If it already exists but is inactive, reactivate it
+                            if not assignment.is_active:
+                                assignment.is_active = True
+                                assignment.assigned_by = request.user
+                                assignment.notes = f'Reactivated by {request.user.username}'
+                                assignment.save()
+                                logger.info(f"Reactivated project role {role_obj.name} for {new_user.username}")
+                    except Role.DoesNotExist:
+                        logger.warning(f"Role ID {selected_role_id} not found")
+                
+                messages.success(request, f'User "{username}" created successfully!')
+                return redirect('users:user_list')
+                
+        except Exception as e:
+            messages.error(request, f'Error creating user: {str(e)}')
+            return redirect('users:user_create')
     
-    if access_type == 'full':
-        roles = [
-            ('admin', 'Tenant Admin'),
-            ('manager', 'Manager'),
-            ('cashier', 'Cashier'),
-            ('sales_agent', 'Sales Agent'),
+    # Prepare project role choices for the form
+    role_choices = []
+    for role_obj in available_roles:
+        role_choices.append({
+            'id': role_obj.id,
+            'name': role_obj.name,
+            'codename': role_obj.codename,
+            'is_system': role_obj.is_system_role,
+        })
+    
+    # System roles for the dropdown
+    if user.is_super_admin:
+        system_roles = [
+            ('super_admin', 'Super Admin'),
+            ('admin', 'Admin'),
+            ('user', 'User'),
         ]
     else:
-        roles = [
-            ('cashier', 'Cashier'),
-            ('sales_agent', 'Sales Agent'),
+        system_roles = [
+            ('user', 'User'),
         ]
     
     context = {
-        'edit_user': edit_user,
-        'user': request.user,
+        'tenants': tenants,
+        'selected_tenant_id': selected_tenant_id if user.is_super_admin else None,
+        'system_roles': system_roles,
+        'available_roles': role_choices,
         'tenant': tenant,
-        'roles': roles,
+        'is_super_admin': user.is_super_admin,
         'active_tab': 'users',
-        'access_type': access_type,
-        'is_admin': access_type == 'full',
-        'is_manager': access_type == 'limited',
-        'is_super_admin': request.user.is_superuser,
     }
-    return render(request, 'shared/edit_user.html', context)
+    return render(request, 'shared/users/user_create.html', context)
 
 
 @login_required
-def delete_user(request, user_id):
-    """Delete user"""
-    has_access, access_type = has_user_management_access(request.user)
+@check_tenant_admin
+@require_http_methods(["POST"])
+def user_delete(request, user_id):
+    """Delete a user"""
+    user = request.user
+    delete_user = get_object_or_404(User, id=user_id)
     
-    if not has_access:
-        messages.error(request, 'Access denied. Only Admins and Managers can delete users.')
-        return redirect('dashboard')
-    
-    # Super Admin can delete ANY user
-    if request.user.is_superuser:
-        user = get_object_or_404(User, id=user_id)
-        tenant = user.tenant
-    else:
-        tenant = request.user.tenant
-        if not tenant:
-            messages.error(request, 'No tenant assigned')
-            return redirect('dashboard')
-        user = get_object_or_404(User, id=user_id, tenant=tenant)
-    
-    if access_type == 'limited' and user.role not in ['cashier', 'sales_agent']:
-        messages.error(request, 'Managers can only delete Cashiers and Sales Agents.')
+    # Prevent deleting self
+    if delete_user == user:
+        messages.error(request, 'You cannot delete your own account.')
         return redirect('users:user_list')
     
-    if user == request.user:
-        messages.error(request, 'You cannot delete your own account')
-        return redirect('users:user_list')
-    
-    username = user.username
-    
-    UserActivityLog.log_activity(
-        user=request.user,
-        action='user_deleted',
-        details={
-            'deleted_user': username,
-            'role': user.role,
-            'tenant': tenant.company_name if tenant else 'System',
-        },
-        request=request
-    )
-    
-    if getattr(settings, 'OFFLINE_MODE', False):
-        try:
-            SyncQueue.objects.create(
-                tenant_id=tenant.id if tenant else None,
-                model_name='User',
-                object_id=str(user.id),
-                operation='DELETE',
-                data={
-                    'id': user.id,
-                    'username': username,
-                    'email': user.email,
-                    'tenant_id': tenant.id if tenant else None,
-                },
-                priority=7
-            )
-            logger.debug(f"✅ Queued User deletion sync: {username}")
-        except Exception as e:
-            logger.error(f"Failed to queue User deletion sync: {e}")
-    
-    user.delete()
-    messages.success(request, f'User {username} deleted successfully!')
-    return redirect('users:user_list')
-
-
-@login_required
-def toggle_user_status(request, user_id):
-    """Activate/Deactivate user"""
-    has_access, access_type = has_user_management_access(request.user)
-    
-    if not has_access:
-        messages.error(request, 'Access denied. Only Admins and Managers can manage users.')
-        return redirect('dashboard')
-    
-    # Super Admin can toggle ANY user
-    if request.user.is_superuser:
-        user = get_object_or_404(User, id=user_id)
-        tenant = user.tenant
-    else:
-        tenant = request.user.tenant
-        if not tenant:
-            messages.error(request, 'No tenant assigned')
-            return redirect('dashboard')
-        user = get_object_or_404(User, id=user_id, tenant=tenant)
-    
-    if access_type == 'limited' and user.role not in ['cashier', 'sales_agent']:
-        messages.error(request, 'Managers can only manage Cashiers and Sales Agents.')
-        return redirect('users:user_list')
-    
-    if user == request.user:
-        messages.error(request, 'You cannot deactivate your own account')
-        return redirect('users:user_list')
-    
-    user.is_active = not user.is_active
-    user.save()
-    
-    status = "activated" if user.is_active else "deactivated"
-    
-    UserActivityLog.log_activity(
-        user=request.user,
-        action='user_updated',
-        details={
-            'updated_user': user.username,
-            'status_change': status,
-            'tenant': tenant.company_name if tenant else 'System',
-        },
-        request=request
-    )
-    
-    if getattr(settings, 'OFFLINE_MODE', False):
-        try:
-            SyncQueue.objects.create(
-                tenant_id=tenant.id if tenant else None,
-                model_name='User',
-                object_id=str(user.id),
-                operation='UPDATE',
-                data={
-                    'id': user.id,
-                    'username': user.username,
-                    'is_active': user.is_active,
-                    'tenant_id': tenant.id if tenant else None,
-                },
-                priority=7
-            )
-            logger.debug(f"✅ Queued User status update sync: {user.username}")
-        except Exception as e:
-            logger.error(f"Failed to queue User status update sync: {e}")
-    
-    messages.success(request, f'User {user.username} has been {status}!')
-    return redirect('users:user_list')
-
-
-@login_required
-def user_profile(request, user_id=None):
-    """View user profile"""
-    if user_id:
-        has_access, access_type = has_user_management_access(request.user)
-        
-        if not has_access:
-            messages.error(request, 'Access denied')
-            return redirect('dashboard')
-        
-        # Super Admin can view ANY user
-        if request.user.is_superuser:
-            profile_user = get_object_or_404(User, id=user_id)
-        else:
-            tenant = request.user.tenant
-            if not tenant:
-                messages.error(request, 'No tenant assigned')
-                return redirect('dashboard')
-            profile_user = get_object_or_404(User, id=user_id, tenant=tenant)
-        
-        if access_type == 'limited' and profile_user.role not in ['cashier', 'sales_agent']:
-            messages.error(request, 'Managers can only view Cashiers and Sales Agents.')
+    # Check permissions
+    if not user.is_super_admin:
+        if delete_user.tenant != user.tenant:
+            messages.error(request, 'You cannot delete users from other tenants.')
             return redirect('users:user_list')
+        if delete_user.role == 'super_admin':
+            messages.error(request, 'You cannot delete Platform Admin users.')
+            return redirect('users:user_list')
+    
+    delete_user.delete()
+    messages.success(request, f'User "{delete_user.username}" deleted successfully!')
+    return redirect('users:user_list')
+
+
+@login_required
+@check_tenant_admin
+@require_http_methods(["POST"])
+def user_toggle_status(request, user_id):
+    """Toggle user active status"""
+    user = request.user
+    toggle_user = get_object_or_404(User, id=user_id)
+    
+    # Check permissions
+    if not user.is_super_admin:
+        if toggle_user.tenant != user.tenant:
+            messages.error(request, 'You cannot manage users from other tenants.')
+            return redirect('users:user_list')
+        if toggle_user.role == 'super_admin':
+            messages.error(request, 'You cannot manage Platform Admin users.')
+            return redirect('users:user_list')
+    
+    toggle_user.is_active = not toggle_user.is_active
+    toggle_user.save()
+    
+    status = "activated" if toggle_user.is_active else "deactivated"
+    messages.success(request, f'User "{toggle_user.username}" has been {status}!')
+    return redirect('users:user_list')
+
+
+# ============================================
+# ROLE MANAGEMENT (Tenant Admin Only)
+# ============================================
+
+@login_required
+@check_tenant_admin
+def role_list(request):
+    """List roles for the tenant"""
+    from apps.shared.permissions.models import Role
+    
+    user = request.user
+    
+    if user.is_super_admin:
+        roles = Role.objects.all()
     else:
-        profile_user = request.user
-    
-    # Get user statistics
-    from apps.tech_master.sales.models import Sale
-    from apps.tech_master.inventory.models import ProductUnit
-    
-    total_sales = Sale.objects.filter(cashier=profile_user).count()
-    total_revenue = Sale.objects.filter(cashier=profile_user).aggregate(
-        total=Sum('total')
-    )['total'] or 0
-    
-    assigned_units = ProductUnit.objects.filter(
-        current_owner=profile_user,
-        status__in=['available', 'reserved']
-    ).count()
-    
-    sold_units = ProductUnit.objects.filter(
-        current_owner=profile_user,
-        status='sold'
-    ).count()
-    
-    recent_activity = UserActivityLog.objects.filter(
-        user=profile_user
-    ).order_by('-created_at')[:10]
+        tenant = user.tenant
+        if not tenant:
+            messages.error(request, 'No tenant assigned.')
+            return redirect('portal:dashboard')
+        project_type = tenant.project_type
+        if project_type:
+            roles = Role.objects.filter(
+                models.Q(project_types=project_type) | models.Q(project_types__isnull=True)
+            ).distinct()
+        else:
+            roles = Role.objects.filter(project_types__isnull=True)
     
     context = {
-        'profile_user': profile_user,
-        'is_own_profile': profile_user == request.user,
-        'tenant': request.user.tenant,
-        'total_sales': total_sales,
-        'total_revenue': total_revenue,
-        'assigned_units': assigned_units,
-        'sold_units': sold_units,
-        'recent_activity': recent_activity,
+        'roles': roles,
+        'is_super_admin': user.is_super_admin,
+        'active_tab': 'roles',
     }
-    return render(request, 'shared/user_profile.html', context)
+    return render(request, 'shared/users/role_list.html', context)

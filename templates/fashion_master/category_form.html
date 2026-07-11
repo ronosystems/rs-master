@@ -1,0 +1,99 @@
+<!-- templates/fashion_master/category_form.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}{% if category %}Edit{% else %}Add{% endif %} Fashion Category{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-tag me-2"></i>
+                        {% if category %}Edit{% else %}Add{% endif %} Fashion Category
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" 
+                                   value="{{ category.name|default:'' }}" required
+                                   placeholder="e.g., Women's Dresses">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Category Type <span class="text-danger">*</span></label>
+                            <select name="category_type" class="form-select" required>
+                                <option value="">Select Type</option>
+                                <option value="clothing" {% if category.category_type == 'clothing' %}selected{% endif %}>Clothing</option>
+                                <option value="shoes" {% if category.category_type == 'shoes' %}selected{% endif %}>Shoes</option>
+                                <option value="bedding" {% if category.category_type == 'bedding' %}selected{% endif %}>Bedding</option>
+                                <option value="cosmetics" {% if category.category_type == 'cosmetics' %}selected{% endif %}>Cosmetics</option>
+                                <option value="boutique" {% if category.category_type == 'boutique' %}selected{% endif %}>Boutique</option>
+                                <option value="babyshop" {% if category.category_type == 'babyshop' %}selected{% endif %}>Baby Shop</option>
+                                <option value="accessories" {% if category.category_type == 'accessories' %}selected{% endif %}>Accessories</option>
+                                <option value="bags" {% if category.category_type == 'bags' %}selected{% endif %}>Bags</option>
+                                <option value="jewelry" {% if category.category_type == 'jewelry' %}selected{% endif %}>Jewelry</option>
+                                <option value="watches" {% if category.category_type == 'watches' %}selected{% endif %}>Watches</option>
+                                <option value="other" {% if category.category_type == 'other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Gender</label>
+                            <select name="gender" class="form-select">
+                                <option value="unisex" {% if category.gender == 'unisex' %}selected{% endif %}>Unisex</option>
+                                <option value="men" {% if category.gender == 'men' %}selected{% endif %}>Men</option>
+                                <option value="women" {% if category.gender == 'women' %}selected{% endif %}>Women</option>
+                                <option value="kids" {% if category.gender == 'kids' %}selected{% endif %}>Kids</option>
+                                <option value="babies" {% if category.gender == 'babies' %}selected{% endif %}>Babies</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Size Type</label>
+                            <select name="size_type" class="form-select">
+                                <option value="clothing" {% if category.size_type == 'clothing' %}selected{% endif %}>Clothing Sizes (S, M, L, XL)</option>
+                                <option value="shoes" {% if category.size_type == 'shoes' %}selected{% endif %}>Shoe Sizes (35-45)</option>
+                                <option value="bedding" {% if category.size_type == 'bedding' %}selected{% endif %}>Bedding Sizes</option>
+                                <option value="baby" {% if category.size_type == 'baby' %}selected{% endif %}>Baby Sizes</option>
+                                <option value="generic" {% if category.size_type == 'generic' %}selected{% endif %}>Generic Sizes</option>
+                                <option value="none" {% if category.size_type == 'none' %}selected{% endif %}>No Size</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea name="description" class="form-control" rows="3" 
+                                      placeholder="Describe this category">{{ category.description|default:'' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" name="is_active" class="form-check-input" id="isActive"
+                                       {% if category.is_active or not category %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="isActive">Active</label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                {% if category %}Update{% else %}Create{% endif %} Category
+                            </button>
+                            <a href="{% url 'fashion_master:category_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

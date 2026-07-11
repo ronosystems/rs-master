@@ -1,0 +1,338 @@
+<!-- templates/food_master/add_purchase.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Record Purchase - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #e9ecef;
+    }
+    .form-section .form-section-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #6f42c1;
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #6f42c1;
+        box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+    }
+    .btn-purple {
+        background-color: #6f42c1;
+        color: white;
+        border: none;
+    }
+    .btn-purple:hover {
+        background-color: #5a32a3;
+        color: white;
+    }
+    .quick-add-btn {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        margin: 2px;
+    }
+    .total-preview {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 10px 15px;
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #6f42c1;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #6f42c1;"></i>Record Purchase</h4>
+        <a href="{% url 'food_master:purchases' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Purchases
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-shopping-bag me-2"></i> Purchase Details
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <!-- Item Name -->
+                        <div class="col-md-6">
+                            <label for="item_name" class="form-label">
+                                <i class="fas fa-tag me-1" style="color: #6f42c1;"></i>
+                                Item Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="item_name" name="item_name" 
+                                   placeholder="e.g., Sugar, Cooking Oil, Flour" required>
+                        </div>
+                        
+                        <!-- Category -->
+                        <div class="col-md-6">
+                            <label for="category" class="form-label">
+                                <i class="fas fa-folder me-1" style="color: #6f42c1;"></i>
+                                Category <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">-- Select Category --</option>
+                                {% for code, name in categories %}
+                                    <option value="{{ code }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Quantity & Unit -->
+                        <div class="col-md-4">
+                            <label for="quantity" class="form-label">
+                                <i class="fas fa-hashtag me-1" style="color: #6f42c1;"></i>
+                                Quantity <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" 
+                                   step="0.01" placeholder="0.00" required oninput="calculateTotal()">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="unit" class="form-label">
+                                <i class="fas fa-balance-scale me-1" style="color: #6f42c1;"></i>
+                                Unit <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="unit" name="unit" required>
+                                <option value="">-- Select Unit --</option>
+                                {% for code, name in units %}
+                                    <option value="{{ code }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Unit Price -->
+                        <div class="col-md-4">
+                            <label for="unit_price" class="form-label">
+                                <i class="fas fa-money-bill-wave me-1" style="color: #6f42c1;"></i>
+                                Unit Price (KES) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="unit_price" name="unit_price" 
+                                   step="0.01" placeholder="0.00" required oninput="calculateTotal()">
+                        </div>
+                        
+                        <!-- Total Preview -->
+                        <div class="col-12">
+                            <div class="total-preview" id="totalPreview">
+                                Total: <span id="totalAmount">KES 0.00</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Supplier -->
+                        <div class="col-md-6">
+                            <label for="supplier" class="form-label">
+                                <i class="fas fa-truck me-1" style="color: #6f42c1;"></i>
+                                Supplier
+                            </label>
+                            <input type="text" class="form-control" id="supplier" name="supplier" 
+                                   placeholder="e.g., KenGen Supplies">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="supplier_contact" class="form-label">
+                                <i class="fas fa-phone me-1" style="color: #6f42c1;"></i>
+                                Supplier Contact
+                            </label>
+                            <input type="text" class="form-control" id="supplier_contact" name="supplier_contact" 
+                                   placeholder="e.g., 0712345678">
+                        </div>
+                        
+                        <!-- Payment -->
+                        <div class="col-md-6">
+                            <label for="payment_status" class="form-label">
+                                <i class="fas fa-credit-card me-1" style="color: #6f42c1;"></i>
+                                Payment Status
+                            </label>
+                            <select class="form-select" id="payment_status" name="payment_status">
+                                <option value="paid">Paid</option>
+                                <option value="pending">Pending</option>
+                                <option value="partial">Partial</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="payment_method" class="form-label">
+                                <i class="fas fa-wallet me-1" style="color: #6f42c1;"></i>
+                                Payment Method
+                            </label>
+                            <select class="form-select" id="payment_method" name="payment_method">
+                                <option value="">-- Select --</option>
+                                {% for code, name in payment_methods %}
+                                    <option value="{{ code }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Purchase Date -->
+                        <div class="col-md-6">
+                            <label for="purchase_date" class="form-label">
+                                <i class="fas fa-calendar-alt me-1" style="color: #6f42c1;"></i>
+                                Purchase Date
+                            </label>
+                            <input type="date" class="form-control" id="purchase_date" name="purchase_date" 
+                                   value="{{ today|date:'Y-m-d' }}">
+                        </div>
+                        
+                        <!-- Notes -->
+                        <div class="col-12">
+                            <label for="notes" class="form-label">
+                                <i class="fas fa-sticky-note me-1" style="color: #6f42c1;"></i>
+                                Notes
+                            </label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                      placeholder="Any additional notes about this purchase..."></textarea>
+                        </div>
+                        
+                        <!-- Submit -->
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-purple px-4">
+                                <i class="fas fa-save me-2"></i> Save Purchase
+                            </button>
+                            <a href="{% url 'food_master:purchases' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick Actions & Help -->
+        <div class="col-lg-4">
+            <!-- Quick Add Items -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header" style="background-color: #f8f9fa;">
+                    <i class="fas fa-bolt me-2" style="color: #6f42c1;"></i>
+                    Quick Add Common Items
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-1">
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Sugar', 'food', 1, 'kg', 200)">Sugar</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Flour', 'food', 1, 'kg', 150)">Flour</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Cooking Oil', 'food', 1, 'l', 350)">Cooking Oil</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Rice', 'food', 1, 'kg', 280)">Rice</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Milk', 'beverage', 1, 'l', 120)">Milk</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Onions', 'food', 1, 'kg', 100)">Onions</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Tomatoes', 'food', 1, 'kg', 80)">Tomatoes</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Potatoes', 'food', 1, 'kg', 90)">Potatoes</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Salt', 'food', 1, 'kg', 50)">Salt</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Tea Leaves', 'beverage', 1, 'kg', 400)">Tea Leaves</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Coffee', 'beverage', 1, 'kg', 600)">Coffee</button>
+                        <button class="btn btn-outline-secondary quick-add-btn" onclick="quickAdd('Sugar', 'food', 1, 'kg', 180)">Sugar</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Help -->
+            <div class="card shadow-sm">
+                <div class="card-header" style="background-color: #f8f9fa;">
+                    <i class="fas fa-info-circle me-2" style="color: #17a2b8;"></i>
+                    Tips
+                </div>
+                <div class="card-body">
+                    <ul class="small text-muted mb-0">
+                        <li class="mb-2">Record all purchases for accurate stock tracking</li>
+                        <li class="mb-2">Enter correct quantity and unit for each item</li>
+                        <li class="mb-2">Add supplier details for easy reordering</li>
+                        <li class="mb-2">Use the "Quick Add" buttons for common items</li>
+                        <li>Total cost is automatically calculated</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// CALCULATE TOTAL
+// ============================================
+function calculateTotal() {
+    const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+    const unitPrice = parseFloat(document.getElementById('unit_price').value) || 0;
+    const total = quantity * unitPrice;
+    document.getElementById('totalAmount').textContent = `KES ${total.toFixed(2)}`;
+}
+
+// ============================================
+// QUICK ADD ITEM
+// ============================================
+function quickAdd(name, category, quantity, unit, price) {
+    document.getElementById('item_name').value = name;
+    document.getElementById('category').value = category;
+    document.getElementById('quantity').value = quantity;
+    document.getElementById('unit').value = unit;
+    document.getElementById('unit_price').value = price;
+    calculateTotal();
+    document.getElementById('item_name').focus();
+}
+
+// ============================================
+// FORM VALIDATION
+// ============================================
+document.querySelector('form').addEventListener('submit', function(e) {
+    const itemName = document.getElementById('item_name').value.trim();
+    const category = document.getElementById('category').value;
+    const quantity = parseFloat(document.getElementById('quantity').value);
+    const unit = document.getElementById('unit').value;
+    const unitPrice = parseFloat(document.getElementById('unit_price').value);
+    
+    if (!itemName) {
+        e.preventDefault();
+        alert('Please enter the item name.');
+        document.getElementById('item_name').focus();
+        return false;
+    }
+    
+    if (!category) {
+        e.preventDefault();
+        alert('Please select a category.');
+        document.getElementById('category').focus();
+        return false;
+    }
+    
+    if (!quantity || quantity <= 0) {
+        e.preventDefault();
+        alert('Please enter a valid quantity.');
+        document.getElementById('quantity').focus();
+        return false;
+    }
+    
+    if (!unit) {
+        e.preventDefault();
+        alert('Please select a unit.');
+        document.getElementById('unit').focus();
+        return false;
+    }
+    
+    if (!unitPrice || unitPrice <= 0) {
+        e.preventDefault();
+        alert('Please enter a valid unit price.');
+        document.getElementById('unit_price').focus();
+        return false;
+    }
+    
+    return true;
+});
+
+// Auto-calculate on input change
+document.getElementById('quantity').addEventListener('input', calculateTotal);
+document.getElementById('unit_price').addEventListener('input', calculateTotal);
+</script>
+{% endblock %}

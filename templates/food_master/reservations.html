@@ -1,0 +1,127 @@
+<!-- templates/food_master/reservations.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Reservations - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-calendar-check me-2" style="color: #e67e22;"></i>Reservations</h4>
+        <div>
+            <a href="{% url 'food_master:create_reservation' %}" class="btn" style="background-color: #e67e22; color: white;">
+                <i class="fas fa-plus me-1"></i> New Reservation
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="date" class="form-label">Date</label>
+                    <input type="date" class="form-control" id="date" name="date" 
+                           value="{{ request.GET.date|default:today|date:'Y-m-d' }}" onchange="this.form.submit()">
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="confirmed" {% if request.GET.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                        <option value="seated" {% if request.GET.status == 'seated' %}selected{% endif %}>Seated</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        <option value="no_show" {% if request.GET.status == 'no_show' %}selected{% endif %}>No Show</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    {% if request.GET.date or request.GET.status %}
+                        <a href="{% url 'food_master:reservations' %}" class="btn btn-outline-secondary">Clear Filters</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if reservations %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Customer</th>
+                        <th>Date & Time</th>
+                        <th>Guests</th>
+                        <th>Table</th>
+                        <th>Status</th>
+                        <th>Branch</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reservation in reservations %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><strong>{{ reservation.customer.name }}</strong></td>
+                            <td>
+                                {{ reservation.reservation_date|date:"M d, Y" }}
+                                <br>
+                                <small class="text-muted">{{ reservation.reservation_time|time:"H:i" }}</small>
+                            </td>
+                            <td>{{ reservation.number_of_guests }}</td>
+                            <td>{{ reservation.table.table_number|default:"Not Assigned" }}</td>
+                            <td>
+                                <span class="badge {% if reservation.status == 'confirmed' %}bg-success{% elif reservation.status == 'pending' %}bg-warning{% elif reservation.status == 'seated' %}bg-info{% elif reservation.status == 'completed' %}bg-secondary{% elif reservation.status == 'cancelled' %}bg-danger{% elif reservation.status == 'no_show' %}bg-dark{% else %}bg-secondary{% endif %}">
+                                    {{ reservation.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ reservation.branch.name }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="viewReservation({{ reservation.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-success" onclick="updateStatus({{ reservation.id }}, 'confirmed')">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="updateStatus({{ reservation.id }}, 'cancelled')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-calendar-check fa-4x text-muted mb-3" style="color: #e67e22;"></i>
+                <h4>No Reservations Found</h4>
+                <p class="text-muted">Create your first reservation.</p>
+                <a href="{% url 'food_master:create_reservation' %}" class="btn" style="background-color: #e67e22; color: white;">
+                    <i class="fas fa-plus me-1"></i> New Reservation
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function viewReservation(reservationId) {
+    alert('View reservation: ' + reservationId);
+}
+
+function updateStatus(reservationId, status) {
+    if (confirm('Update reservation status to ' + status.toUpperCase() + '?')) {
+        // AJAX call to update status
+        alert('Reservation ' + reservationId + ' updated to ' + status);
+        location.reload();
+    }
+}
+</script>
+{% endblock %}

@@ -11,21 +11,13 @@
     <!-- ============================================ -->
     <div class="d-flex flex-wrap flex-sm-nowrap justify-content-between align-items-center pt-3 pb-2 mb-4 border-bottom">
         <div>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
-                    <li class="breadcrumb-item active">
-                        <i class="fas fa-home me-1"></i>Dashboard
-                    </li>
-                </ol>
-            </nav>
             <h4 class="fw-bold mb-0">
-                <i class="fas fa-chart-pie text-primary me-2"></i>Overview
+                <i class="fas fa-chart-pie text-primary me-2"></i>Welcome back, {{ user.get_full_name|default:user.username }}!
             </h4>
-            <p class="text-muted small mb-0">Welcome back, {{ user.get_full_name|default:user.username }}!</p>
         </div>
         <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0">
-            <span class="badge bg-primary bg-opacity-10 text-primary px-4 py-2 rounded-pill">
-                <i class="fas fa-store me-1"></i> {{ tenant.company_name }}
+            <span class="badge bg-primary bg-opacity-100 text-dark px-4 py-2 rounded-pill">
+                <i class="fas fa-store me-1"></i> {{ company_settings.company_name|default:tenant.company_name }}
             </span>
             <span class="badge bg-success px-4 py-2 rounded-pill">
                 <i class="fas fa-microchip me-1"></i> TECH MASTER
@@ -52,7 +44,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <span class="badge bg-primary bg-opacity-100 text-dark px-3 py-2 rounded-pill mb-2">
+                            <span class="badge bg-primary bg-opacity-50 text-dark px-3 py-2 rounded-pill mb-2">
                                 <i class="fas fa-boxes me-1"></i> Products
                             </span>
                             <h2 class="fw-bold mb-0">{{ total_products|default:0 }}</h2>
@@ -60,7 +52,7 @@
                                 <i class="fas fa-arrow-up text-success me-1"></i>{{ product_growth|default:8 }}% this month
                             </small>
                         </div>
-                        <div class="bg-primary bg-opacity-100 p-3 rounded-3">
+                        <div class="bg-primary bg-opacity-50 p-3 rounded-3">
                             <i class="fas fa-boxes fa-2x text-dark"></i>
                         </div>
                     </div>
@@ -75,7 +67,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <span class="badge bg-success bg-opacity-100 text-dark px-3 py-2 rounded-pill mb-2">
+                            <span class="badge bg-success bg-opacity-50 text-dark px-3 py-2 rounded-pill mb-2">
                                 <i class="fas fa-shopping-cart me-1"></i> Today's Sales
                             </span>
                             <h2 class="fw-bold mb-0">KES {{ today_sales|floatformat:0|default:0 }}</h2>
@@ -83,7 +75,7 @@
                                 <i class="fas fa-arrow-up text-success me-1"></i>{{ sales_growth|default:12 }}% vs yesterday
                             </small>
                         </div>
-                        <div class="bg-success bg-opacity-100 p-3 rounded-3">
+                        <div class="bg-success bg-opacity-50 p-3 rounded-3">
                             <i class="fas fa-shopping-cart fa-2x text-dark"></i>
                         </div>
                     </div>
@@ -98,7 +90,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <span class="badge bg-info bg-opacity-100 text-dark px-3 py-2 rounded-pill mb-2">
+                            <span class="badge bg-info bg-opacity-50 text-dark px-3 py-2 rounded-pill mb-2">
                                 <i class="fas fa-users me-1"></i> Customers
                             </span>
                             <h2 class="fw-bold mb-0">{{ total_customers|default:0 }}</h2>
@@ -106,7 +98,7 @@
                                 <i class="fas fa-arrow-up text-success me-1"></i>{{ customer_growth|default:5 }} new this month
                             </small>
                         </div>
-                        <div class="bg-info bg-opacity-100 p-3 rounded-3">
+                        <div class="bg-info bg-opacity-50 p-3 rounded-3">
                             <i class="fas fa-users fa-2x text-dark"></i>
                         </div>
                     </div>
@@ -121,7 +113,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <span class="badge bg-warning bg-opacity-100 text-dark px-3 py-2 rounded-pill mb-2">
+                            <span class="badge bg-warning bg-opacity-50 text-dark px-3 py-2 rounded-pill mb-2">
                                 <i class="fas fa-exclamation-triangle me-1"></i> Low Stock
                             </span>
                             <h2 class="fw-bold mb-0 {% if low_stock_count > 0 %}text-warning{% endif %}">
@@ -129,7 +121,7 @@
                             </h2>
                             <small class="text-muted">Products below reorder level</small>
                         </div>
-                        <div class="bg-warning bg-opacity-100 p-3 rounded-3">
+                        <div class="bg-warning bg-opacity-50 p-3 rounded-3">
                             <i class="fas fa-exclamation-triangle fa-2x text-dark"></i>
                         </div>
                     </div>
@@ -170,7 +162,7 @@
                         <a href="{% url 'tech_master:add_branch' %}" class="btn btn-info text-white rounded-pill px-4">
                             <i class="fas fa-store me-2"></i>Add Branch
                         </a>
-                        <a href="{% url 'users:add_user' %}" class="btn btn-warning rounded-pill px-4">
+                        <a href="{% url 'users:user_create' %}" class="btn btn-warning rounded-pill px-4">
                             <i class="fas fa-user-plus me-2"></i>Add User
                         </a>
                         <a href="{% url 'tech_master:sales_history' %}" class="btn btn-secondary rounded-pill px-4">
@@ -222,7 +214,7 @@
                                     <td>{{ sale.cashier.username }}</td>
                                     <td class="text-muted small">{{ sale.created_at|date:"d/m/Y H:i" }}</td>
                                     <td class="text-center">
-                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">
+                                        <span class="badge bg-success bg-opacity-50 text-dark rounded-pill px-3 py-2">
                                             <i class="fas fa-check-circle me-1"></i>Paid
                                         </span>
                                     </td>
@@ -342,15 +334,18 @@
     
     .table tbody tr {
         transition: all 0.2s;
+        box-shadow: #000000;
     }
     
     .table tbody tr:hover {
         background-color: rgba(13, 110, 253, 0.04);
+        box-shadow: #000000;
     }
     
     .table thead th {
         font-weight: 600;
         color: #000000;
+        background: #0d6efd;
         font-size: 0.8rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;

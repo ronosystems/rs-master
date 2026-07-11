@@ -1,6 +1,5 @@
 # apps/shared/portal/context_processors.py
-
-
+    
 def subscription_status(request):
     """Add subscription status to templates"""
     context = {
@@ -17,8 +16,6 @@ def subscription_status(request):
         context['subscription_expired'] = True
     
     return context
-
-
 
 
 def tenant_context(request):
@@ -47,6 +44,45 @@ def tenant_context(request):
             except:
                 pass
         
+        # ============================================
+        # GET COUNTS FROM DATABASE
+        # ============================================
+        user_count = 0
+        product_count = 0
+        room_count = 0
+        branch_count = 0
+        
+        # Count users
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user_count = User.objects.filter(tenant=tenant, is_active=True).count()
+        except:
+            pass
+        
+        # Count products (Tech Master)
+        try:
+            from apps.tech_master.models import Product
+            product_count = Product.objects.filter(tenant=tenant, is_active=True).count()
+        except:
+            pass
+        
+        # ============================================
+        # COUNT ROOMS (Hotel Master) - ADD THIS
+        # ============================================
+        try:
+            from apps.hotel_master.models import Room
+            room_count = Room.objects.filter(tenant=tenant).count()
+        except:
+            pass
+        
+        # Count branches
+        try:
+            from apps.shared.tenants.models import Branch
+            branch_count = Branch.objects.filter(tenant=tenant, is_active=True).count()
+        except:
+            pass
+        
         # ✅ Now set storage_limit after current_subscription is defined
         storage_used = 0
         storage_limit = current_subscription.max_storage_gb if current_subscription else 1
@@ -59,23 +95,37 @@ def tenant_context(request):
             context['tenant_storage_percentage'] = 0
             context['tenant_storage_at_limit'] = False
             
+            # Users
             context['tenant_user_limit'] = current_subscription.max_users
-            context['tenant_users_count'] = 0
-            context['tenant_users_remaining'] = current_subscription.max_users
-            context['tenant_users_percentage'] = 0
-            context['tenant_users_at_limit'] = False
+            context['tenant_users_count'] = user_count
+            context['tenant_users_remaining'] = max(0, current_subscription.max_users - user_count)
+            context['tenant_users_percentage'] = (user_count / current_subscription.max_users * 100) if current_subscription.max_users > 0 else 0
+            context['tenant_users_at_limit'] = user_count >= current_subscription.max_users
             
+            # Products
             context['tenant_product_limit'] = current_subscription.max_products
-            context['tenant_products_count'] = 0
-            context['tenant_products_remaining'] = current_subscription.max_products
-            context['tenant_products_percentage'] = 0
-            context['tenant_products_at_limit'] = False
+            context['tenant_products_count'] = product_count
+            context['tenant_products_remaining'] = max(0, current_subscription.max_products - product_count)
+            context['tenant_products_percentage'] = (product_count / current_subscription.max_products * 100) if current_subscription.max_products > 0 else 0
+            context['tenant_products_at_limit'] = product_count >= current_subscription.max_products
             
+            # ============================================
+            # ROOMS LIMITS (Hotel Master) - ADD THIS
+            # ============================================
+            # Use max_products as room limit if max_rooms doesn't exist
+            room_limit = getattr(current_subscription, 'max_rooms', current_subscription.max_products)
+            context['tenant_room_limit'] = room_limit
+            context['tenant_rooms_count'] = room_count
+            context['tenant_rooms_remaining'] = max(0, room_limit - room_count)
+            context['tenant_rooms_percentage'] = (room_count / room_limit * 100) if room_limit > 0 else 0
+            context['tenant_rooms_at_limit'] = room_count >= room_limit
+            
+            # Branches
             context['tenant_branch_limit'] = current_subscription.max_branches
-            context['tenant_branches_count'] = 0
-            context['tenant_branches_remaining'] = current_subscription.max_branches
-            context['tenant_branches_percentage'] = 0
-            context['tenant_branches_at_limit'] = False
+            context['tenant_branches_count'] = branch_count
+            context['tenant_branches_remaining'] = max(0, current_subscription.max_branches - branch_count)
+            context['tenant_branches_percentage'] = (branch_count / current_subscription.max_branches * 100) if current_subscription.max_branches > 0 else 0
+            context['tenant_branches_at_limit'] = branch_count >= current_subscription.max_branches
             
             context['tenant_has_limits'] = True
         else:
@@ -87,27 +137,36 @@ def tenant_context(request):
             context['tenant_storage_at_limit'] = False
             
             context['tenant_user_limit'] = 10
-            context['tenant_users_count'] = 0
-            context['tenant_users_remaining'] = 10
-            context['tenant_users_percentage'] = 0
-            context['tenant_users_at_limit'] = False
+            context['tenant_users_count'] = user_count
+            context['tenant_users_remaining'] = max(0, 10 - user_count)
+            context['tenant_users_percentage'] = (user_count / 10 * 100) if 10 > 0 else 0
+            context['tenant_users_at_limit'] = user_count >= 10
             
             context['tenant_product_limit'] = 10000
-            context['tenant_products_count'] = 0
-            context['tenant_products_remaining'] = 10000
-            context['tenant_products_percentage'] = 0
-            context['tenant_products_at_limit'] = False
+            context['tenant_products_count'] = product_count
+            context['tenant_products_remaining'] = max(0, 10000 - product_count)
+            context['tenant_products_percentage'] = (product_count / 10000 * 100) if 10000 > 0 else 0
+            context['tenant_products_at_limit'] = product_count >= 10000
+            
+            # ============================================
+            # ROOMS LIMITS (Default) - ADD THIS
+            # ============================================
+            default_room_limit = 50
+            context['tenant_room_limit'] = default_room_limit
+            context['tenant_rooms_count'] = room_count
+            context['tenant_rooms_remaining'] = max(0, default_room_limit - room_count)
+            context['tenant_rooms_percentage'] = (room_count / default_room_limit * 100) if default_room_limit > 0 else 0
+            context['tenant_rooms_at_limit'] = room_count >= default_room_limit
             
             context['tenant_branch_limit'] = 5
-            context['tenant_branches_count'] = 0
-            context['tenant_branches_remaining'] = 5
-            context['tenant_branches_percentage'] = 0
-            context['tenant_branches_at_limit'] = False
+            context['tenant_branches_count'] = branch_count
+            context['tenant_branches_remaining'] = max(0, 5 - branch_count)
+            context['tenant_branches_percentage'] = (branch_count / 5 * 100) if 5 > 0 else 0
+            context['tenant_branches_at_limit'] = branch_count >= 5
             
             context['tenant_has_limits'] = True
     
     return context
-
 
 
 def project_type_access(request):

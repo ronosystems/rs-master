@@ -1,0 +1,171 @@
+<!-- templates/food_master/create_reservation.html -->
+
+{% extends "food_master/base_food.html" %}
+{% load static %}
+
+{% block title %}Create Reservation - {{ company_settings.company_name|default:tenant.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-plus-circle me-2" style="color: #e67e22;"></i>Create New Reservation</h4>
+        <a href="{% url 'food_master:reservations' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Reservations
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background-color: #f8f4f0;">
+            <i class="fas fa-calendar-plus me-2" style="color: #e67e22;"></i>
+            Reservation Details
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="branch" class="form-label">
+                            <i class="fas fa-store me-1" style="color: #e67e22;"></i>
+                            Branch <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="branch" name="branch" required>
+                            <option value="">-- Select Branch --</option>
+                            {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="customer" class="form-label">
+                            <i class="fas fa-user me-1" style="color: #e67e22;"></i>
+                            Customer <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="customer" name="customer" required>
+                            <option value="">-- Select Customer --</option>
+                            {% for customer in customers %}
+                                <option value="{{ customer.id }}">{{ customer.name }} - {{ customer.phone_number }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">
+                            <a href="{% url 'food_master:add_customer' %}">Add new customer</a>
+                        </small>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="reservation_date" class="form-label">
+                            <i class="fas fa-calendar-alt me-1" style="color: #e67e22;"></i>
+                            Date <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="reservation_date" name="reservation_date" 
+                               value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="reservation_time" class="form-label">
+                            <i class="fas fa-clock me-1" style="color: #e67e22;"></i>
+                            Time <span class="text-danger">*</span>
+                        </label>
+                        <input type="time" class="form-control" id="reservation_time" name="reservation_time" 
+                               value="19:00" required>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="number_of_guests" class="form-label">
+                            <i class="fas fa-users me-1" style="color: #e67e22;"></i>
+                            Number of Guests <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="number_of_guests" name="number_of_guests" 
+                               value="2" min="1" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="table" class="form-label">
+                            <i class="fas fa-chair me-1" style="color: #e67e22;"></i>
+                            Preferred Table
+                        </label>
+                        <select class="form-select" id="table" name="table">
+                            <option value="">-- Any Available Table --</option>
+                            {% for table in tables %}
+                                <option value="{{ table.id }}">Table {{ table.table_number }} ({{ table.capacity }} seats)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="special_requests" class="form-label">
+                            <i class="fas fa-sticky-note me-1" style="color: #e67e22;"></i>
+                            Special Requests
+                        </label>
+                        <textarea class="form-control" id="special_requests" name="special_requests" 
+                                  rows="2" placeholder="Any special requests..."></textarea>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>Reservations are pending until confirmed by staff.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <button type="submit" class="btn" style="background-color: #e67e22; color: white; padding: 10px 30px;">
+                            <i class="fas fa-save me-2"></i> Create Reservation
+                        </button>
+                        <a href="{% url 'food_master:reservations' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const branch = document.getElementById('branch').value;
+    const customer = document.getElementById('customer').value;
+    const date = document.getElementById('reservation_date').value;
+    const time = document.getElementById('reservation_time').value;
+    const guests = document.getElementById('number_of_guests').value;
+    
+    if (!branch) {
+        e.preventDefault();
+        alert('Please select a branch.');
+        document.getElementById('branch').focus();
+        return false;
+    }
+    
+    if (!customer) {
+        e.preventDefault();
+        alert('Please select a customer.');
+        document.getElementById('customer').focus();
+        return false;
+    }
+    
+    if (!date) {
+        e.preventDefault();
+        alert('Please select a date.');
+        document.getElementById('reservation_date').focus();
+        return false;
+    }
+    
+    if (!time) {
+        e.preventDefault();
+        alert('Please select a time.');
+        document.getElementById('reservation_time').focus();
+        return false;
+    }
+    
+    if (!guests || parseInt(guests) < 1) {
+        e.preventDefault();
+        alert('Please enter the number of guests (at least 1).');
+        document.getElementById('number_of_guests').focus();
+        return false;
+    }
+    
+    return true;
+});
+</script>
+{% endblock %}

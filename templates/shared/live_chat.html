@@ -1,0 +1,901 @@
+<!-- templates/shared/live_chat.html -->
+{% extends "shared/base_super_admin.html" %}
+{% load static %}
+
+{% block title %}Live Chat - RS Master Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-4 border-bottom">
+        <div>
+            <h4 class="fw-bold mb-0">
+                <i class="fas fa-comment-dots text-primary me-2"></i>Direct communication with clients
+            </h4>
+            <p class="text-muted small mb-0">Each client has their own private conversation</p>
+        </div>
+        <div>
+            <span class="badge bg-success rounded-pill px-3 py-2 me-2">
+                <i class="fas fa-circle me-1" style="font-size: 8px;"></i> {{ online_count|default:0 }} Online
+            </span>
+            <span class="badge bg-danger rounded-pill px-3 py-2">
+                <i class="fas fa-bell me-1"></i> {{ unread_count|default:0 }} Unread
+            </span>
+        </div>
+    </div>
+
+    <!-- Chat Layout -->
+    <div class="row g-4">
+        <!-- Sidebar - Active Conversations -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center p-3">
+                    <h6 class="fw-bold mb-0">
+                        <i class="fas fa-users me-2"></i>Clients
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-primary rounded-pill" id="convCount">{{ conversations|length|default:0 }}</span>
+                        <button class="btn btn-sm btn-outline-danger" onclick="clearAllConversations()" title="Clear All Chats">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;" id="conversationList">
+                    {% for conv in conversations %}
+                    <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 px-4 py-3 border-0 {% if forloop.first %}active{% endif %}" 
+                         data-conversation-id="{{ conv.id }}" 
+                         style="cursor: pointer;"
+                         onclick="selectConversation({{ conv.id }}, this)">
+                        <div class="position-relative flex-shrink-0">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                            {% if conv.unread_count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                                {{ conv.unread_count }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-semibold text-truncate">{{ conv.client_name|default:"Visitor" }}</h6>
+                                <small class="text-muted">{{ conv.last_message.created_at|date:"H:i"|default:"Just now" }}</small>
+                            </div>
+                            <p class="text-muted small mb-0 text-truncate">{{ conv.last_message.message|default:"Started a conversation"|truncatechars:50 }}</p>
+                            <div class="mt-1">
+                                {% if conv.is_client_online %}
+                                <span class="badge bg-success" style="font-size: 0.5rem;">
+                                    <i class="fas fa-circle me-1"></i>Online
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary" style="font-size: 0.5rem;">
+                                    <i class="fas fa-circle me-1"></i>Offline
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            <small class="text-muted">{{ conv.messages.count }}</small>
+                            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteConversation({{ conv.id }})" title="Delete Conversation">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-comments fa-3x text-muted opacity-25 mb-3"></i>
+                        <p class="text-muted">No active conversations</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 d-flex align-items-center justify-content-between p-3">
+                    <div class="d-flex align-items-center gap-3 flex-grow-1">
+                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0" id="chatUserName">Select a client</h6>
+                            <small class="text-muted" id="chatUserStatus">
+                                <i class="fas fa-circle text-muted me-1" style="font-size: 6px;"></i> Offline
+                            </small>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <span id="selectionModeBadge" class="badge bg-warning text-dark" style="display: none;">
+                            <i class="fas fa-check-circle me-1"></i> <span id="selectedCount">0</span> selected
+                        </span>
+                        <button class="btn btn-sm btn-danger" id="deleteSelectedBtn" onclick="deleteSelectedMessages()" style="display: none;" title="Delete Selected">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="refreshConversations()" title="Refresh">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" id="clearChatBtn" onclick="clearCurrentChat()" title="Clear Chat" style="display: none;">
+                            <i class="fas fa-eraser"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div class="card-body p-0" style="height: 450px; overflow-y: auto;" id="chatMessagesContainer">
+                    <div class="p-4" id="chatMessages">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-comment-dots fa-3x opacity-25 mb-3"></i>
+                            <p>Select a client to start chatting</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="card-footer bg-white border-0 p-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control border-0 shadow-none" id="chatInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+                        <button class="btn btn-primary" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane me-2"></i>Send
+                        </button>
+                    </div>
+                    <div class="mt-2 d-flex justify-content-between">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            <span id="selectionHint">Long press on a message to select it</span>
+                        </small>
+                        <small class="text-muted">
+                            <span id="messageCount">0</span> messages
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .list-group-item.active {
+        background: linear-gradient(135deg, #0f67b3, #0284c7) !important;
+        border-color: #0f67b3 !important;
+        color: white !important;
+    }
+    .list-group-item.active .text-muted {
+        color: rgba(255,255,255,0.7) !important;
+    }
+    .list-group-item {
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    .list-group-item:hover:not(.active) {
+        background: var(--sidebar-hover);
+    }
+    .list-group-item .btn-outline-danger {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .list-group-item:hover .btn-outline-danger {
+        opacity: 1;
+    }
+    #chatMessagesContainer::-webkit-scrollbar {
+        width: 4px;
+    }
+    #chatMessagesContainer::-webkit-scrollbar-track {
+        background: var(--sidebar-border);
+    }
+    #chatMessagesContainer::-webkit-scrollbar-thumb {
+        background: #0f67b3;
+        border-radius: 10px;
+    }
+    .chat-message {
+        max-width: 75%;
+        padding: 10px 16px;
+        border-radius: 16px;
+        margin-bottom: 8px;
+        line-height: 1.5;
+        font-size: 0.9rem;
+        animation: slideIn 0.3s ease;
+        position: relative;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: default;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .chat-message:hover {
+        transform: translateX(2px);
+    }
+    
+    .chat-message.selected {
+        border: 2px solid #0d6efd;
+        transform: scale(1.02);
+        box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+        cursor: pointer;
+    }
+    .chat-message.selected.admin {
+        background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    }
+    .chat-message.selected.client {
+        background: #cfe2ff;
+        color: #0a58ca;
+    }
+    .chat-message .selection-check {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 24px;
+        height: 24px;
+        background: #0d6efd;
+        border-radius: 50%;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.7rem;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
+        z-index: 10;
+    }
+    .chat-message.selected .selection-check {
+        display: flex;
+    }
+    
+    .chat-message .message-actions {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        display: none;
+        gap: 4px;
+    }
+    .chat-message:hover .message-actions {
+        display: flex;
+    }
+    .chat-message .message-actions button {
+        background: rgba(0,0,0,0.5);
+        border: none;
+        color: white;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 0.6rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .chat-message .message-actions button:hover {
+        background: rgba(220, 53, 69, 0.8);
+    }
+    .chat-message.admin {
+        background: linear-gradient(135deg, #0f67b3, #0284c7);
+        color: white;
+        align-self: flex-end;
+        border-bottom-right-radius: 4px;
+        margin-left: auto;
+    }
+    .chat-message.client {
+        background: var(--sidebar-hover);
+        color: var(--sidebar-text);
+        align-self: flex-start;
+        border-bottom-left-radius: 4px;
+        margin-right: auto;
+    }
+    .chat-message .msg-time {
+        font-size: 0.65rem;
+        opacity: 0.6;
+        margin-top: 4px;
+        display: block;
+    }
+    .chat-message .msg-sender {
+        font-weight: 600;
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+        display: block;
+    }
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    #chatMessages {
+        display: flex;
+        flex-direction: column;
+    }
+    .status-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 4px;
+    }
+    .status-dot.online {
+        background: #34d399;
+    }
+    .status-dot.offline {
+        background: #9ca3af;
+    }
+    
+    .toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    .chat-message.selected {
+        animation: pulse 0.3s ease;
+    }
+    
+    .selection-hint {
+        background: rgba(13, 110, 253, 0.1);
+        border: 1px dashed #0d6efd;
+        border-radius: 8px;
+        padding: 4px 12px;
+        font-size: 0.7rem;
+        color: #0d6efd;
+        display: inline-block;
+    }
+</style>
+
+<script>
+    let currentConversation = null;
+    let pollingInterval = null;
+    let currentMessages = [];
+    let selectedMessages = new Set();
+    
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+
+    // ============================================
+    // LONG PRESS DETECTION
+    // ============================================
+
+    function setupLongPress() {
+        let pressTimer = null;
+        
+        document.addEventListener('mousedown', function(e) {
+            const msgElement = e.target.closest('.chat-message');
+            if (!msgElement) return;
+            if (e.target.closest('.message-actions')) return;
+            
+            pressTimer = setTimeout(function() {
+                handleLongPress(msgElement);
+            }, 600);
+        });
+        
+        document.addEventListener('mouseup', function() {
+            clearTimeout(pressTimer);
+        });
+        
+        document.addEventListener('mouseleave', function() {
+            clearTimeout(pressTimer);
+        });
+        
+        let touchTimer = null;
+        let touchTarget = null;
+        
+        document.addEventListener('touchstart', function(e) {
+            const msgElement = e.target.closest('.chat-message');
+            if (!msgElement) return;
+            if (e.target.closest('.message-actions')) return;
+            
+            touchTarget = msgElement;
+            touchTimer = setTimeout(function() {
+                handleLongPress(touchTarget);
+                e.preventDefault();
+            }, 600);
+        }, { passive: true });
+        
+        document.addEventListener('touchend', function() {
+            clearTimeout(touchTimer);
+        });
+        
+        document.addEventListener('touchmove', function() {
+            clearTimeout(touchTimer);
+        });
+    }
+
+    function handleLongPress(element) {
+        const msgId = element.dataset.messageId;
+        if (!msgId) return;
+        if (!currentConversation) return;
+        
+        if (selectedMessages.has(msgId)) {
+            selectedMessages.delete(msgId);
+            element.classList.remove('selected');
+        } else {
+            selectedMessages.add(msgId);
+            element.classList.add('selected');
+            if (!element.querySelector('.selection-check')) {
+                const check = document.createElement('div');
+                check.className = 'selection-check';
+                check.innerHTML = '<i class="fas fa-check"></i>';
+                element.appendChild(check);
+            }
+        }
+        updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+        const count = selectedMessages.size;
+        const badge = document.getElementById('selectionModeBadge');
+        const deleteBtn = document.getElementById('deleteSelectedBtn');
+        const hint = document.getElementById('selectionHint');
+        
+        if (count > 0) {
+            badge.style.display = 'inline-block';
+            document.getElementById('selectedCount').textContent = count;
+            deleteBtn.style.display = 'inline-block';
+            hint.innerHTML = '<span class="selection-hint">' + count + ' message(s) selected. Click trash to delete.</span>';
+        } else {
+            badge.style.display = 'none';
+            deleteBtn.style.display = 'none';
+            hint.innerHTML = 'Long press on a message to select it';
+        }
+    }
+
+    function deleteSelectedMessages() {
+        if (selectedMessages.size === 0) return;
+        
+        const count = selectedMessages.size;
+        if (!confirm(`Are you sure you want to delete ${count} selected message(s)?`)) return;
+        
+        const deleteBtn = document.getElementById('deleteSelectedBtn');
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        
+        const messageIds = Array.from(selectedMessages);
+        let deleted = 0;
+        let failed = 0;
+        
+        messageIds.forEach(function(msgId, index) {
+            fetch(`/chats/api/message/${msgId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    deleted++;
+                    const msgElement = document.querySelector(`.chat-message[data-message-id="${msgId}"]`);
+                    if (msgElement) {
+                        msgElement.remove();
+                    }
+                } else {
+                    failed++;
+                }
+                
+                if (index === messageIds.length - 1) {
+                    selectedMessages.clear();
+                    updateSelectionUI();
+                    const count = document.querySelectorAll('.chat-message').length;
+                    document.getElementById('messageCount').textContent = count;
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                    
+                    if (failed === 0) {
+                        showToast(`Deleted ${deleted} message(s)`, 'success');
+                    } else {
+                        showToast(`Deleted ${deleted} message(s), ${failed} failed`, 'warning');
+                    }
+                    
+                    if (count === 0) {
+                        chatMessages.innerHTML = `
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-comment-dots fa-3x opacity-25 mb-3"></i>
+                                <p>Chat cleared. Start a new conversation!</p>
+                            </div>
+                        `;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting message:', error);
+                failed++;
+                if (index === messageIds.length - 1) {
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                    showToast(`Deleted ${deleted} message(s), ${failed} failed`, 'error');
+                }
+            });
+        });
+    }
+
+    // ============================================
+    // CONVERSATION MANAGEMENT
+    // ============================================
+
+    function selectConversation(convId, element) {
+        selectedMessages.clear();
+        updateSelectionUI();
+        currentConversation = convId;
+        
+        document.querySelectorAll('.list-group-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        if (element) {
+            element.classList.add('active');
+            const name = element.querySelector('h6').textContent;
+            document.getElementById('chatUserName').textContent = name;
+            
+            const statusBadge = element.querySelector('.badge.bg-success, .badge.bg-secondary');
+            const statusText = statusBadge ? statusBadge.textContent.trim() : 'Offline';
+            document.getElementById('chatUserStatus').innerHTML = `
+                <span class="status-dot ${statusText === 'Online' ? 'online' : 'offline'}"></span>
+                ${statusText}
+            `;
+        }
+
+        document.getElementById('clearChatBtn').style.display = 'inline-block';
+        loadMessages(convId);
+        updateUnreadCount(convId);
+    }
+
+    function updateUnreadCount(convId) {
+        const element = document.querySelector(`.list-group-item[data-conversation-id="${convId}"]`);
+        if (element) {
+            const badge = element.querySelector('.badge.bg-danger');
+            if (badge) {
+                badge.remove();
+            }
+            updateMainUnreadCount();
+        }
+    }
+
+    function updateMainUnreadCount() {
+        fetch('/chats/api/unread/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const badge = document.querySelector('.badge.bg-danger');
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.textContent = data.unread_count;
+                            badge.style.display = 'inline-block';
+                        } else {
+                            badge.textContent = '0';
+                            badge.style.display = 'none';
+                        }
+                    }
+                }
+            })
+            .catch(error => console.log('Error updating unread count:', error));
+    }
+
+    function loadMessages(convId) {
+        fetch(`/chats/api/messages/${convId}/`)
+            .then(response => {
+                if (response.status === 404) {
+                    console.log('❌ Conversation not found');
+                    chatMessages.innerHTML = `
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-exclamation-triangle fa-3x opacity-25 mb-3"></i>
+                            <p>Conversation not found</p>
+                        </div>
+                    `;
+                    return null;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data) return;
+                
+                if (data.success) {
+                    currentMessages = data.messages || [];
+                    chatMessages.innerHTML = '';
+                    
+                    if (currentMessages.length === 0) {
+                        chatMessages.innerHTML = `
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-comment-dots fa-3x opacity-25 mb-3"></i>
+                                <p>No messages yet. Start the conversation!</p>
+                            </div>
+                        `;
+                    } else {
+                        currentMessages.forEach(msg => {
+                            addMessageToUI(msg.sender, msg.text, msg.time, msg.sender_name, msg.id);
+                        });
+                    }
+                    document.getElementById('messageCount').textContent = currentMessages.length;
+                    scrollToBottom();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading messages:', error);
+            });
+    }
+
+    function addMessageToUI(sender, text, time, senderName, messageId) {
+        const div = document.createElement('div');
+        div.className = `chat-message ${sender}`;
+        div.dataset.messageId = messageId || Date.now();
+        const displayName = sender === 'admin' ? '👤 You' : (senderName || '👤 Client');
+        div.innerHTML = `
+            <span class="msg-sender">${displayName}</span>
+            ${text}
+            <span class="msg-time">${time || 'Just now'}</span>
+            <div class="message-actions">
+                <button onclick="event.stopPropagation(); deleteSingleMessage(${messageId || Date.now()})" title="Delete message">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        chatMessages.appendChild(div);
+        scrollToBottom();
+    }
+
+    // ============================================
+    // SEND MESSAGE
+    // ============================================
+
+    function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message || !currentConversation) return;
+
+        addMessageToUI('admin', message, 'Just now', 'You');
+        chatInput.value = '';
+
+        fetch('/chats/api/send/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                conversation_id: currentConversation,
+                message: message,
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                console.error('Error sending message:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error sending message:', error);
+        });
+    }
+
+    // ============================================
+    // DELETE FUNCTIONS
+    // ============================================
+
+    function deleteSingleMessage(messageId) {
+        if (!confirm('Delete this message?')) return;
+        
+        fetch(`/chats/api/message/${messageId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const msgElement = document.querySelector(`.chat-message[data-message-id="${messageId}"]`);
+                if (msgElement) {
+                    msgElement.remove();
+                    showToast('Message deleted', 'success');
+                }
+                const count = document.querySelectorAll('.chat-message').length;
+                document.getElementById('messageCount').textContent = count;
+            } else {
+                showToast('Error deleting message', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting message:', error);
+            showToast('Error deleting message', 'error');
+        });
+    }
+
+    function clearCurrentChat() {
+        if (!currentConversation) return;
+        if (!confirm('Are you sure you want to clear ALL messages in this conversation?')) return;
+        
+        fetch(`/chats/api/conversation/${currentConversation}/clear/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                chatMessages.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-comment-dots fa-3x opacity-25 mb-3"></i>
+                        <p>Chat cleared. Start a new conversation!</p>
+                    </div>
+                `;
+                document.getElementById('messageCount').textContent = '0';
+                selectedMessages.clear();
+                updateSelectionUI();
+                showToast('Chat cleared', 'success');
+            } else {
+                showToast('Error clearing chat', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error clearing chat:', error);
+            showToast('Error clearing chat', 'error');
+        });
+    }
+
+    function deleteConversation(convId) {
+        if (!confirm('Are you sure you want to delete this entire conversation?')) return;
+        
+        fetch(`/chats/api/conversation/${convId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const element = document.querySelector(`.list-group-item[data-conversation-id="${convId}"]`);
+                if (element) {
+                    element.remove();
+                    showToast('Conversation deleted', 'success');
+                    
+                    const count = document.querySelectorAll('.list-group-item').length;
+                    document.getElementById('convCount').textContent = count;
+                    
+                    if (currentConversation === convId) {
+                        currentConversation = null;
+                        chatMessages.innerHTML = `
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-comment-dots fa-3x opacity-25 mb-3"></i>
+                                <p>Select a client to start chatting</p>
+                            </div>
+                        `;
+                        document.getElementById('chatUserName').textContent = 'Select a client';
+                        document.getElementById('chatUserStatus').innerHTML = `
+                            <i class="fas fa-circle text-muted me-1" style="font-size: 6px;"></i> Offline
+                        `;
+                        document.getElementById('clearChatBtn').style.display = 'none';
+                    }
+                }
+            } else {
+                showToast('Error deleting conversation', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting conversation:', error);
+            showToast('Error deleting conversation', 'error');
+        });
+    }
+
+    function clearAllConversations() {
+        if (!confirm('Are you sure you want to delete ALL conversations?')) return;
+        
+        fetch('/chats/api/conversations/clear-all/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                showToast('Error clearing conversations', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error clearing conversations:', error);
+            showToast('Error clearing conversations', 'error');
+        });
+    }
+
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+
+    function scrollToBottom() {
+        const container = document.getElementById('chatMessagesContainer');
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 100);
+    }
+
+    function refreshConversations() {
+        location.reload();
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} alert-dismissible fade show`;
+        toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 9999; min-width: 300px; animation: slideUp 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);';
+        toast.innerHTML = `
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    function playNotificationSound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.1;
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 150);
+        } catch (e) {}
+    }
+
+    // ============================================
+    // POLLING FOR NEW MESSAGES
+    // ============================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+        setupLongPress();
+        
+        const firstConv = document.querySelector('.list-group-item[data-conversation-id]');
+        if (firstConv) {
+            selectConversation(parseInt(firstConv.dataset.conversationId), firstConv);
+        }
+
+        pollingInterval = setInterval(function() {
+            if (currentConversation) {
+                fetch(`/chats/api/messages/${currentConversation}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const currentCount = document.querySelectorAll('.chat-message').length;
+                            if (data.messages.length > currentCount) {
+                                loadMessages(currentConversation);
+                                playNotificationSound();
+                            }
+                        }
+                    });
+            }
+        }, 5000);
+    });
+
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    window.addEventListener('beforeunload', function() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+    });
+</script>
+{% endblock %}

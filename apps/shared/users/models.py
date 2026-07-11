@@ -4,17 +4,13 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DefaultUserManager
 from django.conf import settings
-from django.utils import timezone
 import logging
-
-# ✅ Import for sync queue
-from apps.shared.tenants.models import SyncQueue
 
 logger = logging.getLogger(__name__)
 
 
 class UserManager(DefaultUserManager):
-    """Custom manager for User model extending Django's default UserManager"""
+    """Custom manager for User model"""
     
     use_in_migrations = True
     
@@ -22,69 +18,42 @@ class UserManager(DefaultUserManager):
         """Get all users for a tenant"""
         return self.filter(tenant=tenant, is_active=True)
     
-    def get_by_role(self, tenant, role):
-        """Get users by role for a tenant"""
-        return self.filter(tenant=tenant, role=role, is_active=True)
-    
-    def get_sales_agents(self, tenant):
-        """Get all sales agents for a tenant"""
-        return self.filter(tenant=tenant, role='sales_agent', is_active=True)
-    
-    def get_cashiers(self, tenant):
-        """Get all cashiers for a tenant"""
-        return self.filter(tenant=tenant, role='cashier', is_active=True)
-    
-    def get_managers(self, tenant):
-        """Get all managers for a tenant"""
-        return self.filter(tenant=tenant, role='manager', is_active=True)
-    
     def get_tenant_admins(self, tenant):
-        """Get all tenant admins for a tenant"""
+        """Get all tenant admins"""
         return self.filter(tenant=tenant, role='admin', is_active=True)
+    
+    def get_super_admins(self):
+        """Get all super admins"""
+        return self.filter(role='super_admin', is_active=True)
     
     def get_active_users_count(self, tenant):
         """Get count of active users for a tenant"""
         return self.filter(tenant=tenant, is_active=True).count()
-    
-    def get_users_without_pin(self, tenant):
-        """Get users without PIN set"""
-        return self.filter(
-            tenant=tenant,
-            is_active=True,
-            require_pin_for_pos=True,
-            pin_code=''
-        )
-    
-    def get_users_by_project_type(self, project_type_code):
-        """Get users by project type"""
-        return self.filter(
-            tenant__project_type__code__iexact=project_type_code,
-            is_active=True
-        )
 
 
 class User(AbstractUser):
-    """Custom User Model with Roles"""
+    """Custom User Model - System Roles Only"""
     
+    # ============================================
+    # SYSTEM ROLES - ONLY 3!
+    # ============================================
     ROLE_CHOICES = [
-        ('super_admin', 'Super Admin'),
-        ('admin', 'Tenant Admin'),
-        ('manager', 'Manager'),
-        ('cashier', 'Cashier'),
-        ('sales_agent', 'Sales Agent'),
+        ('super_admin', 'Super Admin'),    # Platform owner - Full system access
+        ('admin', 'Admin'),                 # Company owner - Full company access
+        ('user', 'User'),                   # Regular user - No system-level permissions
     ]
     
     ROLE_DISPLAY = {
         'super_admin': 'Super Admin',
-        'admin': 'Tenant Admin',
-        'manager': 'Manager',
-        'cashier': 'Cashier',
-        'sales_agent': 'Sales Agent',
+        'admin': 'Admin',
+        'user': 'User',
     }
     
-    # ✅ Use the custom manager that extends Django's DefaultUserManager
     objects = UserManager()
     
+    # ============================================
+    # FIELDS
+    # ============================================
     tenant = models.ForeignKey(
         'tenants.Tenant',
         on_delete=models.CASCADE,
@@ -97,7 +66,7 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
-        default='cashier'
+        default='user'
     )
     
     phone_number = models.CharField(
@@ -105,7 +74,25 @@ class User(AbstractUser):
         blank=True,
         help_text="User's phone number"
     )
+
+    # ✅ Add branch field
+    branch = models.ForeignKey(
+        'tech_master.Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users',
+        help_text="Branch this user is assigned to"
+    )
     
+    # ✅ Add hire_date field
+    hire_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date when the user was hired"
+    )
+
+    # ✅ Add PIN field back
     pin_code = models.CharField(
         max_length=6,
         blank=True,
@@ -136,100 +123,9 @@ class User(AbstractUser):
         role_display = self.ROLE_DISPLAY.get(self.role, self.role)
         return f"{self.username} ({role_display})"
     
-    def save(self, *args, **kwargs):
-        """Save user and queue for sync"""
-        is_new = self.pk is None
-        tenant_id = self.tenant_id if self.tenant_id else None
-        
-        super().save(*args, **kwargs)
-        
-        # ✅ If offline, queue for sync (only for tenant users)
-        if getattr(settings, 'OFFLINE_MODE', False) and tenant_id:
-            try:
-                SyncQueue.objects.create(
-                    tenant_id=tenant_id,
-                    model_name='User',
-                    object_id=str(self.id),
-                    operation='CREATE' if is_new else 'UPDATE',
-                    data={
-                        'id': self.id,
-                        'username': self.username,
-                        'email': self.email,
-                        'first_name': self.first_name,
-                        'last_name': self.last_name,
-                        'role': self.role,
-                        'phone_number': self.phone_number,
-                        'pin_code': self.pin_code,
-                        'require_pin_for_pos': self.require_pin_for_pos,
-                        'is_active': self.is_active,
-                        'is_superuser': self.is_superuser,
-                        'is_staff': self.is_staff,
-                        'tenant_id': tenant_id,
-                        'last_login': self.last_login.isoformat() if self.last_login else None,
-                        'date_joined': self.date_joined.isoformat() if self.date_joined else None,
-                    },
-                    priority=7  # User changes are important
-                )
-                logger.debug(f"✅ Queued User sync: {self.username}")
-            except Exception as e:
-                logger.error(f"Failed to queue User sync: {e}")
-    
-    def delete(self, *args, **kwargs):
-        """Queue deletion for sync, then delete the object"""
-        
-        tenant_id = self.tenant_id if self.tenant_id else None
-        
-        # ✅ Queue deletion sync if offline
-        if getattr(settings, 'OFFLINE_MODE', False) and tenant_id:
-            try:
-                SyncQueue.objects.create(
-                    tenant_id=tenant_id,
-                    model_name='User',
-                    object_id=str(self.id),
-                    operation='DELETE',
-                    data={
-                        'id': self.id,
-                        'username': self.username,
-                        'email': self.email,
-                        'tenant_id': tenant_id,
-                    },
-                    priority=7
-                )
-                logger.debug(f"✅ Queued User deletion sync: {self.username}")
-            except Exception as e:
-                logger.error(f"Failed to queue User deletion sync: {e}")
-        
-        return super().delete(*args, **kwargs)
-    
-    def set_password(self, raw_password):
-        """Override set_password to track password changes"""
-        from django.contrib.auth.hashers import make_password
-        self.password = make_password(raw_password)
-        self._password = raw_password
-        
-        # ✅ Queue password change sync
-        tenant_id = self.tenant_id if self.tenant_id else None
-        if getattr(settings, 'OFFLINE_MODE', False) and tenant_id:
-            try:
-                SyncQueue.objects.create(
-                    tenant_id=tenant_id,
-                    model_name='User',
-                    object_id=str(self.id),
-                    operation='UPDATE',
-                    data={
-                        'id': self.id,
-                        'username': self.username,
-                        'password_changed_at': timezone.now().isoformat(),
-                        'tenant_id': tenant_id,
-                    },
-                    priority=9  # High priority - security
-                )
-                logger.debug(f"✅ Queued User password change sync: {self.username}")
-            except Exception as e:
-                logger.error(f"Failed to queue User password change sync: {e}")
-        
-        # Save with update_fields to avoid triggering save() twice
-        self.save(update_fields=['password'])
+    # ============================================
+    # PROPERTIES
+    # ============================================
     
     @property
     def full_name(self):
@@ -248,94 +144,73 @@ class User(AbstractUser):
         return self.role == 'admin'
     
     @property
-    def is_manager(self):
-        return self.role == 'manager'
+    def is_regular_user(self):
+        return self.role == 'user'
     
-    @property
-    def is_cashier(self):
-        return self.role == 'cashier'
-    
-    @property
-    def is_sales_agent(self):
-        return self.role == 'sales_agent'
     
     @property
     def has_tenant(self):
         return self.tenant is not None
     
-    @property
-    def has_pin(self):
-        return bool(self.pin_code)
+    # ============================================
+    # PERMISSION METHODS
+    # ============================================
     
-    def has_project_access(self, project_type_code):
+    def has_permission(self, codename):
+        """Check if user has a specific permission"""
+        # Super admin has all permissions
         if self.is_super_admin:
             return True
-        if self.tenant and self.tenant.project_type:
-            return self.tenant.project_type.code.upper() == project_type_code.upper()
+        
+        # Admin has all permissions for their tenant
+        if self.is_tenant_admin:
+            return True
+        
+        # Regular users - check custom roles from permissions app
+        from apps.shared.permissions.models import Role
+        roles = Role.objects.filter(users=self, is_active=True)
+        for role in roles:
+            if role.has_permission(codename):
+                return True
+        
         return False
     
-    def get_project_type(self):
-        if self.tenant and self.tenant.project_type:
-            return self.tenant.project_type
-        return None
+    def can_view(self, model_name):
+        return self.has_permission(f'view_{model_name}')
     
-    def get_dashboard_url(self):
-        if self.is_super_admin:
-            return 'super_admin_dashboard'
-        
-        project_type = self.get_project_type()
-        if not project_type:
-            return 'admin_dashboard'
-        
-        if self.is_tenant_admin:
-            return 'admin_dashboard'
-        elif self.is_manager:
-            return 'manager_dashboard'
-        elif self.is_cashier:
-            return 'cashier_dashboard'
-        elif self.is_sales_agent:
-            return 'sales_agent_dashboard'
-        
-        return 'admin_dashboard'
+    def can_add(self, model_name):
+        return self.has_permission(f'add_{model_name}')
     
-    def verify_pin(self, pin):
-        """Verify user's PIN"""
-        if not self.require_pin_for_pos:
-            return True
+    def can_change(self, model_name):
+        return self.has_permission(f'change_{model_name}')
+    
+    def can_delete(self, model_name):
+        return self.has_permission(f'delete_{model_name}')
+    
+    def can_manage(self, model_name):
+        return self.has_permission(f'manage_{model_name}')
+
+
+    def check_pin(self, pin):
+        """Verify if the provided PIN matches"""
         if not self.pin_code:
+            return False
+        if not pin:
             return False
         return self.pin_code == pin
     
     def set_pin(self, pin):
-        """Set user's PIN"""
-        if len(pin) < 4 or len(pin) > 6:
-            raise ValueError("PIN must be 4-6 digits")
-        if not pin.isdigit():
-            raise ValueError("PIN must contain only digits")
-        
-        self.pin_code = pin
-        self.save(update_fields=['pin_code', 'updated_at'])
-        
-        # ✅ Queue PIN change sync
-        tenant_id = self.tenant_id if self.tenant_id else None
-        if getattr(settings, 'OFFLINE_MODE', False) and tenant_id:
-            try:
-                SyncQueue.objects.create(
-                    tenant_id=tenant_id,
-                    model_name='User',
-                    object_id=str(self.id),
-                    operation='UPDATE',
-                    data={
-                        'id': self.id,
-                        'username': self.username,
-                        'pin_changed_at': timezone.now().isoformat(),
-                        'tenant_id': tenant_id,
-                    },
-                    priority=8
-                )
-                logger.debug(f"✅ Queued User PIN change sync: {self.username}")
-            except Exception as e:
-                logger.error(f"Failed to queue User PIN change sync: {e}")
+        """Set a new PIN"""
+        if pin and len(pin) >= 4:
+            self.pin_code = pin
+            return True
+        return False
+    
+    def has_pin(self):
+        """Check if user has a PIN set"""
+        return bool(self.pin_code)
+
+
 
 
 # ============================================
@@ -358,6 +233,7 @@ class UserActivityLog(models.Model):
         ('pin_change', 'PIN Changed'),
         ('role_change', 'Role Changed'),
         ('tenant_switch', 'Tenant Switched'),
+        ('project_role_change', 'Project Role Changed'),  # ✅ New action type
     ]
     
     tenant = models.ForeignKey(
