@@ -1,0 +1,310 @@
+<!-- templates/fashion_master/search_sale.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Search Sales{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-search text-primary me-2"></i>Search Sales
+            </h4>
+            <p class="text-muted mb-0">Search sales by invoice, customer, or product</p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:sale_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Sales
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="q" class="form-control" 
+                               placeholder="Search by invoice, customer, or product..." 
+                               value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select name="type" class="form-select">
+                        <option value="all" {% if search_type == 'all' %}selected{% endif %}>All</option>
+                        <option value="invoice" {% if search_type == 'invoice' %}selected{% endif %}>Invoice</option>
+                        <option value="customer" {% if search_type == 'customer' %}selected{% endif %}>Customer</option>
+                        <option value="product" {% if search_type == 'product' %}selected{% endif %}>Product</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}" placeholder="From">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}" placeholder="To">
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        <option value="returned" {% if status == 'returned' %}selected{% endif %}>Returned</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                    <a href="{% url 'fashion_master:search_sale' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    {% if search_query %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Found Sales</h6>
+                            <h3 class="fw-bold mb-0 text-primary">{{ total_count }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-receipt text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Amount</h6>
+                            <h3 class="fw-bold mb-0 text-success">KES {{ total_sales|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-3">
+                            <i class="fas fa-money-bill-wave text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Results Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-list me-2"></i>Search Results
+                    {% if search_query %}
+                    <span class="badge bg-secondary ms-2">{{ sales.paginator.count }}</span>
+                    {% endif %}
+                </h6>
+                {% if search_query %}
+                <span class="text-muted">
+                    <i class="fas fa-filter me-1"></i>Showing results for: "<strong>{{ search_query }}</strong>"
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Total (KES)</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales %}
+                        <tr>
+                            <td>
+                                <span class="fw-bold text-primary">{{ sale.invoice_no }}</span>
+                            </td>
+                            <td>
+                                <div>{{ sale.sale_date|date:"Y-m-d" }}</div>
+                                <small class="text-muted">{{ sale.sale_date|time:"H:i" }}</small>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ sale.customer_name|default:"Walk-in" }}</div>
+                                <small class="text-muted">{{ sale.customer_phone|default:"" }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ sale.item_count|default:0 }}</span>
+                            </td>
+                            <td>
+                                <span class="fw-bold">KES {{ sale.total|floatformat:0 }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ sale.get_payment_method_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if sale.status == 'completed' %}bg-success
+                                    {% elif sale.status == 'pending' %}bg-warning text-dark
+                                    {% elif sale.status == 'cancelled' %}bg-danger
+                                    {% elif sale.status == 'returned' %}bg-secondary
+                                    {% else %}bg-light text-dark{% endif %}">
+                                    {{ sale.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'fashion_master:sale_detail' sale.id %}" 
+                                       class="btn btn-outline-primary" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'fashion_master:sale_receipt' sale.id %}" 
+                                       class="btn btn-outline-secondary" title="Receipt" target="_blank">
+                                        <i class="fas fa-receipt"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-3x d-block mb-3 opacity-50"></i>
+                                {% if search_query %}
+                                No sales found matching "{{ search_query }}"
+                                {% else %}
+                                Enter search criteria to find sales
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if sales.has_other_pages %}
+        <div class="card-footer bg-white">
+            <nav>
+                <ul class="pagination mb-0 justify-content-center">
+                    {% if sales.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            &laquo;
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ sales.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            ‹
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ sales.number }}</span>
+                    </li>
+                    
+                    {% if sales.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ sales.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            ›
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ sales.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            &raquo;
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Search Tips -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="fw-bold">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>Search Tips
+                    </h6>
+                    <ul class="text-muted small">
+                        <li>Search by <strong>invoice number</strong> for exact match</li>
+                        <li>Search by <strong>customer name</strong> or <strong>phone number</strong></li>
+                        <li>Search by <strong>product name</strong> to find sales with that product</li>
+                        <li>Use <strong>date filters</strong> to narrow down results</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold">
+                        <i class="fas fa-info-circle text-info me-2"></i>Quick Links
+                    </h6>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{% url 'fashion_master:sale_list' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i>All Sales
+                        </a>
+                        <a href="{% url 'fashion_master:sale_create' %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>New Sale
+                        </a>
+                        <a href="{% url 'fashion_master:reports' %}" class="btn btn-sm btn-info text-white">
+                            <i class="fas fa-chart-bar me-1"></i>Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit search on Enter key
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.closest('form').submit();
+            }
+        });
+    }
+    
+    // Date range validation
+    const dateFrom = document.querySelector('input[name="date_from"]');
+    const dateTo = document.querySelector('input[name="date_to"]');
+    
+    if (dateFrom && dateTo) {
+        dateFrom.addEventListener('change', function() {
+            if (this.value) {
+                dateTo.min = this.value;
+            }
+        });
+        
+        dateTo.addEventListener('change', function() {
+            if (this.value && dateFrom.value && this.value < dateFrom.value) {
+                alert('End date cannot be before start date');
+                this.value = '';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

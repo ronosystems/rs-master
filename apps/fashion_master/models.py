@@ -11,6 +11,90 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================
+# FASHION BRANCH MODEL
+# ============================================
+
+class FashionBranch(models.Model):
+    """
+    Fashion-specific branch extensions
+    Links to the main Branch model from tech_master
+    """
+    
+    # Link to the main branch
+    branch = models.OneToOneField(
+        'tech_master.Branch',
+        on_delete=models.CASCADE,
+        related_name='fashion_settings'
+    )
+    
+    # Fashion specific fields
+    store_type = models.CharField(max_length=50, choices=[
+        ('boutique', 'Boutique'),
+        ('department_store', 'Department Store'),
+        ('outlet', 'Outlet'),
+        ('pop_up', 'Pop-up Store'),
+        ('showroom', 'Showroom'),
+        ('warehouse', 'Warehouse'),
+    ], default='boutique')
+    
+    # Visual merchandising
+    has_fitting_rooms = models.BooleanField(default=True)
+    has_tailor_services = models.BooleanField(default=False)
+    has_alteration_services = models.BooleanField(default=False)
+    
+    # Fashion categories available
+    specializes_in = models.CharField(max_length=200, blank=True, help_text="e.g., Women's Wear, Men's Wear, Children's Wear")
+    
+    # Store ambiance
+    store_ambiance = models.TextField(blank=True, help_text="Store theme, decor, music, etc.")
+    
+    # Operating hours (fashion specific)
+    opening_time = models.TimeField(null=True, blank=True)
+    closing_time = models.TimeField(null=True, blank=True)
+    sunday_opening = models.TimeField(null=True, blank=True)
+    sunday_closing = models.TimeField(null=True, blank=True)
+    is_holiday_open = models.BooleanField(default=False)
+    
+    # Contact
+    contact_person = models.CharField(max_length=200, blank=True)
+    instagram_handle = models.CharField(max_length=100, blank=True)
+    facebook_page = models.CharField(max_length=200, blank=True)
+    
+    # Layout
+    total_floor_space = models.PositiveIntegerField(null=True, blank=True, help_text="Total floor space in sq ft")
+    fitting_rooms_count = models.PositiveIntegerField(default=2)
+    cash_registers = models.PositiveIntegerField(default=1)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Fashion Branch'
+        verbose_name_plural = 'Fashion Branches'
+        indexes = [
+            models.Index(fields=['branch', 'store_type']),
+            models.Index(fields=['branch', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.branch.name} - {self.get_store_type_display()}"
+    
+    @property
+    def full_address(self):
+        return self.branch.full_address
+    
+    @property
+    def branch_name(self):
+        return self.branch.name
+    
+    @property
+    def branch_code(self):
+        return self.branch.code
+
+
+# ============================================
 # CATEGORY MODEL (Fashion Specific)
 # ============================================
 

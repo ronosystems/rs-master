@@ -724,338 +724,331 @@
         </div>
     </div>
 
-
-
-<!-- ============================================ -->
-<!-- FIXED LEFT SIDEBAR - FOOD MASTER (ROLE-BASED) -->
-<!-- ============================================ -->
-<div class="fixed-left-sidebar" id="sidebar">
-    <div class="sidebar-header">
-        <button class="sidebar-toggle" onclick="toggleSidebar()">
-            <i class="fas fa-bars"></i>
-        </button>
-    </div>
-        
-    <div class="sidebar-menu-wrapper">
-        <div class="sidebar-menu">
-                    
-            <!-- ============================================ -->
-            <!-- DASHBOARD - ALL USERS -->
-            <!-- ============================================ -->
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    📊 MAIN HOME
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu open">
-                    <a href="{% url 'food_master:dashboard' %}" class="menu-item {% if active_tab == 'dashboard' %}active{% endif %}">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>Home Page</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- ============================================ -->
-            <!-- PAYMENT - Requires 'can_process_payments' permission -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_process_payments' %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    💳 PAYMENT
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    <a href="{% url 'food_master:payment_dashboard' %}" class="menu-item {% if active_tab == 'payment' %}active{% endif %}">
-                        <i class="fas fa-credit-card"></i>
-                        <span>Confirm Payment</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- ============================================ -->
-            <!-- COMPANY - ADMIN ONLY (System Role) -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    🏢 COMPANY
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    {% if tenant %}
-                        <a href="{% url 'tenants:my_subscription' tenant.id %}" class="menu-item">
-                            <i class="fas fa-crown"></i>
-                            <span>Check Plans</span>
-                        </a>
-                    {% else %}
-                        <a href="javascript:void(0)" class="menu-item disabled" onclick="event.preventDefault(); alert('No tenant assigned!');">
-                            <i class="fas fa-crown"></i>
-                            <span>My Subscription</span>
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- ============================================ -->
-            <!-- MEMBERS - ADMIN ONLY (System Role) -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    👥 MEMBERS
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    <a href="{% url 'users:user_list' %}" class="menu-item">
-                        <i class="fas fa-users"></i>
-                        <span>Manage Users</span>
-                    </a>
-                    <a href="{% url 'users:user_create' %}" class="menu-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Onboard Staff</span>
-                    </a>
-                    <a href="{% url 'food_master:role_list' %}" class="menu-item {% if active_tab == 'roles' %}active{% endif %}">
-                        <i class="fas fa-user-shield"></i>
-                        <span>Role Management</span>
-                    </a>
-                    <a href="{% url 'food_master:create_role' %}" class="menu-item">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Create Role</span>
-                    </a>
-                    <a href="{% url 'food_master:assign_role' %}" class="menu-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Assign Role</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- ============================================ -->
-            <!-- BRANCHES - Requires 'can_manage_branches' permission -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_branches' %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    📍 BRANCHES
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    <a href="{% url 'food_master:branches' %}" class="menu-item">
-                        <i class="fas fa-store"></i>
-                        <span>Restaurant Branches</span>
-                    </a>
-                    <a href="{% url 'food_master:add_branch' %}" class="menu-item">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Add Branch</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- ============================================ -->
-            <!-- MENU MANAGEMENT - Requires 'can_manage_menu' permission -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_menu' %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    🍽️ MENU
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    <a href="{% url 'food_master:menu_list' %}" class="menu-item {% if active_tab == 'menu' %}active{% endif %}">
-                        <i class="fas fa-utensils"></i>
-                        <span>All Menu Items</span>
-                    </a>
-                    <a href="{% url 'food_master:add_menu_item' %}" class="menu-item">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Add Menu Item</span>
-                    </a>
-                    <a href="{% url 'food_master:categories' %}" class="menu-item">
-                        <i class="fas fa-tags"></i>
-                        <span>Categories</span>
-                    </a>
-                    <a href="{% url 'food_master:add_category' %}" class="menu-item">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Add Category</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- ============================================ -->
-            <!-- ORDERS - Requires 'can_view_orders' or 'can_manage_orders' permission -->
-            <!-- ============================================ -->
+    <!-- ============================================ -->
+    <!-- FIXED LEFT SIDEBAR - FOOD MASTER (ROLE-BASED) -->
+    <!-- ============================================ -->
+    <div class="fixed-left-sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
             
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    📋 ORDERS
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+        <div class="sidebar-menu-wrapper">
+            <div class="sidebar-menu">
+                        
+                <!-- ============================================ -->
+                <!-- DASHBOARD - ALL USERS -->
+                <!-- ============================================ -->
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        📊 MAIN HOME
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu open">
+                        <a href="{% url 'food_master:dashboard' %}" class="menu-item {% if active_tab == 'dashboard' %}active{% endif %}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Home Page</span>
+                        </a>
+                    </div>
                 </div>
-                <div class="sub-menu">
-                    {% if user|has_perm:'food_master.can_take_orders' or user.is_super_admin or user.is_tenant_admin %}
-                    {% if user.has_pin %}
-                        <a href="{% url 'food_master:verify_pin_access' %}" class="menu-item {% if active_tab == 'menu_order' %}active{% endif %}">
+
+                <!-- ============================================ -->
+                <!-- PAYMENT - Requires 'can_process_payments' permission -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_process_payments' %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        💳 PAYMENT
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'food_master:payment_dashboard' %}" class="menu-item {% if active_tab == 'payment' %}active{% endif %}">
+                            <i class="fas fa-credit-card"></i>
+                            <span>Confirm Payment</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- COMPANY - ADMIN ONLY (System Role) -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        🏢 COMPANY
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        {% if tenant %}
+                            <a href="{% url 'tenants:my_subscription' tenant.id %}" class="menu-item">
+                                <i class="fas fa-crown"></i>
+                                <span>Check Plans</span>
+                            </a>
+                        {% else %}
+                            <a href="javascript:void(0)" class="menu-item disabled" onclick="event.preventDefault(); alert('No tenant assigned!');">
+                                <i class="fas fa-crown"></i>
+                                <span>My Subscription</span>
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- MEMBERS - ADMIN ONLY (System Role) -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        👥 MEMBERS
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'users:user_list' %}" class="menu-item">
+                            <i class="fas fa-users"></i>
+                            <span>Manage Users</span>
+                        </a>
+                        <a href="{% url 'users:user_create' %}" class="menu-item">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Onboard Staff</span>
+                        </a>
+                        <a href="{% url 'food_master:role_list' %}" class="menu-item {% if active_tab == 'roles' %}active{% endif %}">
+                            <i class="fas fa-user-shield"></i>
+                            <span>Role Management</span>
+                        </a>
+                        <a href="{% url 'food_master:create_role' %}" class="menu-item">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Create Role</span>
+                        </a>
+                        <a href="{% url 'food_master:assign_role' %}" class="menu-item">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Assign Role</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- BRANCHES - Requires 'can_manage_branches' permission -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_branches' %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        📍 BRANCHES
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'food_master:branches' %}" class="menu-item">
+                            <i class="fas fa-store"></i>
+                            <span>Restaurant Branches</span>
+                        </a>
+                        <a href="{% url 'food_master:add_branch' %}" class="menu-item">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Add Branch</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- MENU MANAGEMENT - Requires 'can_manage_menu' permission -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_menu' %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        🍽️ MENU
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'food_master:menu_list' %}" class="menu-item {% if active_tab == 'menu' %}active{% endif %}">
                             <i class="fas fa-utensils"></i>
-                            <span>Place Order POS</span>
-                            <span class="badge bg-warning text-dark ms-2">PIN Required</span>
+                            <span>All Menu Items</span>
                         </a>
-                    {% else %}
-                        <a href="{% url 'settings:change_pin' %}" class="menu-item">
-                            <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
-                            <span>Set PIN to Access POS</span>
+                        <a href="{% url 'food_master:add_menu_item' %}" class="menu-item">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Add Menu Item</span>
                         </a>
-                    {% endif %}
-                    {% endif %}
-                    
-                    {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_view_orders' or user|has_perm:'food_master.can_manage_orders' %}
-                    <a href="{% url 'food_master:orders' %}" class="menu-item {% if active_tab == 'orders' %}active{% endif %}">
-                        <i class="fas fa-receipt"></i>
-                        <span>All Orders</span>
-                    </a>
-                    {% endif %}
+                        <a href="{% url 'food_master:categories' %}" class="menu-item">
+                            <i class="fas fa-tags"></i>
+                            <span>Categories</span>
+                        </a>
+                        <a href="{% url 'food_master:add_category' %}" class="menu-item">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Add Category</span>
+                        </a>
+                    </div>
                 </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- ORDERS - Requires permissions -->
+                <!-- ============================================ -->
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        📋 ORDERS
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        {% if user|has_perm:'food_master.can_take_orders' or user.is_super_admin or user.is_tenant_admin %}
+                        {% if user.has_pin %}
+                            <a href="{% url 'food_master:verify_pin_access' %}" class="menu-item {% if active_tab == 'menu_order' %}active{% endif %}">
+                                <i class="fas fa-utensils"></i>
+                                <span>Place Order POS</span>
+                                <span class="badge bg-warning text-dark ms-2">PIN Required</span>
+                            </a>
+                        {% else %}
+                            <a href="{% url 'settings:change_pin' %}" class="menu-item">
+                                <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
+                                <span>Set PIN to Access POS</span>
+                            </a>
+                        {% endif %}
+                        {% endif %}
+                        
+                        {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_view_orders' or user|has_perm:'food_master.can_manage_orders' %}
+                        <a href="{% url 'food_master:orders' %}" class="menu-item {% if active_tab == 'orders' %}active{% endif %}">
+                            <i class="fas fa-receipt"></i>
+                            <span>All Orders</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TABLES - Requires 'can_manage_tables' permission -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_tables' %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        🪑 TABLES
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'food_master:tables' %}" class="menu-item {% if active_tab == 'tables' %}active{% endif %}">
+                            <i class="fas fa-chair"></i>
+                            <span>All Tables</span>
+                        </a>
+                        <a href="{% url 'food_master:tables' %}?status=available" class="menu-item">
+                            <i class="fas fa-check-circle" style="color: #27ae60;"></i>
+                            <span>Available Tables</span>
+                        </a>
+                        <a href="{% url 'food_master:tables' %}?status=occupied" class="menu-item">
+                            <i class="fas fa-users" style="color: #e74c3c;"></i>
+                            <span>Occupied Tables</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- RESERVATIONS - Requires 'can_manage_reservations' permission -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_reservations' %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        📅 RESERVATIONS
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'food_master:reservations' %}" class="menu-item {% if active_tab == 'reservations' %}active{% endif %}">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>All Reservations</span>
+                        </a>
+                        <a href="{% url 'food_master:reservations' %}?status=pending" class="menu-item">
+                            <i class="fas fa-clock" style="color: #f39c12;"></i>
+                            <span>Pending</span>
+                        </a>
+                        <a href="{% url 'food_master:reservations' %}?status=confirmed" class="menu-item">
+                            <i class="fas fa-check-circle" style="color: #27ae60;"></i>
+                            <span>Confirmed</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- CUSTOMERS - Requires 'can_manage_customers' permission -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_customers' %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        👤 CUSTOMERS
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'food_master:customers' %}" class="menu-item {% if active_tab == 'customers' %}active{% endif %}">
+                            <i class="fas fa-users"></i>
+                            <span>All Customers</span>
+                        </a>
+                        <a href="{% url 'food_master:add_customer' %}" class="menu-item">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Add Customer</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- REPORTS - Requires 'can_view_reports' permission -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_view_reports' %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        📈 REPORTS
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'food_master:reports' %}" class="menu-item {% if active_tab == 'reports' %}active{% endif %}">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Reports</span>
+                        </a>
+                        <a href="{% url 'food_master:purchases' %}" class="menu-item {% if active_tab == 'purchases' %}active{% endif %}">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Purchases</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- SETTINGS - Requires 'can_manage_settings' permission -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_settings' %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        ⚙️ SETTINGS
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'settings:receipt_settings' %}" class="menu-item">
+                            <i class="fas fa-receipt"></i>
+                            <span>Receipt Settings</span>
+                        </a>
+                        <a href="{% url 'settings:payment_settings' %}" class="menu-item">
+                            <i class="fas fa-dollar"></i>
+                            <span>Payment Settings</span>
+                        </a>
+                        <a href="{% url 'settings:company_settings' %}" class="menu-item">
+                            <i class="fas fa-building"></i>
+                            <span>Company Settings</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                
             </div>
-            
+        </div>
 
-            <!-- ============================================ -->
-            <!-- TABLES - Requires 'can_manage_tables' permission -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_tables' %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    🪑 TABLES
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    <a href="{% url 'food_master:tables' %}" class="menu-item {% if active_tab == 'tables' %}active{% endif %}">
-                        <i class="fas fa-chair"></i>
-                        <span>All Tables</span>
-                    </a>
-                    <a href="{% url 'food_master:tables' %}?status=available" class="menu-item">
-                        <i class="fas fa-check-circle" style="color: #27ae60;"></i>
-                        <span>Available Tables</span>
-                    </a>
-                    <a href="{% url 'food_master:tables' %}?status=occupied" class="menu-item">
-                        <i class="fas fa-users" style="color: #e74c3c;"></i>
-                        <span>Occupied Tables</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- ============================================ -->
-            <!-- RESERVATIONS - Requires 'can_manage_reservations' permission -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_reservations' %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    📅 RESERVATIONS
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    <a href="{% url 'food_master:reservations' %}" class="menu-item {% if active_tab == 'reservations' %}active{% endif %}">
-                        <i class="fas fa-calendar-check"></i>
-                        <span>All Reservations</span>
-                    </a>
-                    <a href="{% url 'food_master:reservations' %}?status=pending" class="menu-item">
-                        <i class="fas fa-clock" style="color: #f39c12;"></i>
-                        <span>Pending</span>
-                    </a>
-                    <a href="{% url 'food_master:reservations' %}?status=confirmed" class="menu-item">
-                        <i class="fas fa-check-circle" style="color: #27ae60;"></i>
-                        <span>Confirmed</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- ============================================ -->
-            <!-- CUSTOMERS - Requires 'can_manage_customers' permission -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_customers' %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    👤 CUSTOMERS
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    <a href="{% url 'food_master:customers' %}" class="menu-item {% if active_tab == 'customers' %}active{% endif %}">
-                        <i class="fas fa-users"></i>
-                        <span>All Customers</span>
-                    </a>
-                    <a href="{% url 'food_master:add_customer' %}" class="menu-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Add Customer</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- ============================================ -->
-            <!-- REPORTS - Requires 'can_view_reports' permission -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_view_reports' %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    📈 REPORTS
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    <a href="{% url 'food_master:reports' %}" class="menu-item {% if active_tab == 'reports' %}active{% endif %}">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Reports</span>
-
-                    <a href="{% url 'food_master:purchases' %}"  class="menu-item {% if active_tab == 'purchases' %}active{% endif %}">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Purchases</span>
-                    </a>
-
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- ============================================ -->
-            <!-- SETTINGS - Requires 'can_manage_settings' permission -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin or user|has_perm:'food_master.can_manage_settings' %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    ⚙️ SETTINGS
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    <a href="{% url 'settings:receipt_settings' %}" class="menu-item">
-                        <i class="fas fa-receipt"></i>
-                        <span>Receipt Settings</span>
-                    </a>
-                    <a href="{% url 'settings:payment_settings' %}" class="menu-item">
-                        <i class="fas fa-dollar"></i>
-                        <span>Payment Settings</span>
-                    </a>
-                    <a href="{% url 'settings:company_settings' %}" class="menu-item">
-                        <i class="fas fa-building"></i>
-                        <span>Company Settings</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-            
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <a href="{% url 'portal:no_project_assigned' %}" class="footer-btn help-btn">
+                <i class="fas fa-question-circle"></i>
+                <span><Center> 🔴🟡🟢 About RS Master </Center></span>
+                <span class="badge bg-danger ms-1" id="chatBadge" style="display: none;">0</span>
+            </a>
         </div>
     </div>
-
-    <!-- Sidebar Footer -->
-    <div class="sidebar-footer">
-        <a href="{% url 'portal:no_project_assigned' %}" class="footer-btn help-btn">
-            <i class="fas fa-help"></i>
-            <span><Center> 🔴🟡🟢 About RS Master </Center></span>
-            <span class="badge bg-danger ms-1" id="chatBadge" style="display: none;">0</span>
-        </a>
-    </div>
-</div>
-
-
 
     <!-- ============================================ -->
     <!-- MAIN CONTENT -->
@@ -1116,7 +1109,7 @@
 
     <script>
     // ============================================
-    // SUB-MENU TOGGLE FUNCTION
+    // SUB-MENU TOGGLE FUNCTION - INDEPENDENT
     // ============================================
     function toggleSubMenu(titleElement) {
         const menuGroup = titleElement.closest('.menu-group');
@@ -1125,21 +1118,11 @@
         const subMenu = menuGroup.querySelector('.sub-menu');
         if (!subMenu) return;
         
+        // Toggle the clicked menu only
         subMenu.classList.toggle('open');
         titleElement.classList.toggle('collapsed');
         
-        const allGroups = document.querySelectorAll('.menu-group');
-        allGroups.forEach(group => {
-            if (group !== menuGroup) {
-                const otherSubMenu = group.querySelector('.sub-menu');
-                const otherTitle = group.querySelector('.menu-title');
-                if (otherSubMenu && otherSubMenu.classList.contains('open')) {
-                    otherSubMenu.classList.remove('open');
-                    if (otherTitle) otherTitle.classList.remove('collapsed');
-                }
-            }
-        });
-        
+        // Save state to localStorage
         const menuStates = JSON.parse(localStorage.getItem('menuStates') || '{}');
         const menuKey = titleElement.textContent.trim();
         menuStates[menuKey] = subMenu.classList.contains('open');

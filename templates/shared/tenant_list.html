@@ -8,15 +8,36 @@
     <div class="card border-0 shadow-lg">
         <div class="card-header bg-gradient-primary text-white py-3" style="background: linear-gradient(135deg, #00bbff 0%, #00c8ff 100%);">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
-                <div>
-                    <h5 class="mb-0 fw-bold">
-                        <i class="fas fa-building me-2"></i>Tenant Management
-                    </h5>
-                    <p class="mb-0 small opacity-75 mt-1">Manage all registered companies and their subscriptions</p>
+                <div class="mt-2 mt-sm-0">
+                    <div class="d-flex gap-3">
+                        <div class="btn btn-light btn-sm px-3 py-2 fw-semibold">
+                            <div>
+                                <small class="text-muted d-block">Active Tenants <strong id="activeCount"> 0 </strong></small>
+                            </div>
+                        </div>
+                        <div class="btn btn-light btn-sm px-3 py-2 fw-semibold">
+                            <div>
+                                <small class="text-muted d-block">Pending Approval <strong id="pendingCount"> 0 </strong></small>
+                            </div>
+                        </div>
+                        <div class="btn btn-light btn-sm px-3 py-2 fw-semibold">
+                            <div>
+                                <small class="text-muted d-block">Expired Tenants <strong id="expiredCount"> 0 </strong></small>
+                            </div>
+                        </div>
+                        <div class="btn btn-light btn-sm px-3 py-2 fw-semibold">
+                            <div>
+                                <small class="text-muted d-block">Rejected Tenants <strong id="rejectedCount"> 0 </strong></small>
+                            </div>
+                        </div>                       
+                    </div>
                 </div>
                 <div class="mt-2 mt-sm-0">
                     <a href="{% url 'tenants:register_tenant' %}" class="btn btn-light btn-sm px-3 py-2 fw-semibold">
                         <i class="fas fa-plus-circle me-2 text-primary"></i>Add New Tenant
+                    </a>
+                    <a href="#" class="btn btn-light btn-sm px-3 py-2 fw-semibold">
+                        <i class="fas fa-database me-1"></i> Total Tenants: <strong>{{ tenants|length }}</strong>
                     </a>
                 </div>
             </div>
@@ -267,50 +288,6 @@
                     </tbody>
                 </table>
             </div>
-            
-            <!-- Table Footer with Stats -->
-            {% if tenants %}
-            <div class="card-footer bg-white border-0 py-3">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <div class="d-flex gap-3">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-success bg-opacity-10 p-2 rounded-circle me-2">
-                                    <i class="fas fa-check-circle text-success"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block">Active Tenants</small>
-                                    <strong id="activeCount">0</strong>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <div class="bg-warning bg-opacity-10 p-2 rounded-circle me-2">
-                                    <i class="fas fa-exclamation-triangle text-warning"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block">Pending Approval</small>
-                                    <strong id="pendingCount">0</strong>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <div class="bg-danger bg-opacity-10 p-2 rounded-circle me-2">
-                                    <i class="fas fa-times-circle text-danger"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block">Expired/Rejected</small>
-                                    <strong id="expiredCount">0</strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                        <small class="text-muted">
-                            <i class="fas fa-database me-1"></i> Total Tenants: <strong>{{ tenants|length }}</strong>
-                        </small>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>

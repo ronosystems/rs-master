@@ -1,0 +1,228 @@
+<!-- templates/fashion_master/product_search.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Product Search{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-search text-primary me-2"></i>Product Search
+            </h4>
+            <p class="text-muted mb-0">Advanced product search with filters</p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="q" class="form-control" 
+                               placeholder="Name, SKU, barcode..." 
+                               value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Size</label>
+                    <select name="size" class="form-select">
+                        <option value="">All Sizes</option>
+                        {% for size in sizes %}
+                        <option value="{{ size }}" {% if selected_size == size %}selected{% endif %}>
+                            {{ size }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Color</label>
+                    <select name="color" class="form-select">
+                        <option value="">All Colors</option>
+                        {% for color in colors %}
+                        <option value="{{ color }}" {% if selected_color == color %}selected{% endif %}>
+                            {{ color }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Price</label>
+                    <div class="row g-1">
+                        <div class="col-6">
+                            <input type="number" name="min_price" class="form-control" 
+                                   placeholder="Min" value="{{ min_price }}" step="100">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" name="max_price" class="form-control" 
+                                   placeholder="Max" value="{{ max_price }}" step="100">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                    <a href="{% url 'fashion_master:product_search' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-boxes me-2"></i>Products
+                    <span class="badge bg-secondary ms-2">{{ products.paginator.count }}</span>
+                </h6>
+                {% if search_query %}
+                <span class="text-muted">
+                    <i class="fas fa-filter me-1"></i>Showing results for: "<strong>{{ search_query }}</strong>"
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if products %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th>Brand</th>
+                            <th>Size</th>
+                            <th>Color</th>
+                            <th>SKU</th>
+                            <th>Price (KES)</th>
+                            <th>Stock</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if product.image %}
+                                    <img src="{{ product.image.url }}" alt="{{ product.name }}" 
+                                         style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 10px;">
+                                    {% else %}
+                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                         style="width: 40px; height: 40px; margin-right: 10px;">
+                                        <i class="fas fa-tshirt text-secondary"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-semibold">{{ product.name }}</div>
+                                        <small class="text-muted">{{ product.category.name|default:"Uncategorized" }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ product.brand|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ product.size|default:"-" }}</span>
+                            </td>
+                            <td>
+                                <span class="badge" style="background-color: {{ product.color|default:'#ddd' }}; color: {% if product.color|lower in 'white,yellow' %}black{% else %}white{% endif %}">
+                                    {{ product.color|default:"-" }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ product.sku_code }}</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-success">KES {{ product.selling_price|floatformat:0 }}</div>
+                                {% if product.best_price %}
+                                <small class="text-muted">Best: KES {{ product.best_price|floatformat:0 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if product.available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ product.available_quantity }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'fashion_master:product_detail' product.id %}" 
+                                       class="btn btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'fashion_master:product_edit' product.id %}" 
+                                       class="btn btn-outline-secondary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-box fa-4x d-block mb-3 text-muted opacity-25"></i>
+                <h5 class="text-muted">No products found</h5>
+                <p class="text-muted small">Try adjusting your search filters</p>
+            </div>
+            {% endif %}
+        </div>
+        {% if products.has_other_pages %}
+        <div class="card-footer bg-white">
+            <nav>
+                <ul class="pagination mb-0 justify-content-center">
+                    {% if products.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ products.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            &laquo;
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in products.paginator.page_range %}
+                    <li class="page-item {% if products.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if products.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ products.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            &raquo;
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

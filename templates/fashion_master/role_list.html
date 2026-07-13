@@ -61,15 +61,18 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="#" class="btn btn-outline-primary">
+                                    <a href="{% url 'fashion_master:role_edit' role.id %}" class="btn btn-outline-primary">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <a href="{% url 'fashion_master:role_assign' %}" class="btn btn-outline-info">
                                         <i class="fas fa-users"></i>
                                     </a>
-                                    <button class="btn btn-outline-danger">
+                                    {% if not role.is_system_role and role.user_count == 0 %}
+                                    <button class="btn btn-outline-danger" 
+                                            onclick="confirmDelete('{{ role.id }}', '{{ role.name }}')">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -91,4 +94,35 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteRoleName"></strong>?</p>
+                <p class="text-danger small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(roleId, roleName) {
+    document.getElementById('deleteRoleName').textContent = roleName;
+    document.getElementById('deleteForm').action = `/fashion/roles/${roleId}/delete/`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
 {% endblock %}

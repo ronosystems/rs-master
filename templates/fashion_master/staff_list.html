@@ -14,7 +14,7 @@
             <p class="text-muted mb-0">Manage your fashion store staff</p>
         </div>
         <div>
-            <a href="#" class="btn btn-primary">
+            <a href="{% url 'fashion_master:staff_create' %}" class="btn btn-primary">
                 <i class="fas fa-plus-circle me-2"></i>Add Staff
             </a>
         </div>
@@ -29,7 +29,7 @@
                 </div>
                 <div class="col-md-3">
                     <select name="role" class="form-select">
-                        <option value="">All Roles</option>
+                        <option value="">All System Roles</option>
                         {% for role_code, role_name in roles %}
                         <option value="{{ role_code }}" {% if role_filter == role_code %}selected{% endif %}>
                             {{ role_name }}
@@ -69,8 +69,10 @@
                     <thead class="bg-light">
                         <tr>
                             <th>#</th>
-                            <th>Name</th>
-                            <th>Role</th>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>System Role</th>
+                            <th>Custom Role</th>
                             <th>Branch</th>
                             <th>Phone</th>
                             <th>Status</th>
@@ -82,19 +84,40 @@
                         <tr>
                             <td>{{ forloop.counter }}</td>
                             <td>
-                                <strong>{{ staff_member.name }}</strong>
+                                <strong>{{ staff_member.username }}</strong>
                                 <br>
-                                <small class="text-muted">{{ staff_member.email|default:"No email" }}</small>
+                                <small class="text-muted">ID: {{ staff_member.id }}</small>
                             </td>
                             <td>
-                                <span class="badge bg-info">{{ staff_member.get_role_display }}</span>
-                                {% if staff_member.expertise %}
-                                <br>
-                                <small class="text-muted">{{ staff_member.expertise }}</small>
+                                <div>
+                                    <div class="fw-semibold">{{ staff_member.get_full_name|default:staff_member.username }}</div>
+                                    <small class="text-muted">{{ staff_member.email|default:"No email" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if staff_member.role == 'super_admin' %}
+                                <span class="badge bg-danger">Super Admin</span>
+                                {% elif staff_member.role == 'admin' %}
+                                <span class="badge bg-primary">Admin</span>
+                                {% elif staff_member.role == 'manager' %}
+                                <span class="badge bg-info">Manager</span>
+                                {% elif staff_member.role == 'user' %}
+                                <span class="badge bg-secondary">User</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">{{ staff_member.get_role_display|default:staff_member.role|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if staff_member.custom_role_names %}
+                                    {% for custom_role in staff_member.custom_role_names %}
+                                    <span class="badge bg-warning text-dark me-1">{{ custom_role }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                <span class="text-muted">None</span>
                                 {% endif %}
                             </td>
                             <td>{{ staff_member.branch.name|default:"Not Assigned" }}</td>
-                            <td>{{ staff_member.phone_number }}</td>
+                            <td>{{ staff_member.phone_number|default:"-" }}</td>
                             <td>
                                 {% if staff_member.is_active %}
                                 <span class="badge bg-success">Active</span>
@@ -107,10 +130,16 @@
                                     <a href="{% url 'fashion_master:staff_detail' staff_member.id %}" class="btn btn-outline-primary">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="#" class="btn btn-outline-info">
+                                    <a href="{% url 'fashion_master:staff_edit' staff_member.id %}" class="btn btn-outline-info">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <button class="btn btn-outline-danger">
+                                    <a href="{% url 'fashion_master:staff_toggle_status' staff_member.id %}" 
+                                       class="btn btn-outline-warning"
+                                       onclick="return confirm('Are you sure you want to toggle status?')">
+                                        <i class="fas fa-power-off"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger" 
+                                            onclick="confirmDelete('{{ staff_member.id }}', '{{ staff_member.get_full_name|default:staff_member.username }}')">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
@@ -118,11 +147,11 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+                            <td colspan="9" class="text-center py-5">
                                 <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
                                 <h5 class="text-muted">No staff found</h5>
                                 <p class="text-muted small">Add your first fashion staff member</p>
-                                <a href="#" class="btn btn-primary mt-2">
+                                <a href="{% url 'fashion_master:staff_create' %}" class="btn btn-primary mt-2">
                                     <i class="fas fa-plus-circle me-2"></i>Add Staff
                                 </a>
                             </td>
@@ -157,4 +186,35 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteStaffName"></strong>?</p>
+                <p class="text-danger small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(staffId, staffName) {
+    document.getElementById('deleteStaffName').textContent = staffName;
+    document.getElementById('deleteForm').action = `/fashion/staff/${staffId}/delete/`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
 {% endblock %}

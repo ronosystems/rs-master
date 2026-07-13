@@ -1,0 +1,227 @@
+<!-- templates/fashion_master/expense_report.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Expense Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-receipt text-primary me-2"></i>Expense Report
+            </h4>
+            <p class="text-muted mb-0">Detailed expense analysis with filters</p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:export_report' %}?type=expenses" class="btn btn-success">
+                <i class="fas fa-file-export me-2"></i>Export
+            </a>
+            <a href="{% url 'fashion_master:reports' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Date From</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date To</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if category_id == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+                        <option value="paid" {% if status == 'paid' %}selected{% endif %}>Paid</option>
+                        <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                    <a href="{% url 'fashion_master:expense_report' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Expenses</h6>
+                            <h3 class="fw-bold mb-0 text-danger">KES {{ total_expenses|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 rounded p-3">
+                            <i class="fas fa-money-bill-wave text-danger fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Transactions</h6>
+                            <h3 class="fw-bold mb-0 text-primary">{{ total_count }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-receipt text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Average Expense</h6>
+                            <h3 class="fw-bold mb-0 text-warning">KES {{ avg_expense|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded p-3">
+                            <i class="fas fa-calculator text-warning fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    {% if category_breakdown %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold">Expenses by Category</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for category in category_breakdown %}
+                <div class="col-md-4">
+                    <div class="bg-light rounded p-3">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="fw-semibold">{{ category.category__name|default:"Uncategorized" }}</div>
+                                <small class="text-muted">{{ category.count }} transactions</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-danger">KES {{ category.total|floatformat:0 }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Expenses Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                            <th>Created By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in expenses %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ expense.title }}</div>
+                            </td>
+                            <td>{{ expense.category.name|default:"-" }}</td>
+                            <td class="fw-bold text-danger">KES {{ expense.amount|floatformat:0 }}</td>
+                            <td>{{ expense.date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if expense.status == 'approved' %}bg-success
+                                    {% elif expense.status == 'paid' %}bg-primary
+                                    {% elif expense.status == 'pending' %}bg-warning text-dark
+                                    {% elif expense.status == 'rejected' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ expense.get_status_display|default:expense.status|title }}
+                                </span>
+                            </td>
+                            <td>{{ expense.description|truncatechars:30|default:"-" }}</td>
+                            <td>{{ expense.created_by.get_full_name|default:expense.created_by.username|default:"System" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-3x d-block mb-3 opacity-50"></i>
+                                No expenses found
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if expenses.has_other_pages %}
+        <div class="card-footer bg-white">
+            <nav>
+                <ul class="pagination mb-0 justify-content-center">
+                    {% if expenses.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">&laquo;</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ expenses.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">‹</a>
+                    </li>
+                    {% endif %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ expenses.number }}</span>
+                    </li>
+                    {% if expenses.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ expenses.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">›</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ expenses.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">&raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

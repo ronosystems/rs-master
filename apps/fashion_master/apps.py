@@ -6,6 +6,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+
 class FashionMasterConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.fashion_master'
@@ -13,115 +15,15 @@ class FashionMasterConfig(AppConfig):
 
     def ready(self):
         """Auto-setup default roles and categories when app starts"""
-        self.setup_default_roles()
+        # Comment this out to stop auto-creating roles
+        # self.setup_default_roles()
         self.setup_default_categories()
         logger.info("Fashion Master app ready!")
 
     def setup_default_roles(self):
         """Create default fashion roles if they don't exist"""
-        try:
-            from apps.shared.tenants.models import Tenant
-            from .models import FashionRole
-            from .permissions import FASHION_MASTER_PERMISSIONS
-            
-            tenant = Tenant.objects.first()
-            if not tenant:
-                logger.warning("No tenant found, skipping role creation")
-                return
-            
-            default_roles = {
-                'Store Manager': {
-                    'description': 'Full access to Fashion Master store operations',
-                    'permissions': list(FASHION_MASTER_PERMISSIONS.keys()),
-                    'is_system_role': True
-                },
-                'Sales Representative': {
-                    'description': 'Create sales and manage customer interactions',
-                    'permissions': [
-                        'can_view_dashboard',
-                        'can_view_product',
-                        'can_view_category',
-                        'can_view_stock',
-                        'can_view_sale',
-                        'can_create_sale',
-                        'can_process_payment',
-                        'can_view_receipt',
-                        'can_view_return',
-                        'can_create_return',
-                    ],
-                    'is_system_role': False
-                },
-                'Fashion Stylist': {
-                    'description': 'Product styling and customer consultation',
-                    'permissions': [
-                        'can_view_dashboard',
-                        'can_view_product',
-                        'can_view_category',
-                        'can_view_stock',
-                        'can_view_sale',
-                    ],
-                    'is_system_role': False
-                },
-                'Cashier': {
-                    'description': 'Process payments and manage sales',
-                    'permissions': [
-                        'can_view_product',
-                        'can_view_stock',
-                        'can_view_sale',
-                        'can_create_sale',
-                        'can_process_payment',
-                        'can_view_receipt',
-                    ],
-                    'is_system_role': False
-                },
-                'Stock Controller': {
-                    'description': 'Manage inventory and stock levels',
-                    'permissions': [
-                        'can_view_product',
-                        'can_add_product',
-                        'can_edit_product',
-                        'can_view_category',
-                        'can_add_category',
-                        'can_edit_category',
-                        'can_view_stock',
-                        'can_manage_stock',
-                        'can_adjust_stock',
-                        'can_view_low_stock',
-                        'can_view_report',
-                    ],
-                    'is_system_role': False
-                },
-                'Visual Merchandiser': {
-                    'description': 'Product display and visual presentation',
-                    'permissions': [
-                        'can_view_dashboard',
-                        'can_view_product',
-                        'can_view_category',
-                        'can_view_stock',
-                    ],
-                    'is_system_role': False
-                },
-            }
-            
-            created = []
-            for role_name, role_data in default_roles.items():
-                role, created_flag = FashionRole.objects.get_or_create(
-                    tenant=tenant,
-                    name=role_name,
-                    defaults={
-                        'description': role_data['description'],
-                        'permissions': role_data['permissions'],
-                        'is_system_role': role_data['is_system_role'],
-                    }
-                )
-                if created_flag:
-                    created.append(role_name)
-            
-            if created:
-                logger.info(f"Created default Fashion Master roles: {', '.join(created)}")
-                
-        except Exception as e:
-            logger.error(f"Error setting up default roles: {e}")
+        # ... keep the function but it won't be called
+        pass
 
     def setup_default_categories(self):
         """Create default fashion categories if they don't exist"""

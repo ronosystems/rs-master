@@ -15,12 +15,6 @@ from .models import (
 )
 from apps.tech_master.models import Branch, Supplier
 
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Q, Sum, F
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -36,7 +30,52 @@ from .models import (
 from apps.tech_master.models import Branch, Supplier
 from apps.shared.customers.models import Customer
 from django.contrib.auth import get_user_model
+import logging
 
+from apps.shared.users.models import User
+from apps.tech_master.models import Branch
+
+from .models import FashionProduct, FashionVariant, FashionCategory
+from django.http import HttpResponse, JsonResponse
+from django.db.models import Q, Sum, Count, F
+from django.core.paginator import Paginator
+from django.utils import timezone
+from decimal import Decimal
+from datetime import datetime, timedelta
+import csv
+import json
+import logging
+
+from apps.shared.users.models import User
+from apps.shared.expenses.models import Expense
+from apps.tech_master.models import Branch
+
+from .models import FashionProduct, FashionVariant, FashionCategory, FashionSale, FashionSaleItem, FashionReturn
+
+# apps/fashion_master/views.py
+
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db.models import Q, Sum
+from django.core.paginator import Paginator
+from django.utils import timezone
+from decimal import Decimal
+import logging
+
+from apps.shared.users.models import User
+
+from .models import FashionSale, FashionSaleItem, FashionProduct
+
+logger = logging.getLogger(__name__)
+
+
+
+
+
+
+logger = logging.getLogger(__name__)
 
 
 User = get_user_model()
@@ -1020,6 +1059,173 @@ def sale_receipt(request, pk):
 
 
 # ============================================
+# SEARCH SALE VIEWS
+# ============================================
+
+@login_required
+def search_sale(request):
+    """
+    Search sales by invoice number, customer name, phone, or product
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('fashion_master:dashboard')
+    
+    search_query = request.GET.get('q', '').strip()
+    search_type = request.GET.get('type', 'all')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    status = request.GET.get('status', '')
+    
+    sales = FashionSale.objects.filter(tenant=tenant).order_by('-sale_date')
+    
+    # Apply filters
+    if search_query:
+        if search_type == 'invoice':
+            sales = sales.filter(invoice_no__icontains=search_query)
+        elif search_type == 'customer':
+            sales = sales.filter(
+                Q(customer_name__icontains=search_query) |
+                Q(customer_phone__icontains=search_query) |
+                Q(customer_email__icontains=search_query)
+            )
+        elif search_type == 'product':
+            # Search by product name in sale items
+            sale_ids = FashionSaleItem.objects.filter(
+                product_name__icontains=search_query
+            ).values_list('sale_id', flat=True).distinct()
+            sales = sales.filter(id__in=sale_ids)
+        else:
+            # All types
+            sales = sales.filter(
+                Q(invoice_no__icontains=search_query) |
+                Q(customer_name__icontains=search_query) |
+                Q(customer_phone__icontains=search_query) |
+                Q(customer_email__icontains=search_query) |
+                Q(id__in=FashionSaleItem.objects.filter(
+                    product_name__icontains=search_query
+                ).values_list('sale_id', flat=True))
+            )
+    
+    if date_from:
+        sales = sales.filter(sale_date__date__gte=date_from)
+    
+    if date_to:
+        sales = sales.filter(sale_date__date__lte=date_to)
+    
+    if status:
+        sales = sales.filter(status=status)
+    
+    # Add item count to each sale
+    for sale in sales:
+        sale.item_count = sale.items.count()
+    
+    # Statistics
+    total_sales = sales.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    total_count = sales.count()
+    
+    # Pagination
+    paginator = Paginator(sales, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tenant': tenant,
+        'sales': page_obj,
+        'search_query': search_query,
+        'search_type': search_type,
+        'date_from': date_from,
+        'date_to': date_to,
+        'status': status,
+        'total_sales': total_sales,
+        'total_count': total_count,
+        'active_tab': 'sales',
+    }
+    return render(request, 'fashion_master/search_sale.html', context)
+
+
+@login_required
+def search_sale_ajax(request):
+    """
+    AJAX endpoint for live sale search suggestions
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        return JsonResponse({'error': 'No tenant assigned'}, status=400)
+    
+    query = request.GET.get('q', '').strip()
+    
+    if not query or len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    results = []
+    
+    # Search by invoice number
+    sales = FashionSale.objects.filter(
+        tenant=tenant,
+        invoice_no__icontains=query
+    ).values('id', 'invoice_no', 'customer_name', 'total', 'status')[:10]
+    
+    for sale in sales:
+        results.append({
+            'type': 'invoice',
+            'id': sale['id'],
+            'invoice_no': sale['invoice_no'],
+            'customer_name': sale['customer_name'] or 'Walk-in',
+            'total': float(sale['total']) if sale['total'] else 0,
+            'status': sale['status'],
+            'url': f"/fashion/sales/{sale['id']}/"
+        })
+    
+    # Search by customer name or phone
+    if len(results) < 10:
+        customer_sales = FashionSale.objects.filter(
+            Q(customer_name__icontains=query) |
+            Q(customer_phone__icontains=query),
+            tenant=tenant
+        ).values('id', 'invoice_no', 'customer_name', 'total', 'status')[:10]
+        
+        for sale in customer_sales:
+            if sale['id'] not in [r['id'] for r in results]:
+                results.append({
+                    'type': 'customer',
+                    'id': sale['id'],
+                    'invoice_no': sale['invoice_no'],
+                    'customer_name': sale['customer_name'] or 'Walk-in',
+                    'total': float(sale['total']) if sale['total'] else 0,
+                    'status': sale['status'],
+                    'url': f"/fashion/sales/{sale['id']}/"
+                })
+    
+    # Search by product name in sale items
+    if len(results) < 10:
+        product_sale_ids = FashionSaleItem.objects.filter(
+            product_name__icontains=query
+        ).values_list('sale_id', flat=True).distinct()[:10]
+        
+        product_sales = FashionSale.objects.filter(
+            tenant=tenant,
+            id__in=product_sale_ids
+        ).values('id', 'invoice_no', 'customer_name', 'total', 'status')
+        
+        for sale in product_sales:
+            if sale['id'] not in [r['id'] for r in results]:
+                results.append({
+                    'type': 'product',
+                    'id': sale['id'],
+                    'invoice_no': sale['invoice_no'],
+                    'customer_name': sale['customer_name'] or 'Walk-in',
+                    'total': float(sale['total']) if sale['total'] else 0,
+                    'status': sale['status'],
+                    'url': f"/fashion/sales/{sale['id']}/"
+                })
+    
+    return JsonResponse({'results': results})
+
+# ============================================
 # RETURN VIEWS
 # ============================================
 
@@ -1196,6 +1402,485 @@ def reports(request):
     }
     return render(request, 'fashion_master/reports.html', context)
 
+
+# ============================================
+# REPORTS VIEWS
+# ============================================
+
+@login_required
+def reports_dashboard(request):
+    """
+    Reports Dashboard - Main reports page with analytics
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('fashion_master:dashboard')
+    
+    # Date ranges
+    today = timezone.now().date()
+    month_start = today.replace(day=1)
+    year_start = today.replace(month=1, day=1)
+    last_7_days = today - timedelta(days=7)
+    last_30_days = today - timedelta(days=30)
+    
+    # Sales statistics
+    total_sales = FashionSale.objects.filter(
+        tenant=tenant,
+        status='completed'
+    )
+    
+    # Today's sales
+    today_sales = total_sales.filter(
+        sale_date__date=today
+    )
+    today_total = today_sales.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    today_count = today_sales.count()
+    
+    # This month's sales
+    month_sales = total_sales.filter(
+        sale_date__date__gte=month_start
+    )
+    month_total = month_sales.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    month_count = month_sales.count()
+    
+    # This year's sales
+    year_sales = total_sales.filter(
+        sale_date__date__gte=year_start
+    )
+    year_total = year_sales.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    
+    # Average sale value
+    avg_sale = month_sales.aggregate(avg=Sum('total') / Count('id'))['avg'] or Decimal('0.00')
+    
+    # Top products
+    top_products = FashionSaleItem.objects.filter(
+        sale__tenant=tenant,
+        sale__status='completed'
+    ).values(
+        'product__id',
+        'product__name',
+        'product__sku_code'
+    ).annotate(
+        total_sold=Sum('quantity'),
+        total_revenue=Sum('subtotal')
+    ).order_by('-total_revenue')[:10]
+    
+    # Recent sales (last 10)
+    recent_sales = total_sales.select_related(
+        'customer', 'cashier', 'branch'
+    ).order_by('-sale_date')[:10]
+    
+    # Stock overview
+    total_products = FashionProduct.objects.filter(
+        tenant=tenant,
+        is_active=True
+    ).count()
+    
+    low_stock_products = FashionProduct.objects.filter(
+        tenant=tenant,
+        is_active=True,
+        quantity_in_stock__lte=F('reorder_level'),
+        quantity_in_stock__gt=0
+    ).count()
+    
+    out_of_stock_products = FashionProduct.objects.filter(
+        tenant=tenant,
+        is_active=True,
+        quantity_in_stock=0
+    ).count()
+    
+    context = {
+        'tenant': tenant,
+        'today_total': today_total,
+        'today_count': today_count,
+        'month_total': month_total,
+        'month_count': month_count,
+        'year_total': year_total,
+        'avg_sale': avg_sale,
+        'top_products': top_products,
+        'recent_sales': recent_sales,
+        'total_products': total_products,
+        'low_stock_products': low_stock_products,
+        'out_of_stock_products': out_of_stock_products,
+        'active_tab': 'reports',
+    }
+    return render(request, 'fashion_master/reports_dashboard.html', context)
+
+
+@login_required
+def sales_report(request):
+    """
+    Detailed Sales Report with filters
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('fashion_master:dashboard')
+    
+    # Get filter parameters
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    payment_method = request.GET.get('payment_method')
+    cashier_id = request.GET.get('cashier')
+    branch_id = request.GET.get('branch')
+    
+    # Base queryset
+    sales = FashionSale.objects.filter(
+        tenant=tenant,
+        status='completed'
+    ).select_related('customer', 'cashier', 'branch')
+    
+    # Apply filters
+    if date_from:
+        sales = sales.filter(sale_date__date__gte=date_from)
+    if date_to:
+        sales = sales.filter(sale_date__date__lte=date_to)
+    if payment_method:
+        sales = sales.filter(payment_method=payment_method)
+    if cashier_id:
+        sales = sales.filter(cashier_id=cashier_id)
+    if branch_id:
+        sales = sales.filter(branch_id=branch_id)
+    
+    # Statistics
+    total_sales = sales.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    total_count = sales.count()
+    avg_sale = total_sales / total_count if total_count > 0 else Decimal('0.00')
+    
+    # Payment method breakdown
+    payment_breakdown = sales.values('payment_method').annotate(
+        count=Count('id'),
+        total=Sum('total')
+    ).order_by('-total')
+    
+    # Daily sales for chart
+    daily_sales = []
+    if date_from and date_to:
+        start = datetime.strptime(date_from, '%Y-%m-%d').date()
+        end = datetime.strptime(date_to, '%Y-%m-%d').date()
+        delta = (end - start).days + 1
+        for i in range(delta):
+            date = start + timedelta(days=i)
+            day_total = sales.filter(sale_date__date=date).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+            daily_sales.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'total': float(day_total)
+            })
+    
+    # Get cashiers and branches for filters
+    cashiers = User.objects.filter(tenant=tenant, is_active=True)
+    branches = Branch.objects.filter(tenant=tenant, is_active=True)
+    
+    # Pagination
+    paginator = Paginator(sales, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tenant': tenant,
+        'sales': page_obj,
+        'total_sales': total_sales,
+        'total_count': total_count,
+        'avg_sale': avg_sale,
+        'payment_breakdown': payment_breakdown,
+        'daily_sales': daily_sales,
+        'cashiers': cashiers,
+        'branches': branches,
+        'date_from': date_from,
+        'date_to': date_to,
+        'payment_method': payment_method,
+        'cashier_id': cashier_id,
+        'branch_id': branch_id,
+        'active_tab': 'reports',
+    }
+    return render(request, 'fashion_master/sales_report.html', context)
+
+
+@login_required
+def inventory_report(request):
+    """
+    Detailed Inventory Report
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('fashion_master:dashboard')
+    
+    # Get filter parameters
+    category_id = request.GET.get('category')
+    stock_status = request.GET.get('stock_status')
+    search = request.GET.get('search', '')
+    
+    # Base queryset
+    products = FashionProduct.objects.filter(
+        tenant=tenant,
+        is_active=True
+    ).select_related('category', 'branch', 'supplier')
+    
+    # Apply filters
+    if category_id:
+        products = products.filter(category_id=category_id)
+    
+    if stock_status == 'in_stock':
+        products = products.filter(quantity_in_stock__gt=0)
+    elif stock_status == 'low_stock':
+        products = products.filter(
+            quantity_in_stock__lte=F('reorder_level'),
+            quantity_in_stock__gt=0
+        )
+    elif stock_status == 'out_of_stock':
+        products = products.filter(quantity_in_stock=0)
+    
+    if search:
+        products = products.filter(
+            Q(name__icontains=search) |
+            Q(brand__icontains=search) |
+            Q(sku_code__icontains=search) |
+            Q(barcode__icontains=search)
+        )
+    
+    # Statistics
+    total_products = products.count()
+    total_stock_value = products.aggregate(
+        total=Sum(F('quantity_in_stock') * F('buying_price'))
+    )['total'] or Decimal('0.00')
+    
+    # Category breakdown
+    category_breakdown = products.values('category__name').annotate(
+        count=Count('id'),
+        total_stock=Sum('quantity_in_stock'),
+        total_value=Sum(F('quantity_in_stock') * F('buying_price'))
+    ).order_by('-total_value')
+    
+    # Get categories for filter
+    categories = FashionCategory.objects.filter(tenant=tenant, is_active=True)
+    
+    # Pagination
+    paginator = Paginator(products, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tenant': tenant,
+        'products': page_obj,
+        'total_products': total_products,
+        'total_stock_value': total_stock_value,
+        'category_breakdown': category_breakdown,
+        'categories': categories,
+        'category_id': category_id,
+        'stock_status': stock_status,
+        'search': search,
+        'active_tab': 'reports',
+    }
+    return render(request, 'fashion_master/inventory_report.html', context)
+
+
+@login_required
+def expense_report(request):
+    """
+    Detailed Expense Report
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('fashion_master:dashboard')
+    
+    # Get date range
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    category_id = request.GET.get('category')
+    status = request.GET.get('status')
+    
+    # Base queryset
+    expenses = Expense.objects.filter(
+        tenant=tenant,
+        status__in=['approved', 'paid']
+    )
+    
+    if date_from:
+        expenses = expenses.filter(date__gte=date_from)
+    if date_to:
+        expenses = expenses.filter(date__lte=date_to)
+    if category_id:
+        expenses = expenses.filter(category_id=category_id)
+    if status:
+        expenses = expenses.filter(status=status)
+    
+    # Statistics
+    total_expenses = expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_count = expenses.count()
+    avg_expense = total_expenses / total_count if total_count > 0 else Decimal('0.00')
+    
+    # Category breakdown
+    category_breakdown = expenses.values('category__name').annotate(
+        count=Count('id'),
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    # Get categories for filter
+    from apps.shared.expenses.models import ExpenseCategory
+    categories = ExpenseCategory.objects.filter(tenant=tenant, is_active=True)
+    
+    # Pagination
+    paginator = Paginator(expenses, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tenant': tenant,
+        'expenses': page_obj,
+        'total_expenses': total_expenses,
+        'total_count': total_count,
+        'avg_expense': avg_expense,
+        'category_breakdown': category_breakdown,
+        'categories': categories,
+        'date_from': date_from,
+        'date_to': date_to,
+        'category_id': category_id,
+        'status': status,
+        'active_tab': 'reports',
+    }
+    return render(request, 'fashion_master/expense_report.html', context)
+
+
+@login_required
+def export_report(request):
+    """
+    Export reports in CSV or Excel format
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('fashion_master:dashboard')
+    
+    report_type = request.GET.get('type', 'sales')
+    format_type = request.GET.get('format', 'csv')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if report_type == 'sales':
+        return export_sales_report(tenant, format_type, date_from, date_to)
+    elif report_type == 'inventory':
+        return export_inventory_report(tenant, format_type)
+    elif report_type == 'expenses':
+        return export_expenses_report(tenant, format_type, date_from, date_to)
+    else:
+        messages.error(request, 'Invalid report type')
+        return redirect('fashion_master:reports')
+
+
+def export_sales_report(tenant, format_type, date_from, date_to):
+    """Export sales report to CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="sales_report.csv"'
+    
+    sales = FashionSale.objects.filter(
+        tenant=tenant,
+        status='completed'
+    ).select_related('customer', 'cashier', 'branch')
+    
+    if date_from:
+        sales = sales.filter(sale_date__date__gte=date_from)
+    if date_to:
+        sales = sales.filter(sale_date__date__lte=date_to)
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'Invoice No', 'Date', 'Customer', 'Phone', 'Branch',
+        'Cashier', 'Subtotal', 'Discount', 'Tax', 'Total', 'Payment Method'
+    ])
+    
+    for sale in sales:
+        writer.writerow([
+            sale.invoice_no,
+            sale.sale_date.strftime('%Y-%m-%d %H:%M'),
+            sale.customer_name or 'Walk-in',
+            sale.customer_phone or '',
+            sale.branch.name if sale.branch else '',
+            sale.cashier.get_full_name() if sale.cashier else '',
+            float(sale.subtotal),
+            float(sale.discount),
+            float(sale.tax),
+            float(sale.total),
+            sale.get_payment_method_display()
+        ])
+    
+    return response
+
+
+def export_inventory_report(tenant, format_type):
+    """Export inventory report to CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="inventory_report.csv"'
+    
+    products = FashionProduct.objects.filter(
+        tenant=tenant,
+        is_active=True
+    ).select_related('category', 'supplier', 'branch')
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'SKU', 'Name', 'Brand', 'Category', 'Size', 'Color',
+        'Buying Price', 'Selling Price', 'Stock', 'Reorder Level', 'Stock Value'
+    ])
+    
+    for product in products:
+        stock_value = product.quantity_in_stock * product.buying_price
+        writer.writerow([
+            product.sku_code,
+            product.name,
+            product.brand,
+            product.category.name if product.category else '',
+            product.size,
+            product.color,
+            float(product.buying_price),
+            float(product.selling_price),
+            product.quantity_in_stock,
+            product.reorder_level,
+            float(stock_value)
+        ])
+    
+    return response
+
+
+def export_expenses_report(tenant, format_type, date_from, date_to):
+    """Export expenses report to CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="expenses_report.csv"'
+    
+    expenses = Expense.objects.filter(
+        tenant=tenant,
+        status__in=['approved', 'paid']
+    ).select_related('category', 'created_by')
+    
+    if date_from:
+        expenses = expenses.filter(date__gte=date_from)
+    if date_to:
+        expenses = expenses.filter(date__lte=date_to)
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'Title', 'Category', 'Amount', 'Date', 'Status', 'Description', 'Created By'
+    ])
+    
+    for expense in expenses:
+        writer.writerow([
+            expense.title,
+            expense.category.name if expense.category else '',
+            float(expense.amount),
+            expense.date.strftime('%Y-%m-%d'),
+            expense.status,
+            expense.description or '',
+            expense.created_by.get_full_name() if expense.created_by else ''
+        ])
+    
+    return response
 
 
 
@@ -1444,3 +2129,274 @@ def api_reject_return(request, return_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)   
+
+
+
+
+# ============================================
+# PRICE CHECK VIEWS
+# ============================================
+
+@login_required
+def price_check(request):
+    """
+    Price check view - Search product by name, SKU, barcode, size, or color
+    Displays selling price and best price
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('fashion_master:dashboard')
+    
+    context = {
+        'tenant': tenant,
+        'active_tab': 'price_check',
+    }
+    return render(request, 'fashion_master/price_check.html', context)
+
+
+@login_required
+def price_check_search(request):
+    """
+    AJAX endpoint for price check - Search product by identifier
+    Returns: product details with selling_price and best_price
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        return JsonResponse({'error': 'No tenant assigned'}, status=400)
+    
+    query = request.GET.get('q', '').strip()
+    
+    if not query:
+        return JsonResponse({'error': 'Please enter a search term'}, status=400)
+    
+    if len(query) < 2:
+        return JsonResponse({'error': 'Please enter at least 2 characters'}, status=400)
+    
+    try:
+        # Search by SKU, Barcode, Name, Size, or Color
+        products = FashionProduct.objects.filter(
+            tenant=tenant,
+            is_active=True
+        ).filter(
+            Q(sku_code__icontains=query) |
+            Q(barcode__icontains=query) |
+            Q(name__icontains=query) |
+            Q(brand__icontains=query) |
+            Q(size__icontains=query) |
+            Q(color__icontains=query) |
+            Q(style_code__icontains=query)
+        ).select_related('category')[:10]
+        
+        if products.exists():
+            results = []
+            for product in products:
+                results.append({
+                    'id': product.id,
+                    'sku_code': product.sku_code,
+                    'name': product.name,
+                    'brand': product.brand,
+                    'size': product.size,
+                    'color': product.color,
+                    'selling_price': float(product.selling_price),
+                    'best_price': float(product.best_price) if product.best_price else None,
+                    'buying_price': float(product.buying_price),
+                    'available_quantity': product.available_quantity,
+                    'category': product.category.name if product.category else None,
+                    'image': product.image.url if product.image else None,
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'found': True,
+                'type': 'list',
+                'data': results,
+                'count': len(results),
+                'message': f'Found {len(results)} products matching "{query}"'
+            })
+        
+        # Search by SKU in variants
+        variants = FashionVariant.objects.filter(
+            tenant=tenant,
+            is_active=True
+        ).filter(
+            Q(sku__icontains=query) |
+            Q(barcode__icontains=query)
+        ).select_related('product')[:5]
+        
+        if variants.exists():
+            results = []
+            for variant in variants:
+                results.append({
+                    'id': variant.id,
+                    'type': 'variant',
+                    'sku': variant.sku,
+                    'product_name': variant.product.name,
+                    'size': variant.size,
+                    'color': variant.color,
+                    'selling_price': float(variant.selling_price or variant.product.selling_price),
+                    'best_price': float(variant.product.best_price) if variant.product.best_price else None,
+                    'available_quantity': variant.available_quantity,
+                    'image': variant.image.url if variant.image else None,
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'found': True,
+                'type': 'variant',
+                'data': results,
+                'count': len(results),
+                'message': f'Found {len(results)} variants matching "{query}"'
+            })
+        
+        # No results found
+        return JsonResponse({
+            'success': True,
+            'found': False,
+            'message': f'No product found for "{query}"'
+        })
+        
+    except Exception as e:
+        logger.error(f"Price check error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ============================================
+# PRODUCT SEARCH VIEWS
+# ============================================
+
+@login_required
+def product_search(request):
+    """
+    Product search page - Search products by name, SKU, brand, etc.
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('fashion_master:dashboard')
+    
+    search_query = request.GET.get('q', '').strip()
+    category_id = request.GET.get('category', '')
+    size = request.GET.get('size', '')
+    color = request.GET.get('color', '')
+    min_price = request.GET.get('min_price', '')
+    max_price = request.GET.get('max_price', '')
+    
+    products = FashionProduct.objects.filter(tenant=tenant, is_active=True)
+    
+    # Apply filters
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) |
+            Q(brand__icontains=search_query) |
+            Q(sku_code__icontains=search_query) |
+            Q(barcode__icontains=search_query) |
+            Q(size__icontains=search_query) |
+            Q(color__icontains=search_query) |
+            Q(style_code__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+    
+    if category_id:
+        products = products.filter(category_id=category_id)
+    
+    if size:
+        products = products.filter(size__icontains=size)
+    
+    if color:
+        products = products.filter(color__icontains=color)
+    
+    if min_price:
+        try:
+            products = products.filter(selling_price__gte=Decimal(min_price))
+        except:
+            pass
+    
+    if max_price:
+        try:
+            products = products.filter(selling_price__lte=Decimal(max_price))
+        except:
+            pass
+    
+    # Get categories for filter
+    categories = FashionCategory.objects.filter(tenant=tenant, is_active=True)
+    
+    # Get unique sizes and colors for filters
+    sizes = products.values_list('size', flat=True).distinct().order_by('size')
+    colors = products.values_list('color', flat=True).distinct().order_by('color')
+    
+    # Pagination
+    paginator = Paginator(products, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tenant': tenant,
+        'products': page_obj,
+        'categories': categories,
+        'sizes': sizes,
+        'colors': colors,
+        'search_query': search_query,
+        'selected_category': category_id,
+        'selected_size': size,
+        'selected_color': color,
+        'min_price': min_price,
+        'max_price': max_price,
+        'active_tab': 'product_search',
+    }
+    return render(request, 'fashion_master/product_search.html', context)
+
+
+@login_required
+def product_search_ajax(request):
+    """
+    AJAX endpoint for product search - Live suggestions
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        return JsonResponse({'error': 'No tenant assigned'}, status=400)
+    
+    query = request.GET.get('q', '').strip()
+    
+    if not query or len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    products = FashionProduct.objects.filter(
+        tenant=tenant,
+        is_active=True
+    ).filter(
+        Q(name__icontains=query) |
+        Q(brand__icontains=query) |
+        Q(sku_code__icontains=query) |
+        Q(barcode__icontains=query) |
+        Q(size__icontains=query) |
+        Q(color__icontains=query)
+    ).select_related('category')[:20]
+    
+    results = []
+    for product in products:
+        results.append({
+            'id': product.id,
+            'sku_code': product.sku_code,
+            'name': product.name,
+            'brand': product.brand,
+            'size': product.size,
+            'color': product.color,
+            'selling_price': float(product.selling_price),
+            'buying_price': float(product.buying_price),
+            'available_quantity': product.available_quantity,
+            'category': product.category.name if product.category else None,
+            'image': product.image.url if product.image else None,
+            'url': f"/fashion/products/{product.id}/"
+        })
+    
+    return JsonResponse({'results': results})
+
+

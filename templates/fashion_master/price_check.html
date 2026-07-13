@@ -1,0 +1,236 @@
+<!-- templates/fashion_master/price_check.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Price Check{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-dollar-sign text-primary me-2"></i>Price Check
+            </h4>
+            <p class="text-muted mb-0">Search products by name, SKU, barcode, or size</p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control" 
+                               placeholder="Search by name, SKU, barcode, size, or color..."
+                               autofocus>
+                        <button type="button" class="btn btn-primary" id="searchBtn">
+                            <i class="fas fa-search me-2"></i>Search
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="clearBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Search by product name, SKU code, barcode, size (S, M, L), or color
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="alert alert-info h-100 d-flex align-items-center mb-0">
+                        <div>
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Quick Search:</strong> 
+                            <span class="text-muted small">Try searching "blue", "M", or "SKU001"</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card border-0 shadow-sm" id="resultsCard" style="display: none;">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-list me-2"></i>Search Results
+                    <span class="badge bg-secondary ms-2" id="resultCount">0</span>
+                </h6>
+                <div id="loadingSpinner" style="display: none;">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div id="resultsContainer">
+                <!-- Results will be rendered here -->
+            </div>
+            <div id="noResults" class="text-center py-5" style="display: none;">
+                <i class="fas fa-inbox fa-4x d-block mb-3 text-muted opacity-25"></i>
+                <h5 class="text-muted">No products found</h5>
+                <p class="text-muted small">Try adjusting your search terms</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initial State -->
+    <div class="text-center py-5" id="initialState">
+        <i class="fas fa-search fa-4x d-block mb-3 text-muted opacity-25"></i>
+        <h5 class="text-muted">Search for products</h5>
+        <p class="text-muted small">Enter a product name, SKU, size, or color to check prices</p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const resultsCard = document.getElementById('resultsCard');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const resultCount = document.getElementById('resultCount');
+    const noResults = document.getElementById('noResults');
+    const initialState = document.getElementById('initialState');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+
+    // Search function
+    function performSearch() {
+        const query = searchInput.value.trim();
+        
+        if (!query || query.length < 2) {
+            showToast('Please enter at least 2 characters', 'warning');
+            return;
+        }
+
+        // Show loading
+        resultsCard.style.display = 'block';
+        loadingSpinner.style.display = 'inline-block';
+        initialState.style.display = 'none';
+        noResults.style.display = 'none';
+        resultsContainer.innerHTML = '';
+
+        // Make AJAX request
+        fetch(`/fashion/price-check/search/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                loadingSpinner.style.display = 'none';
+                
+                if (data.success && data.found) {
+                    displayResults(data);
+                } else {
+                    noResults.style.display = 'block';
+                    resultsContainer.innerHTML = '';
+                    resultCount.textContent = '0';
+                }
+            })
+            .catch(error => {
+                loadingSpinner.style.display = 'none';
+                console.error('Error:', error);
+                showToast('An error occurred while searching', 'danger');
+            });
+    }
+
+    // Display results
+    function displayResults(data) {
+        resultCount.textContent = data.count;
+        noResults.style.display = 'none';
+        
+        let html = '<div class="table-responsive"><table class="table table-hover align-middle mb-0">';
+        html += `
+            <thead class="table-light">
+                <tr>
+                    <th>Product</th>
+                    <th>Size</th>
+                    <th>Color</th>
+                    <th>SKU</th>
+                    <th>Price</th>
+                    <th>Best Price</th>
+                    <th>Stock</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        data.data.forEach(item => {
+            html += `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 10px;">` : ''}
+                            <div>
+                                <div class="fw-semibold">${item.name}</div>
+                                <small class="text-muted">${item.brand || ''}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge bg-secondary">${item.size || '-'}</span></td>
+                    <td><span class="badge" style="background-color: ${item.color || '#ddd'}; color: ${['white','black','yellow'].includes(item.color?.toLowerCase()) ? '#333' : 'white'}">${item.color || '-'}</span></td>
+                    <td><span class="badge bg-light text-dark">${item.sku_code || item.sku}</span></td>
+                    <td class="fw-bold text-success">KES ${item.selling_price.toFixed(2)}</td>
+                    <td>${item.best_price ? `KES ${item.best_price.toFixed(2)}` : '-'}</td>
+                    <td>
+                        <span class="badge ${item.available_quantity > 0 ? 'bg-success' : 'bg-danger'}">
+                            ${item.available_quantity}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        resultsContainer.innerHTML = html;
+    }
+
+    // Show toast notification
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} alert-dismissible fade show`;
+        toast.style.cssText = 'position: fixed; top: 90px; right: 30px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // Event listeners
+    searchBtn.addEventListener('click', performSearch);
+    
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+    
+    clearBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        searchInput.focus();
+        resultsCard.style.display = 'none';
+        initialState.style.display = 'block';
+        resultsContainer.innerHTML = '';
+        resultCount.textContent = '0';
+    });
+    
+    // Auto-focus
+    searchInput.focus();
+});
+</script>
+{% endblock %}

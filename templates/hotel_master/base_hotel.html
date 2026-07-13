@@ -1008,7 +1008,7 @@
     <!-- Sidebar Footer -->
     <div class="sidebar-footer">
         <a href="{% url 'portal:no_project_assigned' %}" class="footer-btn help-btn">
-            <i class="fas fa-help"></i>
+            <i class="fas fa-question-circle"></i>
             <span><Center> 🔴🟡🟢 About RS Master </Center></span>
             <span class="badge bg-danger ms-1" id="chatBadge" style="display: none;">0</span>
         </a>
@@ -1030,198 +1030,6 @@
     </div>
     {% endif %}
 
-    <!-- ============================================ -->
-    <!-- TENANT LIMITS DASHBOARD WIDGETS (ADMIN ONLY) -->
-    <!-- ============================================ -->
-    {% if user.is_super_admin or user.is_tenant_admin %}
-    {% if tenant_has_limits %}
-    <div class="row g-4 mb-4">
-        <!-- Users Limit Card -->
-        <div class="col-xl-3 col-lg-6 col-md-6">
-            <div class="card border-0 shadow-sm h-100 tenant-limit-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="badge {% if tenant_users_at_limit %}bg-danger{% else %}bg-primary{% endif %} bg-opacity-50 p-2 rounded-3">
-                                <i class="fas fa-users fs-5 {% if tenant_users_at_limit %}text-danger{% else %}text-dark{% endif %}"></i>
-                            </span>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge {% if tenant_users_at_limit %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3 py-2">
-                                {{ tenant_users_count|default:0 }} / {{ tenant_user_limit|default:0 }}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <h6 class="fw-bold mb-1">Users</h6>
-                    <p class="text-muted small mb-3">
-                        {% if current_subscription %}
-                            {{ tenant_user_limit|default:0 }} users included in {{ current_subscription.name }}
-                        {% else %}
-                            No subscription plan active ({{ tenant_user_limit|default:0 }} default limit)
-                        {% endif %}
-                    </p>
-                    
-                    <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
-                        <div class="progress-bar {% if tenant_users_at_limit %}bg-danger{% elif tenant_users_percentage > 80 %}bg-warning{% else %}bg-success{% endif %}" 
-                             style="width: {{ tenant_users_percentage|default:0 }}%; border-radius: 8px; transition: width 0.6s ease;">
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            {% if tenant_users_remaining > 0 %}
-                                <i class="fas fa-user-plus me-1 text-success"></i> {{ tenant_users_remaining }} remaining
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Limit reached!</span>
-                            {% endif %}
-                        </small>
-                        <small class="fw-bold">{{ tenant_users_percentage|floatformat:0 }}%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Rooms Limit Card -->
-        <div class="col-xl-3 col-lg-6 col-md-6">
-            <div class="card border-0 shadow-sm h-100 tenant-limit-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="badge {% if tenant_rooms_at_limit %}bg-danger{% else %}bg-primary{% endif %} bg-opacity-50 p-2 rounded-3">
-                                <i class="fas fa-bed fs-5 {% if tenant_rooms_at_limit %}text-danger{% else %}text-dark{% endif %}"></i>
-                            </span>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge {% if tenant_rooms_at_limit %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3 py-2">
-                                {{ tenant_rooms_count|default:0 }} / {{ tenant_room_limit|default:0 }}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <h6 class="fw-bold mb-1">Rooms</h6>
-                    <p class="text-muted small mb-3">
-                        {% if current_subscription %}
-                            {{ tenant_room_limit|default:0 }} rooms included in {{ current_subscription.name }}
-                        {% else %}
-                            No subscription plan active ({{ tenant_room_limit|default:0 }} default limit)
-                        {% endif %}
-                    </p>
-                    
-                    <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
-                        <div class="progress-bar {% if tenant_rooms_at_limit %}bg-danger{% elif tenant_rooms_percentage > 80 %}bg-warning{% else %}bg-success{% endif %}" 
-                             style="width: {{ tenant_rooms_percentage|default:0 }}%; border-radius: 8px; transition: width 0.6s ease;">
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            {% if tenant_rooms_remaining > 0 %}
-                                <i class="fas fa-plus-circle me-1 text-success"></i> {{ tenant_rooms_remaining }} remaining
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Limit reached!</span>
-                            {% endif %}
-                        </small>
-                        <small class="fw-bold">{{ tenant_rooms_percentage|floatformat:0 }}%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Branches Limit Card -->
-        <div class="col-xl-3 col-lg-6 col-md-6">
-            <div class="card border-0 shadow-sm h-100 tenant-limit-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="badge {% if tenant_branches_at_limit %}bg-danger{% else %}bg-primary{% endif %} bg-opacity-50 p-2 rounded-3">
-                                <i class="fas fa-store fs-5 {% if tenant_branches_at_limit %}text-danger{% else %}text-dark{% endif %}"></i>
-                            </span>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge {% if tenant_branches_at_limit %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3 py-2">
-                                {{ tenant_branches_count|default:0 }} / {{ tenant_branch_limit|default:0 }}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <h6 class="fw-bold mb-1">Branches</h6>
-                    <p class="text-muted small mb-3">
-                        {% if current_subscription %}
-                            {{ tenant_branch_limit|default:0 }} branches included in {{ current_subscription.name }}
-                        {% else %}
-                            No subscription plan active ({{ tenant_branch_limit|default:0 }} default limit)
-                        {% endif %}
-                    </p>
-                    
-                    <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
-                        <div class="progress-bar {% if tenant_branches_at_limit %}bg-danger{% elif tenant_branches_percentage > 80 %}bg-warning{% else %}bg-success{% endif %}" 
-                             style="width: {{ tenant_branches_percentage|default:0 }}%; border-radius: 8px; transition: width 0.6s ease;">
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            {% if tenant_branches_remaining > 0 %}
-                                <i class="fas fa-plus-circle me-1 text-success"></i> {{ tenant_branches_remaining }} remaining
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Limit reached!</span>
-                            {% endif %}
-                        </small>
-                        <small class="fw-bold">{{ tenant_branches_percentage|floatformat:0 }}%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Storage Limit Card -->
-        <div class="col-xl-3 col-lg-6 col-md-6">
-            <div class="card border-0 shadow-sm h-100 tenant-limit-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <span class="badge {% if tenant_storage_at_limit %}bg-danger{% else %}bg-info{% endif %} bg-opacity-50 p-2 rounded-3">
-                                <i class="fas fa-hdd fs-5 {% if tenant_storage_at_limit %}text-danger{% else %}text-dark{% endif %}"></i>
-                            </span>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge {% if tenant_storage_at_limit %}bg-danger{% else %}bg-info{% endif %} fs-6 px-3 py-2">
-                                {{ tenant_storage_used|floatformat:1|default:"0" }} GB / {{ tenant_storage_limit|default:0 }} GB
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <h6 class="fw-bold mb-1">Storage</h6>
-                    <p class="text-muted small mb-3">
-                        {% if current_subscription %}
-                            {{ tenant_storage_limit|default:0 }} GB included in {{ current_subscription.name }}
-                        {% else %}
-                            No subscription plan active ({{ tenant_storage_limit|default:0 }} GB default limit)
-                        {% endif %}
-                    </p>
-                    
-                    <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
-                        <div class="progress-bar {% if tenant_storage_at_limit %}bg-danger{% elif tenant_storage_percentage > 80 %}bg-warning{% else %}bg-info{% endif %}" 
-                             style="width: {{ tenant_storage_percentage|default:0 }}%; border-radius: 8px; transition: width 0.6s ease;">
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">
-                            {% if tenant_storage_remaining > 0 %}
-                                <i class="fas fa-check-circle me-1 text-success"></i> {{ tenant_storage_remaining|floatformat:1 }} GB available
-                            {% else %}
-                                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Storage full!</span>
-                            {% endif %}
-                        </small>
-                        <small class="fw-bold">{{ tenant_storage_percentage|floatformat:0 }}%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    {% endif %}
 
     <!-- Django Messages -->
     {% if messages %}
@@ -1267,7 +1075,7 @@
 
 <script>
 // ============================================
-// SUB-MENU TOGGLE FUNCTION
+// SUB-MENU TOGGLE FUNCTION - INDEPENDENT
 // ============================================
 function toggleSubMenu(titleElement) {
     const menuGroup = titleElement.closest('.menu-group');
@@ -1276,21 +1084,11 @@ function toggleSubMenu(titleElement) {
     const subMenu = menuGroup.querySelector('.sub-menu');
     if (!subMenu) return;
     
+    // Toggle the clicked menu only
     subMenu.classList.toggle('open');
     titleElement.classList.toggle('collapsed');
     
-    const allGroups = document.querySelectorAll('.menu-group');
-    allGroups.forEach(group => {
-        if (group !== menuGroup) {
-            const otherSubMenu = group.querySelector('.sub-menu');
-            const otherTitle = group.querySelector('.menu-title');
-            if (otherSubMenu && otherSubMenu.classList.contains('open')) {
-                otherSubMenu.classList.remove('open');
-                if (otherTitle) otherTitle.classList.remove('collapsed');
-            }
-        }
-    });
-    
+    // Save state to localStorage
     const menuStates = JSON.parse(localStorage.getItem('menuStates') || '{}');
     const menuKey = titleElement.textContent.trim();
     menuStates[menuKey] = subMenu.classList.contains('open');

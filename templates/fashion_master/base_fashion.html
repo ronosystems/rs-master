@@ -700,7 +700,7 @@
             <div class="sidebar-menu">
                         
                 <!-- ============================================ -->
-                <!-- DASHBOARD - BASED ON PERMISSIONS -->
+                <!-- DASHBOARD -->
                 <!-- ============================================ -->
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
@@ -767,53 +767,8 @@
                 </div>
                 {% endif %}
 
-
-            <!-- ============================================ -->
-            <!-- BRANCHES - BASED ON BRANCH PERMISSIONS -->
-            <!-- ============================================ -->
-            {% if user|fashion_can_any:'can_view_branches,can_add_branch,can_assign_branch_manager,can_view_branch_stock,can_transfer_stock' %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    📍 BRANCHES
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="sub-menu">
-                    {% if user|fashion_can:'can_view_branches' %}
-                    <a href="{% url 'fashion_master:branch_list' %}" class="menu-item">
-                        <i class="fas fa-store"></i>
-                        <span>Shop Branches</span>
-                    </a>
-                    {% endif %}
-                    {% if user|fashion_can:'can_add_branch' %}
-                    <a href="{% url 'fashion_master:add_branch' %}" class="menu-item">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Add Branch</span>
-                    </a>
-                    {% endif %}
-                    {% if user|fashion_can:'can_assign_branch_manager' %}
-                    <a href="{% url 'fashion_master:assign_branch_manager' %}" class="menu-item">
-                        <i class="fas fa-user-tie"></i>
-                        <span>Assign Manager</span>
-                    </a>
-                    {% endif %}
-                    {% if user|fashion_can:'can_view_branch_stock' %}
-                    <a href="{% url 'fashion_master:branch_stock_list' %}" class="menu-item">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span>Branch Stock</span>
-                    </a>
-                    {% endif %}
-                    {% if user|fashion_can:'can_transfer_stock' %}
-                    <a href="{% url 'fashion_master:transfer_stock' %}" class="menu-item">
-                        <i class="fas fa-exchange-alt"></i>
-                        <span>Transfer Stock</span>
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
                 <!-- ============================================ -->
-                <!-- MEMBERS - BASED ON STAFF PERMISSIONS -->
+                <!-- MEMBERS - STAFF PERMISSIONS -->
                 <!-- ============================================ -->
                 {% if user|fashion_can_any:'can_view_staff,can_add_staff,can_manage_staff' %}
                 <div class="menu-group">
@@ -829,7 +784,7 @@
                         </a>
                         {% endif %}
                         {% if user|fashion_can:'can_add_staff' %}
-                        <a href="#" class="menu-item">
+                        <a href="{% url 'fashion_master:staff_create' %}" class="menu-item">
                             <i class="fas fa-user-plus"></i>
                             <span>Add Staff</span>
                         </a>
@@ -862,7 +817,47 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- CATEGORIES - BASED ON PERMISSIONS -->
+                <!-- BRANCHES -->
+                <!-- ============================================ -->
+                {% if user|fashion_can_any:'can_view_branch,can_add_branch,can_manage_branch' %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        📍 BRANCHES
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        {% if user|fashion_can:'can_view_branch' %}
+                        <a href="{% url 'fashion_master:branch_list' %}" class="menu-item">
+                            <i class="fas fa-store"></i>
+                            <span>Shop Branches</span>
+                        </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_add_branch' %}
+                        <a href="{% url 'fashion_master:add_branch' %}" class="menu-item">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Add Branch</span>
+                        </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_manage_branch' %}
+                        <a href="{% url 'fashion_master:assign_branch_manager' %}" class="menu-item">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Assign Manager</span>
+                        </a>
+                        <a href="{% url 'fashion_master:branch_stock_list' %}" class="menu-item">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span>Branch Stock</span>
+                        </a>
+                        <a href="{% url 'fashion_master:transfer_stock' %}" class="menu-item">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>Transfer Stock</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ============================================ -->
+                <!-- CATEGORIES -->
                 <!-- ============================================ -->
                 {% if user|fashion_can_any:'can_view_category,can_add_category,can_edit_category' %}
                 <div class="menu-group">
@@ -894,9 +889,9 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- PRODUCTS - BASED ON PERMISSIONS -->
+                <!-- PRODUCTS & INVENTORY -->
                 <!-- ============================================ -->
-                {% if user|fashion_can_any:'can_view_product,can_add_product,can_edit_product,can_delete_product' %}
+                {% if user|fashion_can_any:'can_view_product,can_add_product,can_edit_product,can_delete_product,can_manage_stock' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
                         👟 PRODUCTS
@@ -922,15 +917,19 @@
                         </a>
                         {% endif %}
                         <div class="menu-divider"></div>
-                        {% if user|fashion_can:'can_manage_stock' %}
+                        {% if user|fashion_can:'can_view_stock' %}
                         <a href="{% url 'fashion_master:inventory_list' %}" class="menu-item">
                             <i class="fas fa-clipboard-list"></i>
                             <span>Inventory</span>
                         </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_manage_stock' %}
                         <a href="{% url 'fashion_master:inventory_movements' %}" class="menu-item">
                             <i class="fas fa-history"></i>
                             <span>Stock Movements</span>
                         </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_view_low_stock' %}
                         <a href="#" class="menu-item">
                             <i class="fas fa-exclamation-triangle"></i>
                             <span>Low Stock Alert</span>
@@ -941,9 +940,9 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- SALES &  - BASED ON PERMISSIONS -->
+                <!-- SALES -->
                 <!-- ============================================ -->
-                {% if user|fashion_can_any:'can_view_sale,can_create_sale,can_edit_sale,' %}
+                {% if user|fashion_can_any:'can_view_sale,can_create_sale,can_edit_sale' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
                         💰 SALES 
@@ -961,7 +960,9 @@
                             <i class="fas fa-history"></i>
                             <span>Sales History</span>
                         </a>
-                        <a href="#" class="menu-item">
+                        {% endif %}
+                        {% if user|fashion_can:'can_search_sale' %}
+                        <a href="{% url 'fashion_master:search_sale' %}" class="menu-item">
                             <i class="fas fa-search"></i>
                             <span>Search Sales</span>
                         </a>
@@ -971,12 +972,12 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!--  RETURNS - BASED ON PERMISSIONS -->
+                <!-- RETURNS -->
                 <!-- ============================================ -->
                 {% if user|fashion_can_any:'can_view_return,can_create_return,can_approve_return' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
-                        💰 RETURNS
+                        🔄 RETURNS
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
@@ -1003,7 +1004,7 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- REPORTS - BASED ON PERMISSIONS -->
+                <!-- REPORTS -->
                 <!-- ============================================ -->
                 {% if user|fashion_can_any:'can_view_report,can_export_report' %}
                 <div class="menu-group">
@@ -1017,21 +1018,27 @@
                             <i class="fas fa-chart-bar"></i>
                             <span>Reports Dashboard</span>
                         </a>
-                        <a href="#" class="menu-item">
+                        {% if user|fashion_can:'can_view_sales_report' %}
+                        <a href="{% url 'fashion_master:sales_report' %}" class="menu-item">
                             <i class="fas fa-chart-line"></i>
                             <span>Sales Reports</span>
                         </a>
-                        <a href="#" class="menu-item">
+                        {% endif %}
+                        {% if user|fashion_can:'can_view_inventory_report' %}
+                        <a href="{% url 'fashion_master:inventory_report' %}" class="menu-item">
                             <i class="fas fa-boxes"></i>
                             <span>Inventory Report</span>
                         </a>
-                        <a href="#" class="menu-item">
+                        {% endif %}
+                        {% if user|fashion_can:'can_view_expense_report' %}
+                        <a href="{% url 'fashion_master:expense_report' %}" class="menu-item">
                             <i class="fas fa-receipt"></i>
                             <span>Expense Report</span>
                         </a>
                         {% endif %}
+                        {% endif %}
                         {% if user|fashion_can:'can_export_report' %}
-                        <a href="#" class="menu-item">
+                        <a href="{% url 'fashion_master:export_report' %}" class="menu-item">
                             <i class="fas fa-file-export"></i>
                             <span>Export Reports</span>
                         </a>
@@ -1041,7 +1048,7 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- SETTINGS - BASED ON PERMISSIONS -->
+                <!-- SETTINGS -->
                 <!-- ============================================ -->
                 {% if user|fashion_can_any:'can_view_settings,can_manage_settings' %}
                 <div class="menu-group">
@@ -1050,28 +1057,40 @@
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
-                        {% if user|fashion_can:'can_view_settings' %}
+                        {% if user|fashion_can:'can_view_receipt_settings' %}
                         <a href="{% url 'settings:receipt_settings' %}" class="menu-item">
                             <i class="fas fa-receipt"></i>
                             <span>Receipt Settings</span>
                         </a>
-                        <a href="{% url 'settings:company_settings' %}" class="menu-item">
-                            <i class="fas fa-building"></i>
-                            <span>Company Settings</span>
-                        </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_view_payment_settings' %}
                         <a href="{% url 'settings:payment_settings' %}" class="menu-item">
                             <i class="fas fa-dollar"></i>
                             <span>Payment Settings</span>
                         </a>
                         {% endif %}
-                        {% if user|fashion_can:'can_manage_settings' %}
+                        {% if user|fashion_can:'can_view_company_settings' %}
+                        <a href="{% url 'settings:company_settings' %}" class="menu-item">
+                            <i class="fas fa-building"></i>
+                            <span>Company Settings</span>
+                        </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_view_store_settings' %}
                         <a href="#" class="menu-item">
                             <i class="fas fa-store"></i>
                             <span>Store Settings</span>
                         </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_view_tax_settings' %}
                         <a href="#" class="menu-item">
                             <i class="fas fa-tag"></i>
                             <span>Tax Settings</span>
+                        </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_manage_settings' %}
+                        <a href="#" class="menu-item">
+                            <i class="fas fa-cogs"></i>
+                            <span>System Settings</span>
                         </a>
                         {% endif %}
                     </div>
@@ -1079,49 +1098,59 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- MY WORK - BASED ON PERMISSIONS -->
+                <!-- MY WORK -->
                 <!-- ============================================ -->
-                {% if user|fashion_can:'can_view_sale' %}
+                {% if user|fashion_can_any:'can_view_my_stock,can_view_my_sales,can_create_agent_sale' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
                         💼 MY WORK
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
+                        {% if user|fashion_can:'can_view_my_stock' %}
                         <a href="#" class="menu-item">
                             <i class="fas fa-box"></i>
                             <span>My Stock</span>
                         </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_view_my_sales' %}
                         <a href="#" class="menu-item">
                             <i class="fas fa-chart-line"></i>
                             <span>My Sales</span>
                         </a>
+                        {% endif %}
+                        {% if user|fashion_can:'can_create_agent_sale' %}
                         <a href="#" class="menu-item">
                             <i class="fas fa-hand-holding-usd"></i>
                             <span>New Sale</span>
                         </a>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- LOOKUPS - BASED ON PERMISSIONS -->
+                <!-- LOOKUPS -->
                 <!-- ============================================ -->
-                {% if user|fashion_can:'can_view_product' %}
+                {% if user|fashion_can_any:'can_price_check,can_product_search' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
                         🔍 LOOKUPS
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
-                        <a href="#" class="menu-item">
+                        {% if user|fashion_can:'can_price_check' %}
+                        <a href="{% url 'fashion_master:price_check' %}" class="menu-item">
                             <i class="fas fa-dollar-sign"></i>
                             <span>Price Check</span>
                         </a>
-                        <a href="#" class="menu-item">
+                        {% endif %}
+                        {% if user|fashion_can:'can_product_search' %}
+                        <a href="{% url 'fashion_master:product_search' %}" class="menu-item">
                             <i class="fas fa-search"></i>
                             <span>Product Search</span>
                         </a>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -1204,7 +1233,7 @@
 
     <script>
     // ============================================
-    // SUB-MENU TOGGLE FUNCTION
+    // SUB-MENU TOGGLE FUNCTION - INDEPENDENT
     // ============================================
     function toggleSubMenu(titleElement) {
         const menuGroup = titleElement.closest('.menu-group');
@@ -1213,21 +1242,11 @@
         const subMenu = menuGroup.querySelector('.sub-menu');
         if (!subMenu) return;
         
+        // Toggle the clicked menu only
         subMenu.classList.toggle('open');
         titleElement.classList.toggle('collapsed');
         
-        const allGroups = document.querySelectorAll('.menu-group');
-        allGroups.forEach(group => {
-            if (group !== menuGroup) {
-                const otherSubMenu = group.querySelector('.sub-menu');
-                const otherTitle = group.querySelector('.menu-title');
-                if (otherSubMenu && otherSubMenu.classList.contains('open')) {
-                    otherSubMenu.classList.remove('open');
-                    if (otherTitle) otherTitle.classList.remove('collapsed');
-                }
-            }
-        });
-        
+        // Save state to localStorage
         const menuStates = JSON.parse(localStorage.getItem('menuStates') || '{}');
         const menuKey = titleElement.textContent.trim();
         menuStates[menuKey] = subMenu.classList.contains('open');

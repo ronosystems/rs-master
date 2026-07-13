@@ -1,3 +1,4 @@
+<!-- templates/rental_master/base_rental.html -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
@@ -16,10 +17,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
           onerror="this.onerror=null;this.href='{% static 'css/all.min.css' %}'">
     
-    
     <!-- Simple data URI favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>®️</text></svg>">
-    
     
     <style>
         /* ============================================ */
@@ -668,8 +667,6 @@
     </div>
 </div>
 
-
-
 <!-- ============================================ -->
 <!-- FIXED LEFT SIDEBAR - RENTAL MASTER WITH WORKING URLS -->
 <!-- ============================================ -->
@@ -781,7 +778,7 @@
             <!-- ============================================ -->
             <!-- PROPERTY MANAGEMENT -->
             <!-- ============================================ -->
-             {% if user.is_super_admin or user.is_tenant_admin %}
+            {% if user.is_super_admin or user.is_tenant_admin %}
             <div class="menu-group">
                 <div class="menu-title" onclick="toggleSubMenu(this)">
                     🏢 PROPERTIES
@@ -1080,14 +1077,12 @@
     <!-- Sidebar Footer -->
     <div class="sidebar-footer">
         <a href="{% url 'portal:no_project_assigned' %}" class="footer-btn help-btn">
-            <i class="fas fa-help"></i>
+            <i class="fas fa-question-circle"></i>
             <span><Center> 🔴🟡🟢 About RS Master </Center></span>
             <span class="badge bg-danger ms-1" id="chatBadge" style="display: none;">0</span>
         </a>
     </div>
 </div>
-
-
 
 <!-- ============================================ -->
 <!-- MAIN CONTENT -->
@@ -1148,7 +1143,7 @@
 
 <script>
 // ============================================
-// SUB-MENU TOGGLE FUNCTION
+// SUB-MENU TOGGLE FUNCTION - INDEPENDENT
 // ============================================
 function toggleSubMenu(titleElement) {
     const menuGroup = titleElement.closest('.menu-group');
@@ -1157,21 +1152,11 @@ function toggleSubMenu(titleElement) {
     const subMenu = menuGroup.querySelector('.sub-menu');
     if (!subMenu) return;
     
+    // Toggle the clicked menu only
     subMenu.classList.toggle('open');
     titleElement.classList.toggle('collapsed');
     
-    const allGroups = document.querySelectorAll('.menu-group');
-    allGroups.forEach(group => {
-        if (group !== menuGroup) {
-            const otherSubMenu = group.querySelector('.sub-menu');
-            const otherTitle = group.querySelector('.menu-title');
-            if (otherSubMenu && otherSubMenu.classList.contains('open')) {
-                otherSubMenu.classList.remove('open');
-                if (otherTitle) otherTitle.classList.remove('collapsed');
-            }
-        }
-    });
-    
+    // Save state to localStorage
     const menuStates = JSON.parse(localStorage.getItem('menuStates') || '{}');
     const menuKey = titleElement.textContent.trim();
     menuStates[menuKey] = subMenu.classList.contains('open');
@@ -1209,167 +1194,182 @@ function handleLogoError(img) {
     icon.style.color = 'white';
     parent.appendChild(icon);
 }
-</script>
 
-<script>
-    // Theme Toggle
-    function toggleTheme() {
-        const html = document.documentElement;
-        const currentTheme = html.getAttribute('data-bs-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        html.setAttribute('data-bs-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        
-        const themeIcon = document.querySelector('#themeToggle i');
-        if (newTheme === 'dark') {
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
-        } else {
-            themeIcon.classList.remove('fa-sun');
-            themeIcon.classList.add('fa-moon');
-        }
+// ============================================
+// THEME TOGGLE
+// ============================================
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-bs-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-bs-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    const themeIcon = document.querySelector('#themeToggle i');
+    if (newTheme === 'dark') {
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+    } else {
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
     }
-    
-    function loadTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-bs-theme', savedTheme);
-        const themeIcon = document.querySelector('#themeToggle i');
-        if (savedTheme === 'dark') {
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
-        } else {
-            themeIcon.classList.remove('fa-sun');
-            themeIcon.classList.add('fa-moon');
-        }
+}
+
+function loadTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    const themeIcon = document.querySelector('#themeToggle i');
+    if (savedTheme === 'dark') {
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+    } else {
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
     }
+}
+
+document.getElementById('currentYear').innerText = new Date().getFullYear();
+
+// ============================================
+// SIDEBAR TOGGLE
+// ============================================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    const footer = document.getElementById('footer');
     
-    document.getElementById('currentYear').innerText = new Date().getFullYear();
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('sidebar-collapsed');
+    footer.classList.toggle('sidebar-collapsed');
     
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('mainContent');
-        const footer = document.getElementById('footer');
-        
-        sidebar.classList.toggle('collapsed');
-        mainContent.classList.toggle('sidebar-collapsed');
-        footer.classList.toggle('sidebar-collapsed');
-        
-        const isCollapsed = sidebar.classList.contains('collapsed');
-        localStorage.setItem('sidebarCollapsed', isCollapsed);
-    }
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    localStorage.setItem('sidebarCollapsed', isCollapsed);
+}
+
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
     
-    function toggleMobileSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        
-        sidebar.classList.add('mobile-open');
-        overlay.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
     
-    function closeMobileSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        
-        sidebar.classList.remove('mobile-open');
-        overlay.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-    
-    function loadSidebarState() {
-        if (window.innerWidth > 768) {
-            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-            if (isCollapsed) {
-                const sidebar = document.getElementById('sidebar');
-                const mainContent = document.getElementById('mainContent');
-                const footer = document.getElementById('footer');
-                
-                sidebar.classList.add('collapsed');
-                mainContent.classList.add('sidebar-collapsed');
-                footer.classList.add('sidebar-collapsed');
-            }
-        }
-    }
-    
-    function setActiveMenuItem() {
-        const currentPath = window.location.pathname;
-        document.querySelectorAll('.menu-item').forEach(item => {
-            const href = item.getAttribute('href');
-            if (href && (currentPath === href || currentPath.startsWith(href))) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
-        });
-    }
-    
-    function showHelp() {
-        alert('📞 For Rental support, please contact your Property Manager');
-    }
-    
-    window.addEventListener('resize', function() {
-        if (window.innerWidth > 768) {
-            closeMobileSidebar();
-            loadSidebarState();
-        } else {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function loadSidebarState() {
+    if (window.innerWidth > 768) {
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed) {
             const sidebar = document.getElementById('sidebar');
-            sidebar.classList.remove('collapsed');
+            const mainContent = document.getElementById('mainContent');
+            const footer = document.getElementById('footer');
+            
+            sidebar.classList.add('collapsed');
+            mainContent.classList.add('sidebar-collapsed');
+            footer.classList.add('sidebar-collapsed');
         }
-    });
-    
-    document.querySelectorAll('.menu-item').forEach(item => {
-        item.addEventListener('click', function(e) {
-            if (this.getAttribute('href') === 'javascript:void(0)') {
-                e.preventDefault();
-                return;
-            }
-            if (window.innerWidth <= 768) {
-                closeMobileSidebar();
-            }
-        });
-    });
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        loadTheme();
-        loadSidebarState();
-        setActiveMenuItem();
-        restoreMenuStates();
-    });
-    
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
     }
-    
-    const csrftoken = getCookie('csrftoken');
-    $.ajaxSetup({
-        beforeSend: function(xhr, settings) {
-            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
-            }
+}
+
+function setActiveMenuItem() {
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.menu-item').forEach(item => {
+        const href = item.getAttribute('href');
+        if (href && (currentPath === href || currentPath.startsWith(href))) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
         }
     });
-    
-    // Auto-dismiss alerts after 5 seconds
-    setTimeout(function() {
-        document.querySelectorAll('.alert').forEach(function(alert) {
-            alert.style.transition = 'opacity 0.5s ease';
-            alert.style.opacity = '0';
-            setTimeout(function() {
-                alert.remove();
-            }, 500);
-        });
-    }, 5000);
+}
+
+// ============================================
+// HELP FUNCTION
+// ============================================
+function showHelp() {
+    alert('📞 For Rental support, please contact your Property Manager');
+}
+
+// ============================================
+// WINDOW EVENTS
+// ============================================
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+        closeMobileSidebar();
+        loadSidebarState();
+    } else {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.remove('collapsed');
+    }
+});
+
+document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+        if (this.getAttribute('href') === 'javascript:void(0)') {
+            e.preventDefault();
+            return;
+        }
+        if (window.innerWidth <= 768) {
+            closeMobileSidebar();
+        }
+    });
+});
+
+// ============================================
+// DOM READY
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    loadTheme();
+    loadSidebarState();
+    setActiveMenuItem();
+    restoreMenuStates();
+});
+
+// ============================================
+// CSRF TOKEN
+// ============================================
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        }
+    }
+});
+
+// Auto-dismiss alerts after 5 seconds
+setTimeout(function() {
+    document.querySelectorAll('.alert').forEach(function(alert) {
+        alert.style.transition = 'opacity 0.5s ease';
+        alert.style.opacity = '0';
+        setTimeout(function() {
+            alert.remove();
+        }, 500);
+    });
+}, 5000);
 </script>
 
 {% block extra_js %}{% endblock %}

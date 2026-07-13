@@ -56,7 +56,7 @@
         .sidebar-footer .footer-btn.help-btn:hover { background: linear-gradient(135deg, #0084ff, #0011ff); transform: translateX(5px); }
         .fixed-left-sidebar.collapsed .sidebar-footer .footer-btn span { display: none; }
         .fixed-left-sidebar.collapsed .sidebar-footer .footer-btn { justify-content: center; padding: 12px 0; }
-        .main-content { margin-top: 80px; margin-left: 280px; min-height: calc(100vh - 130px); padding: 25px 30px; transition: all 0.3s ease; background: #888; }
+        .main-content { margin-top: 80px; margin-left: 280px; min-height: calc(100vh - 130px); padding: 25px 30px; transition: all 0.3s ease; background: #eef2f6; }
         .main-content.sidebar-collapsed { margin-left: 80px; }
         .fixed-footer { position: fixed; bottom: 0; left: 280px; right: 0; height: 50px; background: var(--footer-bg); border-top: 1px solid var(--sidebar-border); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; font-size: 0.8rem; color: var(--sidebar-text); z-index: 998; transition: all 0.3s ease; }
         .fixed-footer.sidebar-collapsed { left: 80px; }
@@ -416,6 +416,9 @@
                 <a href="{% url 'tenants:project_type_list' %}" class="menu-item">
                     <i class="fas fa-project-diagram"></i><span>System Projects</span>
                 </a>
+                <a href="{% url 'tenants:project_type_create' %}" class="menu-item">
+                    <i class="fas fa-plus-circle"></i><span>New Project Type</span>
+                </a>
                 <a href="{% url 'tenants:subscription_plans_list' %}" class="menu-item">
                     <i class="fas fa-crown"></i><span>Subscription Plans</span>
                 </a>
@@ -423,7 +426,10 @@
                     <i class="fas fa-credit-card"></i><span>Tenant Subscribers</span>
                 </a>
                 <a href="{% url 'tenants:tenant_list' %}" class="menu-item">
-                    <i class="fas fa-building"></i><span>Manage Tenants</span>
+                    <i class="fas fa-building"></i><span>Tenant Management</span>
+                </a>
+                <a href="{% url 'tenants:register_tenant' %}" class="menu-item">
+                    <i class="fas fa-plus-circle text-primary"></i><span>Add New Tenant</span>
                 </a>
                 <div class="menu-divider"></div>
                 <div class="menu-title">RS SETTINGS</div>
@@ -743,16 +749,90 @@
             }
         }
 
+        // ============================================
+        // FIXED: ACTIVE MENU ITEM - Exact Match Only
+        // ============================================
         function setActiveMenuItem() {
             const currentPath = window.location.pathname;
+            
+            // Remove all active classes first
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Try to find exact match first
+            let foundExact = false;
             document.querySelectorAll('.menu-item').forEach(item => {
                 const href = item.getAttribute('href');
-                if (href && (currentPath === href || currentPath.startsWith(href))) {
+                if (href && href === currentPath) {
                     item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
+                    foundExact = true;
                 }
             });
+            
+            // If no exact match, try to match with data-url or last part
+            if (!foundExact) {
+                const urlParts = currentPath.split('/').filter(p => p);
+                const lastPart = urlParts[urlParts.length - 1] || '';
+                
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    const href = item.getAttribute('href');
+                    
+                    // Check if href ends with the last part of the URL
+                    if (href && href.endsWith(lastPart) && lastPart) {
+                        // Make sure it's not a partial match
+                        const hrefParts = href.split('/').filter(p => p);
+                        const hrefLastPart = hrefParts[hrefParts.length - 1] || '';
+                        
+                        if (hrefLastPart === lastPart) {
+                            item.classList.add('active');
+                        }
+                    }
+                });
+            }
+            
+            // If still no match, check if any href is a prefix (for nested pages)
+            if (!document.querySelector('.menu-item.active')) {
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    const href = item.getAttribute('href');
+                    if (href && href !== '/' && href !== '#') {
+                        // Check if current path starts with href and href is longer than '/'
+                        if (currentPath.startsWith(href) && href.length > 1) {
+                            // Make sure it's a proper prefix (next char is '/' or end)
+                            const nextChar = currentPath[href.length] || '';
+                            if (nextChar === '' || nextChar === '/') {
+                                // Don't match if href is a partial match (e.g., /tenant should not match /tenants/)
+                                // Check if href ends with a word boundary or slash
+                                const hrefEnd = href[href.length - 1];
+                                if (hrefEnd === '/' || !currentPath[href.length] || currentPath[href.length] === '/') {
+                                    item.classList.add('active');
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // If still no match, check for contained path (for non-prefix matching)
+            if (!document.querySelector('.menu-item.active')) {
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    const href = item.getAttribute('href');
+                    if (href && href !== '/' && href !== '#') {
+                        // Check if any part of the URL matches the href
+                        const hrefParts = href.split('/').filter(p => p);
+                        if (hrefParts.length > 0) {
+                            const lastHrefPart = hrefParts[hrefParts.length - 1];
+                            if (lastHrefPart && currentPath.includes(lastHrefPart)) {
+                                // Make sure it's a meaningful match (not just a common word)
+                                const matchCount = (currentPath.match(new RegExp(lastHrefPart, 'g')) || []).length;
+                                if (matchCount > 0) {
+                                    item.classList.add('active');
+                                }
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         // ============================================

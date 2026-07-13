@@ -1,15 +1,25 @@
 # ============================================
-# CONFIG SETTINGS
+# CONFIG SETTINGS - PYTHONANYWHERE READY
 # ============================================
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
 import dj_database_url
 from typing import Dict, Any
 
+# ============================================
+# BASE DIRECTORY
+# ============================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Force OFFLINE_MODE from environment variable
+# ============================================
+# ENVIRONMENT DETECTION
+# ============================================
+# Detect if running on PythonAnywhere
+IS_PYTHONANYWHERE = 'pythonanywhere' in sys.executable or os.getenv('PYTHONANYWHERE_DOMAIN') is not None
+
+# Force OFFLINE_MODE from environment variable (Default False for PA)
 OFFLINE_MODE = os.getenv('OFFLINE_MODE', 'False') == 'True'
 
 # ============================================
@@ -34,7 +44,19 @@ else:
 # ============================================
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-here')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# --- ALLOWED HOSTS (Fixed for PythonAnywhere) ---
+if IS_PYTHONANYWHERE:
+    # Allow all PythonAnywhere subdomains + custom domains
+    ALLOWED_HOSTS = [
+        '.pythonanywhere.com',  # Wildcard for yourusername.pythonanywhere.com
+        os.getenv('ALLOWED_HOSTS', ''),
+    ]
+else:
+    ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# Clean up empty entries
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
 
 # ============================================
 # AUTHENTICATION
@@ -45,7 +67,7 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
 # ============================================
-# PROJECT TYPES
+# PROJECT TYPES (YOUR ORIGINAL BUSINESS LOGIC)
 # ============================================
 PROJECT_TYPES = {
     'TECH_MASTER': {
@@ -182,7 +204,6 @@ ROOT_URLCONF = 'config.urls'
 # ============================================
 # TEMPLATES
 # ============================================
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -213,7 +234,6 @@ TEMPLATES = [
     },
 ]
 
-
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -221,75 +241,53 @@ CACHES = {
     }
 }
 
-
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
 # ============================================
-# OFFLINE DATABASE HANDLING
+# DATABASE CONFIGURATION - PYTHONANYWHERE READY
 # ============================================
 
-def is_database_available():
-    """Check if the database host is reachable"""
-    import socket
-    import os
-    import urllib.parse
-    
-    database_url = os.getenv('DATABASE_URL', '')
-    
-    if not database_url:
-        print("📶 No DATABASE_URL set - using SQLite")
-        return True  # SQLite is always available
-    
-    try:
-        parsed = urllib.parse.urlparse(database_url)
-        host = parsed.hostname
-        
-        if not host:
-            return True
-        
-        socket.setdefaulttimeout(3)
-        ip = socket.gethostbyname(host)
-        print(f"✅ Database host resolved: {host} -> {ip}")
-        return True
-        
-    except socket.gaierror as e:
-        print(f"❌ Database host unreachable: {e}")
-        return False
-    except Exception as e:
-        print(f"❌ Database connection error: {e}")
-        return False
-    finally:
-        socket.setdefaulttimeout(None)
-
-# ✅ Check environment variable first, then fallback to database check
-# If OFFLINE_MODE is explicitly set in environment, use that
-env_offline = os.getenv('OFFLINE_MODE', '').lower()
-if env_offline in ['true', '1', 'yes']:
-    OFFLINE_MODE = True
-    print("📴 OFFLINE MODE FORCED BY ENVIRONMENT VARIABLE")
-else:
-    # Otherwise auto-detect
-    OFFLINE_MODE = not is_database_available()
-
-if OFFLINE_MODE:
-    print("📴 OFFLINE MODE ACTIVATED - Using local cache")
-else:
-    print("📶 ONLINE MODE - Using PostgreSQL database")
-
-
-
-
-# ============================================
-# DATABASE CONFIGURATION
-# ============================================
 def get_database_config(offline_mode=False) -> Dict[str, Any]:
     """
     Returns database configuration based on environment variables.
     Automatically switches to SQLite when offline.
     """
     
-    # Check if we're offline
+    # --- PRIORITY 1: PYTHONANYWHERE MySQL (Auto-detected) ---
+    if IS_PYTHONANYWHERE:
+        print("🏠 Running on PythonAnywhere - Configuring MySQL")
+        
+        # Get MySQL credentials from environment
+        db_name = os.getenv('MYSQL_DATABASE')
+        db_user = os.getenv('MYSQL_USER')
+        db_password = os.getenv('MYSQL_PASSWORD')
+        db_host = os.getenv('MYSQL_HOST', 'mysql.pythonanywhere-services.com')
+        
+        # Validate credentials exist
+        if not all([db_name, db_user, db_password]):
+            raise ValueError(
+                "❌ MySQL credentials not set! Please set MYSQL_DATABASE, MYSQL_USER, "
+                "and MYSQL_PASSWORD in your .env.production file."
+            )
+        
+        return {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': db_name,
+                'USER': db_user,
+                'PASSWORD': db_password,
+                'HOST': db_host,
+                'PORT': '3306',
+                'OPTIONS': {
+                    'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                    'charset': 'utf8mb4',
+                },
+                'CONN_MAX_AGE': 600,
+                'CONN_HEALTH_CHECKS': True,
+            }
+        }
+    
+    # --- PRIORITY 2: OFFLINE MODE (SQLite) ---
     if offline_mode:
         print("📴 OFFLINE: Using SQLite cache database")
         return {
@@ -302,7 +300,7 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
             }
         }
     
-    # Check if DATABASE_URL is provided (production)
+    # --- PRIORITY 3: DATABASE_URL (For Heroku/Other cloud) ---
     database_url = os.getenv('DATABASE_URL')
     if database_url:
         config = dj_database_url.config(
@@ -313,7 +311,7 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
         )
         return {'default': dict(config)}
     
-    # Otherwise build from individual settings
+    # --- PRIORITY 4: Individual PostgreSQL Settings ---
     engine = os.getenv('DATABASE_ENGINE', 'django.db.backends.sqlite3')
     
     if engine == 'django.db.backends.postgresql':
@@ -334,8 +332,9 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
                 'ATOMIC_REQUESTS': True,
             }
         }
+    
+    # --- PRIORITY 5: Default SQLite (Local development) ---
     else:
-        # SQLite configuration
         db_name = os.getenv('DATABASE_NAME', 'db.sqlite3')
         
         if ENV == 'test':
@@ -357,21 +356,17 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
             }
 
 # ============================================
-# DATABASES
+# DATABASES - FINAL ASSIGNMENT
 # ============================================
-# Now assign the databases - pass OFFLINE_MODE
 DATABASES = get_database_config(offline_mode=OFFLINE_MODE)
 
-# Print which database we're using
+# Print which database we're using (for debugging)
 if DEBUG:
     db_engine = DATABASES['default'].get('ENGINE', 'unknown')
     if 'sqlite3' in db_engine:
         print(f"🗄️  Using SQLite: {DATABASES['default'].get('NAME', '')}")
     else:
-        print(f"🗄️  Using PostgreSQL")
-
-
-
+        print(f"🗄️  Using {db_engine}")
 
 # ============================================
 # AUTH PASSWORD VALIDATORS
@@ -400,15 +395,28 @@ USE_I18N = True
 USE_TZ = True
 
 # ============================================
-# STATIC & MEDIA FILES
+# STATIC & MEDIA FILES - PYTHONANYWHERE OPTIMIZED
 # ============================================
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Different paths for PythonAnywhere (absolute paths required)
+if IS_PYTHONANYWHERE:
+    # IMPORTANT: Replace 'yourusername' with YOUR actual PythonAnywhere username
+    PA_USERNAME = os.getenv('PYTHONANYWHERE_USERNAME', 'yourusername')
+    STATIC_ROOT = f'/home/{PA_USERNAME}/staticfiles'
+    MEDIA_ROOT = f'/home/{PA_USERNAME}/media'
+else:
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    MEDIA_ROOT = BASE_DIR / 'media'
+
+# Ensure directories exist (creates them if not)
+os.makedirs(STATIC_ROOT, exist_ok=True)
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 
 # ============================================
 # DEFAULT FIELD
@@ -423,30 +431,75 @@ POWERSYNC_URL = os.getenv('POWERSYNC_URL', 'https://6a38344d0ef84ed671a39215.pow
 POWERSYNC_API_KEY = os.getenv('POWERSYNC_API_KEY', '')
 
 # ============================================
-# CORS SETTINGS
+# CORS SETTINGS - PYTHONANYWHERE READY
 # ============================================
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+if IS_PYTHONANYWHERE:
+    PA_DOMAIN = os.getenv('PYTHONANYWHERE_DOMAIN', 'yourusername.pythonanywhere.com')
+    CORS_ALLOWED_ORIGINS = [
+        f'https://{PA_DOMAIN}',
+        f'http://{PA_DOMAIN}',
+        'https://*.pythonanywhere.com',
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [origin for origin in CORS_ALLOWED_ORIGINS if origin]
+# Clean up empty entries
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS if origin.strip()]
+
+
 
 # ============================================
-# SECURITY SETTINGS (Production only)
+# SECURITY SETTINGS - PYTHONANYWHERE OPTIMIZED
 # ============================================
+
+# ✅ Define default values (prevents "unbound" errors)
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_HSTS_SECONDS = 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+CSRF_TRUSTED_ORIGINS = []
+
 if not DEBUG:
-    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
-    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'True') == 'True'
-    CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'True') == 'True'
-    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    # PythonAnywhere handles SSL termination, so we don't redirect
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    
+    # Optional HSTS (PythonAnywhere may already handle this)
+    # SECURE_HSTS_SECONDS = 31536000
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_HSTS_PRELOAD = True
     
     SESSION_COOKIE_HTTPONLY = True
     CSRF_COOKIE_HTTPONLY = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     
+    # CSRF Trusted Origins for PythonAnywhere
+    if IS_PYTHONANYWHERE:
+        PA_DOMAIN = os.getenv('PYTHONANYWHERE_DOMAIN', 'RONOSYSTEMS.pythonanywhere.com')
+        CSRF_TRUSTED_ORIGINS = [
+            f'https://{PA_DOMAIN}',
+            f'http://{PA_DOMAIN}',
+            'https://*.pythonanywhere.com',
+        ]
+    
+    # Add any custom origins from environment
     csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-    CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(',') if origin.strip()]
+    if csrf_origins:
+        CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in csrf_origins.split(',') if origin.strip()])
+    
+    # Clean up empty entries
+    CSRF_TRUSTED_ORIGINS = [origin for origin in CSRF_TRUSTED_ORIGINS if origin]
+
+
 
 # ============================================
 # LOGGING - CLEAN VERSION (Only INFO and above)
@@ -468,18 +521,18 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
-            'level': 'INFO',  # ✅ Only show INFO and above
+            'level': 'INFO',  # Only show INFO and above
         },
         'file': {
             'class': 'logging.FileHandler',
             'filename': str(BASE_DIR / 'logs' / 'django.log'),
             'formatter': 'verbose',
-            'level': 'INFO',  # ✅ Only show INFO and above in file
+            'level': 'INFO',  # Only show INFO and above in file
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',  # ✅ Root logger at INFO level
+        'level': 'INFO',
     },
     'loggers': {
         # Django core loggers - INFO and above only
@@ -512,7 +565,7 @@ LOGGING = {
         # Suppress context processors debug messages
         'apps.shared.portal.context_processors': {
             'handlers': ['console', 'file'],
-            'level': 'ERROR',  # ✅ Suppress "Company name loaded" messages
+            'level': 'ERROR',  # Suppress "Company name loaded" messages
             'propagate': False,
         },
         
@@ -592,8 +645,9 @@ REST_FRAMEWORK = {
 # ============================================
 if DEBUG:
     print(f"🔧 Environment: {ENV}")
-    print(f"🗄️  Database: {DATABASES['default'].get('ENGINE', 'unknown')}")
+    print(f"🏠 PythonAnywhere: {IS_PYTHONANYWHERE}")
+    print(f"🗄️  Database Engine: {DATABASES['default'].get('ENGINE', 'unknown')}")
     print(f"📴 Offline Mode: {OFFLINE_MODE}")
+    print(f"🌐 Allowed Hosts: {ALLOWED_HOSTS}")
     if ENV == 'production':
-        print(f"🌐 Neon Auth: {NEON_AUTH_URL}")
-        print(f"🔄 PowerSync: {POWERSYNC_URL}")
+        print(f"🔐 SECURE_SSL_REDIRECT: {SECURE_SSL_REDIRECT if not DEBUG else 'Not set (DEBUG mode)'}")

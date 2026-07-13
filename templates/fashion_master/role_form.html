@@ -2,7 +2,7 @@
 {% extends "fashion_master/base_fashion.html" %}
 {% load static %}
 
-{% block title %}Create Fashion Role{% endblock %}
+{% block title %}{% if role %}Edit{% else %}Create{% endif %} Fashion Role{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -11,38 +11,77 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0 fw-bold">
-                        <i class="fas fa-user-tag me-2"></i>Create Fashion Role
+                        <i class="fas fa-user-tag me-2"></i>
+                        {% if role %}Edit{% else %}Create{% endif %} Fashion Role
                     </h5>
+                    <p class="mb-0 small text-white-50">
+                        {% if role %}Update role details and permissions{% else %}Define a new fashion role and assign permissions{% endif %}
+                    </p>
                 </div>
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
                         
+                        <!-- Role Name -->
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Role Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" placeholder="e.g., Store Manager" required>
+                            <input type="text" name="name" class="form-control" 
+                                   value="{{ role.name|default:'' }}" 
+                                   placeholder="e.g., Store Manager" required>
+                            <small class="text-muted">Display name for the role</small>
                         </div>
                         
+                        <!-- Description -->
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Description</label>
-                            <textarea name="description" class="form-control" rows="3" placeholder="Describe the role responsibilities"></textarea>
+                            <textarea name="description" class="form-control" rows="3" 
+                                      placeholder="Describe the role responsibilities">{{ role.description|default:'' }}</textarea>
+                            <small class="text-muted">Brief description of the role's responsibilities</small>
                         </div>
                         
+                        <!-- System Role Toggle -->
                         <div class="mb-3">
                             <div class="form-check form-switch">
-                                <input type="checkbox" name="is_system_role" class="form-check-input" id="isSystemRole">
-                                <label class="form-check-label fw-semibold" for="isSystemRole">System Role</label>
+                                <input type="checkbox" name="is_system_role" class="form-check-input" id="isSystemRole"
+                                       {% if role.is_system_role %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="isSystemRole">
+                                    <i class="fas fa-cog me-1"></i> System Role
+                                </label>
                             </div>
-                            <small class="text-muted">System roles cannot be deleted</small>
+                            <small class="text-muted">System roles are built-in and cannot be deleted</small>
+                        </div>
+                        
+                        <!-- Active Status -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" name="is_active" class="form-check-input" id="isActive"
+                                       {% if role.is_active or not role %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="isActive">
+                                    <i class="fas fa-circle text-{% if role.is_active or not role %}success{% else %}secondary{% endif %} me-1" style="font-size: 0.6rem;"></i>
+                                    Active Role
+                                </label>
+                            </div>
+                            <small class="text-muted">Inactive roles cannot be assigned to users</small>
                         </div>
                         
                         <hr>
-                        <h6 class="fw-bold mb-3"><i class="fas fa-lock me-2"></i>Permissions</h6>
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-lock me-2"></i>Permissions
+                            <span class="badge bg-secondary ms-2" id="selectedCount">0 selected</span>
+                        </h6>
+                        <p class="text-muted small mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Select the permissions this role will have. Users with this role will inherit all selected permissions.
+                        </p>
                         
+                        <!-- Permission Groups -->
                         {% for group, perms in permission_groups.items %}
                         <div class="card mb-3">
                             <div class="card-header bg-light">
-                                <h6 class="mb-0 fw-bold">{{ group }}</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-bold">{{ group }}</h6>
+                                    <span class="badge bg-secondary" id="groupCount_{{ forloop.counter }}">0 selected</span>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div class="row">
@@ -50,7 +89,11 @@
                                     <div class="col-md-6">
                                         <div class="form-check">
                                             <input type="checkbox" name="permissions" value="{{ perm.codename }}" 
-                                                   class="form-check-input" id="perm_{{ perm.codename }}">
+                                                   class="form-check-input permission-check" 
+                                                   id="perm_{{ perm.codename }}"
+                                                   data-group="{{ forloop.parentloop.counter }}"
+                                                   {% if perm.codename in role_permissions %}checked{% endif %}
+                                                   onchange="updatePermissionCount()">
                                             <label class="form-check-label" for="perm_{{ perm.codename }}">
                                                 {{ perm.name }}
                                             </label>
@@ -60,15 +103,28 @@
                                 </div>
                             </div>
                         </div>
+                        {% empty %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No permissions available for Fashion Master.
+                        </div>
                         {% endfor %}
                         
+                        <!-- Action Buttons -->
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>Create Role
+                                <i class="fas fa-save me-2"></i>
+                                {% if role %}Update{% else %}Create{% endif %} Role
                             </button>
                             <a href="{% url 'fashion_master:role_list' %}" class="btn btn-secondary">
                                 <i class="fas fa-times me-2"></i>Cancel
                             </a>
+                            {% if role and not role.is_system_role %}
+                            <button type="button" class="btn btn-danger ms-auto" 
+                                    onclick="confirmDelete('{{ role.id }}', '{{ role.name }}')">
+                                <i class="fas fa-trash me-2"></i>Delete
+                            </button>
+                            {% endif %}
                         </div>
                     </form>
                 </div>
@@ -76,4 +132,80 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+{% if role and not role.is_system_role %}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteRoleName">{{ role.name }}</strong>?</p>
+                <p class="text-danger small">This action cannot be undone.</p>
+                {% if role.user_count > 0 %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    This role has <strong>{{ role.user_count }}</strong> user(s) assigned. 
+                    They will lose this role if you delete it.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'fashion_master:role_delete' role.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Role</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial count
+    updatePermissionCount();
+});
+
+function updatePermissionCount() {
+    const allCheckboxes = document.querySelectorAll('.permission-check');
+    const checked = document.querySelectorAll('.permission-check:checked');
+    const total = allCheckboxes.length;
+    const count = checked.length;
+    
+    // Update total count
+    const selectedCount = document.getElementById('selectedCount');
+    if (selectedCount) {
+        selectedCount.textContent = `${count} selected`;
+    }
+    
+    // Update group counts
+    const groups = {};
+    allCheckboxes.forEach(cb => {
+        const group = cb.dataset.group;
+        if (!groups[group]) {
+            groups[group] = { total: 0, checked: 0 };
+        }
+        groups[group].total++;
+        if (cb.checked) groups[group].checked++;
+    });
+    
+    Object.keys(groups).forEach(groupId => {
+        const countSpan = document.getElementById(`groupCount_${groupId}`);
+        if (countSpan) {
+            const g = groups[groupId];
+            countSpan.textContent = `${g.checked}/${g.total} selected`;
+        }
+    });
+}
+
+function confirmDelete(roleId, roleName) {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
 {% endblock %}

@@ -1,0 +1,220 @@
+<!-- templates/fashion_master/reports_dashboard.html -->
+{% extends "fashion_master/base_fashion.html" %}
+{% load static %}
+
+{% block title %}Reports Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-chart-bar text-primary me-2"></i>Reports Dashboard
+            </h4>
+            <p class="text-muted mb-0">Fashion store analytics and insights</p>
+        </div>
+        <div>
+            <a href="{% url 'fashion_master:export_report' %}?type=sales" class="btn btn-success">
+                <i class="fas fa-file-export me-2"></i>Export Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Today's Sales</h6>
+                            <h3 class="fw-bold mb-0 text-success">KES {{ today_total|floatformat:0 }}</h3>
+                            <small class="text-muted">{{ today_count }} transactions</small>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-3">
+                            <i class="fas fa-money-bill-wave text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">This Month</h6>
+                            <h3 class="fw-bold mb-0 text-primary">KES {{ month_total|floatformat:0 }}</h3>
+                            <small class="text-muted">{{ month_count }} transactions</small>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-calendar-alt text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">This Year</h6>
+                            <h3 class="fw-bold mb-0 text-info">KES {{ year_total|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded p-3">
+                            <i class="fas fa-chart-line text-info fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Average Sale</h6>
+                            <h3 class="fw-bold mb-0 text-warning">KES {{ avg_sale|floatformat:0 }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded p-3">
+                            <i class="fas fa-calculator text-warning fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Top Products -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="fas fa-crown text-warning me-2"></i>Top Products
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Sold</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_products %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">{{ product.product__name }}</div>
+                                        <small class="text-muted">{{ product.product__sku_code }}</small>
+                                    </td>
+                                    <td>{{ product.total_sold }}</td>
+                                    <td class="fw-bold">KES {{ product.total_revenue|floatformat:0 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">No sales data</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Overview -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="fas fa-boxes text-primary me-2"></i>Stock Overview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="bg-light rounded p-3 text-center">
+                                <div class="text-muted small">Total Products</div>
+                                <div class="fw-bold fs-3">{{ total_products }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded p-3 text-center">
+                                <div class="text-muted small">Low Stock</div>
+                                <div class="fw-bold fs-3 text-warning">{{ low_stock_products }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded p-3 text-center">
+                                <div class="text-muted small">Out of Stock</div>
+                                <div class="fw-bold fs-3 text-danger">{{ out_of_stock_products }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded p-3 text-center">
+                                <div class="text-muted small">In Stock</div>
+                                <div class="fw-bold fs-3 text-success">{{ total_products|add:low_stock_products|add:out_of_stock_products }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Sales -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="fas fa-clock me-2"></i>Recent Sales
+                        </h6>
+                        <a href="{% url 'fashion_master:sales_report' %}" class="btn btn-sm btn-outline-primary">
+                            View All
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice</th>
+                                    <th>Date</th>
+                                    <th>Customer</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in recent_sales %}
+                                <tr>
+                                    <td>
+                                        <span class="fw-semibold">{{ sale.invoice_no }}</span>
+                                    </td>
+                                    <td>{{ sale.sale_date|date:"Y-m-d H:i" }}</td>
+                                    <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+                                    <td class="fw-bold">KES {{ sale.total|floatformat:0 }}</td>
+                                    <td>
+                                        <span class="badge bg-success">Completed</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No recent sales</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
