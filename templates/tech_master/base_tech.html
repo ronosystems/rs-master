@@ -8,19 +8,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    
+
     <!-- Bootstrap - CDN with local fallback -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
-          rel="stylesheet" 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+          rel="stylesheet"
           onerror="this.onerror=null;this.href='{% static 'css/bootstrap.min.css' %}'">
-    
+
     <!-- Font Awesome - CDN with local fallback -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
           onerror="this.onerror=null;this.href='{% static 'css/all.min.css' %}'">
-    
+
     <!-- Simple data URI favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>®️</text></svg>">
-    
+
     <style>
         /* ============================================ */
         /* ALL YOUR EXISTING STYLES - KEEP AS IS */
@@ -635,39 +635,39 @@
                 height: 70px;
                 padding: 0 15px;
             }
-            
+
             .mobile-menu-btn {
                 display: flex !important;
             }
-            
+
             .navbar-left {
                 gap: 10px;
             }
-            
+
             .fixed-left-sidebar {
                 transform: translateX(-100%);
                 transition: transform 0.3s ease;
                 top: 70px;
             }
-            
+
             .fixed-left-sidebar.mobile-open {
                 transform: translateX(0);
             }
-            
+
             .main-content {
                 margin-left: 0;
                 padding: 15px;
                 margin-top: 70px;
             }
-            
+
             .fixed-footer {
                 left: 0;
             }
-            
+
             .company-name {
                 display: none;
             }
-            
+
             .user-info {
                 display: none;
             }
@@ -686,19 +686,19 @@
             <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">
                 <i class="fas fa-bars"></i>
             </button>
-            
+
             <div class="company-logo" id="companyLogo">
                 {% if company_settings and company_settings.show_logo_on_dashboard and company_settings.has_valid_logo %}
-                    <img src="{{ company_settings.logo.url }}" 
-                         alt="{{ company_settings.company_name|default:tenant.company_name }}" 
+                    <img src="{{ company_settings.logo.url }}"
+                         alt="{{ company_settings.company_name|default:tenant.company_name }}"
                          style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;"
                          onerror="this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex'">
                     <div class="logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">
                         <i class="fas fa-store" style="font-size: 1.5rem; color: white;"></i>
                     </div>
                 {% elif tenant_has_valid_logo and tenant_logo_url %}
-                    <img src="{{ tenant_logo_url }}" 
-                         alt="{{ company_settings.company_name|default:tenant.company_name }}" 
+                    <img src="{{ tenant_logo_url }}"
+                         alt="{{ company_settings.company_name|default:tenant.company_name }}"
                          style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;"
                          onerror="this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex'">
                     <div class="logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">
@@ -708,7 +708,7 @@
                     <i class="fas fa-store" style="font-size: 1.5rem; color: white;"></i>
                 {% endif %}
             </div>
-            
+
             <div class="company-name" style="color: {% if company_settings and company_settings.primary_color %}{{ company_settings.primary_color }}{% else %}white{% endif %};">
                 {% if company_settings and company_settings.company_name %}
                     {{ company_settings.company_name }}
@@ -719,7 +719,7 @@
                 {% endif %}
             </div>
         </div>
-        
+
         <div class="navbar-right">
             <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
                 <i class="fas fa-moon"></i>
@@ -771,12 +771,12 @@
                 <i class="fas fa-bars"></i>
             </button>
         </div>
-            
+
         <div class="sidebar-menu-wrapper">
             <div class="sidebar-menu">
-                        
+
                 <!-- ============================================ -->
-                <!-- DASHBOARD - BASED ON PERMISSIONS -->
+                <!-- DASHBOARD -->
                 <!-- ============================================ -->
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
@@ -790,28 +790,28 @@
                                 <span>Overview</span>
                             </a>
                         {% endif %}
-                        
+
                         {% if user|tech_can:'can_view_report' %}
                             <a href="{% url 'tech_master:report_dashboard' %}" class="menu-item">
                                 <i class="fas fa-chart-bar"></i>
                                 <span>Reports Dashboard</span>
                             </a>
                         {% endif %}
-                        
+
                         {% if user|tech_can:'can_view_sale' %}
                             <a href="{% url 'tech_master:sales_history' %}" class="menu-item">
                                 <i class="fas fa-history"></i>
                                 <span>Sales History</span>
                             </a>
                         {% endif %}
-                        
+
                         {% if user|tech_can:'can_view_low_stock' %}
                             <a href="{% url 'tech_master:low_stock_alert' %}" class="menu-item">
                                 <i class="fas fa-exclamation-triangle"></i>
                                 <span>Low Stock Alerts</span>
                             </a>
                         {% endif %}
-                        
+
                         {% if user|tech_can:'can_create_sale' or user|tech_can:'can_process_payment' %}
                             <a href="{% url 'tech_master:pos' %}" class="menu-item">
                                 <i class="fas fa-shopping-cart"></i>
@@ -847,7 +847,7 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- MEMBERS - BASED ON STAFF PERMISSIONS -->
+                <!-- MEMBERS -->
                 <!-- ============================================ -->
                 {% if user|tech_can_any:'can_view_staff,can_add_staff,can_manage_staff' %}
                 <div class="menu-group">
@@ -862,36 +862,52 @@
                             <span>Staff List</span>
                         </a>
                         {% endif %}
-                        {% if user|tech_can:'can_view_staff' or user|tech_can:'can_manage_staff' %}
+
+                        {% if user|tech_can:'can_manage_staff' %}
                         <a href="{% url 'tech_master:manage_staff' %}" class="menu-item">
                             <i class="fas fa-edit"></i>
                             <span>Manage Staff</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_add_staff' %}
                         <a href="{% url 'tech_master:staff_create' %}" class="menu-item">
                             <i class="fas fa-user-plus"></i>
                             <span>Add Staff</span>
                         </a>
                         {% endif %}
-                        {% if user|tech_can:'can_manage_staff' %}
+
+                        {% if user|tech_can:'can_view_staff_attendance' %}
                         <a href="{% url 'tech_master:staff_attendance' %}" class="menu-item">
                             <i class="fas fa-calendar-check"></i>
                             <span>Staff Attendance</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_staff_leave' %}
                         <a href="{% url 'tech_master:staff_leave_list' %}" class="menu-item">
                             <i class="fas fa-calendar-alt"></i>
                             <span>Staff Leave</span>
                         </a>
+                        {% endif %}
+
                         <div class="menu-divider"></div>
+
+                        {% if user|tech_can:'can_view_roles' %}
                         <a href="{% url 'tech_master:role_list' %}" class="menu-item {% if active_tab == 'roles' %}active{% endif %}">
                             <i class="fas fa-user-shield"></i>
                             <span>Roles List</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_create_role' %}
                         <a href="{% url 'tech_master:role_create' %}" class="menu-item">
                             <i class="fas fa-plus-circle"></i>
                             <span>Create Role</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_assign_role' %}
                         <a href="{% url 'tech_master:role_assign' %}" class="menu-item">
                             <i class="fas fa-user-plus"></i>
                             <span>Assign Role</span>
@@ -902,7 +918,7 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- BRANCHES - BASED ON BRANCH PERMISSIONS -->
+                <!-- BRANCHES -->
                 <!-- ============================================ -->
                 {% if user|tech_can_any:'can_view_branch,can_add_branch,can_manage_branch' %}
                 <div class="menu-group">
@@ -917,21 +933,29 @@
                             <span>Shop Branches</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_add_branch' %}
                         <a href="{% url 'tech_master:add_branch' %}" class="menu-item">
                             <i class="fas fa-plus-circle"></i>
                             <span>Add Branch</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_manage_branch' %}
                         <a href="{% url 'tech_master:assign_branch_manager' %}" class="menu-item">
                             <i class="fas fa-user-tie"></i>
                             <span>Assign Manager</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_branch_stock' %}
                         <a href="{% url 'tech_master:branch_stock_list' %}" class="menu-item">
                             <i class="fas fa-clipboard-list"></i>
                             <span>Branch Stock</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_transfer_stock' %}
                         <a href="{% url 'tech_master:transfer_stock' %}" class="menu-item">
                             <i class="fas fa-exchange-alt"></i>
                             <span>Transfer Stock</span>
@@ -940,9 +964,9 @@
                     </div>
                 </div>
                 {% endif %}
-                
+
                 <!-- ============================================ -->
-                <!-- INVENTORY - BASED ON PRODUCT/STOCK PERMISSIONS -->
+                <!-- INVENTORY -->
                 <!-- ============================================ -->
                 {% if user|tech_can_any:'can_view_category,can_view_product,can_manage_stock,can_view_stock' %}
                 <div class="menu-group">
@@ -958,6 +982,7 @@
                             <span>Categories</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_add_category' or user|tech_can:'can_edit_category' %}
                         <a href="{% url 'tech_master:manage_categories' %}" class="menu-item">
                             <i class="fas fa-edit"></i>
@@ -966,7 +991,7 @@
                         {% endif %}
 
                         <div class="menu-divider"></div>
-                        
+
                         <!-- Products -->
                         {% if user|tech_can:'can_view_product' %}
                         <a href="{% url 'tech_master:product_list' %}" class="menu-item">
@@ -974,12 +999,14 @@
                             <span>Product List</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_add_product' or user|tech_can:'can_edit_product' %}
                         <a href="{% url 'tech_master:manage_products' %}" class="menu-item">
                             <i class="fas fa-edit"></i>
                             <span>Manage Products</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_add_product' %}
                         <a href="{% url 'tech_master:add_product_selection' %}" class="menu-item">
                             <i class="fas fa-plus-circle"></i>
@@ -988,7 +1015,7 @@
                         {% endif %}
 
                         <div class="menu-divider"></div>
-                        
+
                         <!-- Stock Management -->
                         {% if user|tech_can:'can_view_stock' %}
                         <a href="{% url 'tech_master:stock_report' %}" class="menu-item">
@@ -999,11 +1026,15 @@
                             <i class="fas fa-history"></i>
                             <span>Stock History</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_damaged_units' %}
                         <a href="{% url 'tech_master:damaged_units_report' %}" class="menu-item">
                             <i class="fas fa-exclamation-triangle"></i>
                             <span>Damaged Units</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_manage_stock' %}
                         <a href="{% url 'tech_master:move_product_ownership' %}" class="menu-item">
                             <i class="fas fa-exchange-alt"></i>
@@ -1020,19 +1051,22 @@
                         {% endif %}
 
                         <div class="menu-divider"></div>
-                        
+
                         <!-- Barcodes -->
-                        {% if user|tech_can:'can_view_product' %}
+                        {% if user|tech_can:'can_view_product_barcodes' %}
                         <a href="{% url 'tech_master:barcode_labels_list' %}" class="menu-item">
                             <i class="fas fa-barcode"></i>
                             <span>Product Barcodes</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_bulk_print_labels' %}
                         <a href="{% url 'tech_master:bulk_print_labels' %}" class="menu-item">
                             <i class="fas fa-print"></i>
                             <span>Bulk Print Labels</span>
                         </a>
                         {% endif %}
-                        
+
                         <!-- Import/Export -->
                         {% if user|tech_can:'can_add_product' %}
                         <a href="{% url 'tech_master:import_products' %}" class="menu-item">
@@ -1043,42 +1077,46 @@
                     </div>
                 </div>
                 {% endif %}
-                
+
                 <!-- ============================================ -->
-                <!-- SALES & RETURNS - BASED ON SALES PERMISSIONS -->
+                <!-- SALES & RETURNS -->
                 <!-- ============================================ -->
-                {% if user|tech_can_any:'can_view_sale,can_create_sale,can_edit_sale' %}
+                {% if user|tech_can_any:'can_view_sale, can_view_receipt' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
                         💰 SALES
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
-                        {% if user|tech_can:'can_create_sale' %}
-                        <a href="{% url 'tech_master:pos' %}" class="menu-item">
-                            <i class="fas fa-cash-register"></i>
-                            <span>New Sale</span>
-                        </a>
+                        {% if user|tech_can:'can_view_agent_sale' %}
                         <a href="{% url 'tech_master:agent_sale' %}" class="menu-item">
                             <i class="fas fa-hand-holding-usd"></i>
                             <span>Agent Sale</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_view_sale' %}
                         <a href="{% url 'tech_master:sales_history' %}" class="menu-item">
                             <i class="fas fa-history"></i>
                             <span>Sales History</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_search_sales' %}
                         <a href="{% url 'tech_master:sales_search' %}" class="menu-item">
                             <i class="fas fa-search"></i>
                             <span>Search Sales</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_returns' %}
                         <a href="{% url 'tech_master:return_list' %}" class="menu-item">
                             <i class="fas fa-undo-alt"></i>
                             <span>Returns</span>
                         </a>
                         {% endif %}
-                        {% if user|tech_can:'can_view_receipt' %}
+
+                        {% if user|tech_can:'can_view_receipt' or user|tech_can:'can_view_receipt_search' %}
                         <a href="{% url 'tech_master:receipt_search' %}" class="menu-item">
                             <i class="fas fa-file-invoice"></i>
                             <span>Receipt Lookup</span>
@@ -1087,9 +1125,9 @@
                     </div>
                 </div>
                 {% endif %}
-                
+
                 <!-- ============================================ -->
-                <!-- SUPPLIERS - BASED ON SUPPLIER PERMISSIONS -->
+                <!-- SUPPLIERS -->
                 <!-- ============================================ -->
                 {% if user|tech_can_any:'can_view_supplier,can_add_supplier,can_edit_supplier' %}
                 <div class="menu-group">
@@ -1104,12 +1142,14 @@
                             <span>Supplier List</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_add_supplier' or user|tech_can:'can_edit_supplier' %}
                         <a href="{% url 'tech_master:manage_suppliers' %}" class="menu-item">
                             <i class="fas fa-edit"></i>
                             <span>Manage Suppliers</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_add_supplier' %}
                         <a href="{% url 'tech_master:add_supplier' %}" class="menu-item">
                             <i class="fas fa-plus-circle"></i>
@@ -1119,39 +1159,52 @@
                     </div>
                 </div>
                 {% endif %}
-                
+
                 <!-- ============================================ -->
-                <!-- REPORTS - BASED ON REPORT PERMISSIONS -->
+                <!-- REPORTS -->
                 <!-- ============================================ -->
-                {% if user|tech_can_any:'can_view_report,can_export_report' %}
+                {% if user|tech_can_any:'can_view_report,can_view_report_dashboard,can_export_report' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
                         📈 REPORTS
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
+                        {% if user|tech_can:'can_view_report_dashboard' or user|tech_can:'can_view_report' %}
                         <a href="{% url 'tech_master:report_dashboard' %}" class="menu-item">
                             <i class="fas fa-chart-bar"></i>
                             <span>Report Dashboard</span>
                         </a>
-                        {% if user|tech_can:'can_view_sale' %}
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_sales_reports' %}
                         <a href="{% url 'tech_master:sales_report' %}" class="menu-item">
                             <i class="fas fa-chart-line"></i>
                             <span>Sales Reports</span>
                         </a>
                         {% endif %}
+
+                        {% if user|tech_can:'can_view_expenses' %}
                         <a href="{% url 'tech_master:expense_list' %}" class="menu-item">
                             <i class="fas fa-receipt"></i>
                             <span>Expenses</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_expense_report' %}
                         <a href="{% url 'tech_master:expense_report' %}" class="menu-item">
                             <i class="fas fa-chart-pie"></i>
                             <span>Expense Report</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_inventory_report' %}
                         <a href="{% url 'tech_master:inventory_report' %}" class="menu-item">
                             <i class="fas fa-boxes"></i>
                             <span>Inventory Report</span>
                         </a>
+                        {% endif %}
+
                         {% if user|tech_can:'can_export_report' %}
                         <a href="{% url 'tech_master:export_reports' %}" class="menu-item">
                             <i class="fas fa-file-export"></i>
@@ -1161,9 +1214,9 @@
                     </div>
                 </div>
                 {% endif %}
-                
+
                 <!-- ============================================ -->
-                <!-- SETTINGS - BASED ON SETTINGS PERMISSIONS -->
+                <!-- SETTINGS -->
                 <!-- ============================================ -->
                 {% if user|tech_can_any:'can_view_settings,can_manage_settings' %}
                 <div class="menu-group">
@@ -1186,6 +1239,7 @@
                             <span>Company Settings</span>
                         </a>
                         {% endif %}
+
                         {% if user|tech_can:'can_manage_settings' %}
                         <a href="{% url 'settings:system_settings' %}" class="menu-item">
                             <i class="fas fa-cogs"></i>
@@ -1197,49 +1251,62 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- SALES AGENT - MY STOCK & MY SALES -->
+                <!-- MY BUSINESS -->
                 <!-- ============================================ -->
-                {% if user|tech_can:'can_view_product' %}
+                {% if user|tech_can_any:'can_view_my_stock,can_view_my_sales,can_view_agent_sale_form' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
                         👤 MY BUSINESS
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
+                        {% if user|tech_can:'can_view_my_stock' %}
                         <a href="{% url 'tech_master:my_stock' %}" class="menu-item">
                             <i class="fas fa-box"></i>
                             <span>My Stock</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_my_sales' %}
                         <a href="{% url 'tech_master:my_sales' %}" class="menu-item">
                             <i class="fas fa-chart-line"></i>
                             <span>My Sales</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_agent_sale_form' %}
                         <a href="{% url 'tech_master:agent_sale' %}" class="menu-item">
                             <i class="fas fa-hand-holding-usd"></i>
                             <span>New Sale</span>
                         </a>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- PRICE LOOKUP - CASHIER/SALES ACCESS -->
+                <!-- PRICE LOOKUP -->
                 <!-- ============================================ -->
-                {% if user|tech_can:'can_view_product' %}
+                {% if user|tech_can_any:'can_view_price_check,can_view_product_search' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
                         💰 PRICE LOOKUP
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
+                        {% if user|tech_can:'can_view_price_check' %}
                         <a href="{% url 'tech_master:price_check' %}" class="menu-item">
                             <i class="fas fa-dollar-sign"></i>
                             <span>Price Check</span>
                         </a>
+                        {% endif %}
+
+                        {% if user|tech_can:'can_view_product_search' %}
                         <a href="{% url 'tech_master:product_search' %}" class="menu-item">
                             <i class="fas fa-search"></i>
                             <span>Product Search</span>
                         </a>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -1266,7 +1333,7 @@
         {% if subscription_restricted %}
         <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
             <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Restricted Access!</strong> Your subscription has expired. 
+            <strong>Restricted Access!</strong> Your subscription has expired.
             Please <a href="{% url 'tenants:tenant_subscription' tenant.id %}" class="alert-link">renew now</a> to restore full access.
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -1283,7 +1350,7 @@
             </div>
             {% endfor %}
         {% endif %}
-            
+
         {% block content %}{% endblock %}
     </div>
 
@@ -1293,7 +1360,7 @@
     <div class="fixed-footer" id="footer">
         <div>
             Copyright
-            <i class="fas fa-copyright me-1"></i> <span id="currentYear"></span> 
+            <i class="fas fa-copyright me-1"></i> <span id="currentYear"></span>
             {% if company_settings and company_settings.company_name %}
                 {{ company_settings.company_name }}
             {% elif tenant and tenant.company_name %}
@@ -1314,11 +1381,11 @@
     </div>
 
     <!-- jQuery - CDN with local fallback -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
             onerror="this.onerror=null;this.src='{% static 'js/jquery.min.js' %}'"></script>
 
     <!-- Bootstrap JS - CDN with local fallback -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
             onerror="this.onerror=null;this.src='{% static 'js/bootstrap.bundle.min.js' %}'">
     </script>
 
@@ -1329,14 +1396,14 @@
     function toggleSubMenu(titleElement) {
         const menuGroup = titleElement.closest('.menu-group');
         if (!menuGroup) return;
-        
+
         const subMenu = menuGroup.querySelector('.sub-menu');
         if (!subMenu) return;
-        
+
         // Toggle the clicked menu only
         subMenu.classList.toggle('open');
         titleElement.classList.toggle('collapsed');
-        
+
         // Save state to localStorage
         const menuStates = JSON.parse(localStorage.getItem('menuStates') || '{}');
         const menuKey = titleElement.textContent.trim();
@@ -1385,7 +1452,7 @@
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
         html.setAttribute('data-bs-theme', newTheme);
         localStorage.setItem('theme', newTheme);
-        
+
         const themeIcon = document.querySelector('#themeToggle i');
         if (newTheme === 'dark') {
             themeIcon.classList.remove('fa-moon');
@@ -1395,7 +1462,7 @@
             themeIcon.classList.add('fa-moon');
         }
     }
-    
+
     function loadTheme() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
@@ -1408,9 +1475,9 @@
             themeIcon.classList.add('fa-moon');
         }
     }
-    
+
     document.getElementById('currentYear').innerText = new Date().getFullYear();
-    
+
     // ============================================
     // SIDEBAR TOGGLE
     // ============================================
@@ -1418,33 +1485,33 @@
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('mainContent');
         const footer = document.getElementById('footer');
-        
+
         sidebar.classList.toggle('collapsed');
         mainContent.classList.toggle('sidebar-collapsed');
         footer.classList.toggle('sidebar-collapsed');
-        
+
         const isCollapsed = sidebar.classList.contains('collapsed');
         localStorage.setItem('sidebarCollapsed', isCollapsed);
     }
-    
+
     function toggleMobileSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        
+
         sidebar.classList.add('mobile-open');
         overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
-    
+
     function closeMobileSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        
+
         sidebar.classList.remove('mobile-open');
         overlay.classList.remove('active');
         document.body.style.overflow = '';
     }
-    
+
     function loadSidebarState() {
         if (window.innerWidth > 768) {
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
@@ -1452,14 +1519,14 @@
                 const sidebar = document.getElementById('sidebar');
                 const mainContent = document.getElementById('mainContent');
                 const footer = document.getElementById('footer');
-                
+
                 sidebar.classList.add('collapsed');
                 mainContent.classList.add('sidebar-collapsed');
                 footer.classList.add('sidebar-collapsed');
             }
         }
     }
-    
+
     function setActiveMenuItem() {
         const currentPath = window.location.pathname;
         document.querySelectorAll('.menu-item').forEach(item => {
@@ -1471,14 +1538,14 @@
             }
         });
     }
-    
+
     // ============================================
     // HELP FUNCTION
     // ============================================
     function showHelp() {
         alert('📞 For support, Contact site owner or your Administrator');
     }
-    
+
     // ============================================
     // WINDOW EVENTS
     // ============================================
@@ -1491,7 +1558,7 @@
             sidebar.classList.remove('collapsed');
         }
     });
-    
+
     document.querySelectorAll('.menu-item').forEach(item => {
         item.addEventListener('click', function(e) {
             if (this.getAttribute('href') === 'javascript:void(0)') {
@@ -1503,7 +1570,7 @@
             }
         });
     });
-    
+
     // ============================================
     // DOM READY
     // ============================================
@@ -1513,7 +1580,7 @@
         setActiveMenuItem();
         restoreMenuStates();
     });
-    
+
     // ============================================
     // CSRF TOKEN
     // ============================================
@@ -1531,7 +1598,7 @@
         }
         return cookieValue;
     }
-    
+
     const csrftoken = getCookie('csrftoken');
     $.ajaxSetup({
         beforeSend: function(xhr, settings) {
@@ -1540,7 +1607,7 @@
             }
         }
     });
-    
+
     // Auto-dismiss alerts after 5 seconds
     setTimeout(function() {
         document.querySelectorAll('.alert').forEach(function(alert) {

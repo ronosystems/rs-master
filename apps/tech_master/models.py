@@ -35,7 +35,7 @@ class Branch(models.Model):
     Store/Branch locations - Tenant-specific
     Each tenant can have multiple branches (main store, sub-branches, warehouses)
     """
-    
+
     # ============================================
     # MULTI-TENANCY
     # ============================================
@@ -45,7 +45,7 @@ class Branch(models.Model):
         related_name='branches',
         verbose_name="Tenant"
     )
-    
+
     # ============================================
     # BASIC INFORMATION
     # ============================================
@@ -54,14 +54,14 @@ class Branch(models.Model):
         verbose_name="Branch Name",
         help_text="e.g., Main Store, Mombasa Branch, Warehouse A"
     )
-    
+
     code = models.CharField(
         max_length=50,
         db_index=True,
         verbose_name="Branch Code",
         help_text="Unique branch code per tenant (e.g., MAIN, MSA, WARE-A)"
     )
-    
+
     # ============================================
     # CONTACT INFORMATION
     # ============================================
@@ -70,10 +70,10 @@ class Branch(models.Model):
     state = models.CharField(max_length=100, blank=True, verbose_name="State/County")
     country = models.CharField(max_length=100, default="Kenya")
     postal_code = models.CharField(max_length=20, blank=True)
-    
+
     phone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
-    
+
     # ============================================
     # BRANCH TYPE
     # ============================================
@@ -84,14 +84,14 @@ class Branch(models.Model):
         ('outlet', 'Outlet'),
         ('kiosk', 'Kiosk'),
     ]
-    
+
     branch_type = models.CharField(
         max_length=20,
         choices=BRANCH_TYPE_CHOICES,
         default='sub_branch',
         verbose_name="Branch Type"
     )
-    
+
     is_main_branch = models.BooleanField(
         default=False,
         verbose_name="Is Main Branch?",
@@ -104,30 +104,30 @@ class Branch(models.Model):
         verbose_name="Branch Manager",
         help_text="Name of the branch manager"
     )
-    
+
     # ============================================
     # OPERATIONAL HOURS
     # ============================================
     opening_time = models.TimeField(null=True, blank=True)
     closing_time = models.TimeField(null=True, blank=True)
     is_24_hours = models.BooleanField(default=False)
-    
+
     # ============================================
     # STATUS
     # ============================================
     is_active = models.BooleanField(default=True, verbose_name="Is Active?")
-    
+
     # ============================================
     # ADDITIONAL INFO
     # ============================================
     notes = models.TextField(blank=True, null=True)
-    
+
     # ============================================
     # COORDINATES (For mapping)
     # ============================================
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    
+
     # ============================================
     # AUDIT FIELDS (Using AUTH_USER_MODEL)
     # ============================================
@@ -167,18 +167,18 @@ class Branch(models.Model):
         """Ensure only one main branch per tenant and queue for sync"""
         is_new = self.pk is None
         tenant_id = self.tenant_id
-        
+
         if self.is_main_branch:
             Branch.objects.filter(
-                tenant=self.tenant, 
+                tenant=self.tenant,
                 is_main_branch=True
             ).exclude(id=self.id).update(is_main_branch=False)
-        
+
         if not self.code:
             self.code = self._generate_branch_code()
-        
+
         super().save(*args, **kwargs)
-        
+
         # ✅ If offline, queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -213,13 +213,13 @@ class Branch(models.Model):
                 logger.debug(f"✅ Queued Branch sync: {self.name}")
             except Exception as e:
                 logger.error(f"Failed to queue Branch sync: {e}")
-    
+
     def _generate_branch_code(self):
         """Generate branch code from name if not provided"""
         name_clean = self.name.upper()
         name_clean = name_clean.replace('STORE', '').replace('BRANCH', '').replace('WAREHOUSE', '')
         name_clean = ''.join(e for e in name_clean if e.isalnum())
-        
+
         if len(name_clean) >= 4:
             return name_clean[:4]
         elif len(name_clean) >= 2:
@@ -227,7 +227,7 @@ class Branch(models.Model):
         else:
             count = Branch.objects.filter(tenant=self.tenant).count() + 1
             return f"BR{count:03d}"
-    
+
     @property
     def full_address(self):
         parts = []
@@ -242,19 +242,19 @@ class Branch(models.Model):
         if self.postal_code:
             parts.append(self.postal_code)
         return ', '.join(parts)
-    
+
     @property
     def product_count(self):
         return self.products.count()
-    
+
     @property
     def unit_count(self):
         return self.product_units.count()
-    
+
     @property
     def available_unit_count(self):
         return self.product_units.filter(status='available').count()
-    
+
     @property
     def is_open_now(self):
         if self.is_24_hours:
@@ -263,7 +263,7 @@ class Branch(models.Model):
             return True
         now = timezone.now().time()
         return self.opening_time <= now <= self.closing_time
-    
+
     def __str__(self):
         main_indicator = " (MAIN)" if self.is_main_branch else ""
         return f"{self.name} ({self.code}){main_indicator}"
@@ -279,7 +279,7 @@ class BranchStock(models.Model):
     product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='branch_stocks')
     quantity = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['branch', 'product']]
         indexes = [
@@ -288,7 +288,7 @@ class BranchStock(models.Model):
         ]
         verbose_name = 'Branch Stock'
         verbose_name_plural = 'Branch Stocks'
-    
+
     def __str__(self):
         return f"{self.branch.code} - {self.product.sku_code}: {self.quantity}"
 
@@ -335,12 +335,12 @@ class Category(models.Model):
     """
     Product categories - Tenant-specific
     """
-    
+
     ITEM_TYPE_CHOICES = [
         ('single', 'Single Item'),
         ('bulk', 'Bulk Item'),
     ]
-    
+
     IDENTIFIER_TYPE_CHOICES = [
         ('imei', 'IMEI Number (15-digit)'),
         ('serial', 'Serial Number'),
@@ -352,7 +352,7 @@ class Category(models.Model):
         on_delete=models.CASCADE,
         related_name='inventory_categories'
     )
-    
+
     name = models.CharField(max_length=100)
     item_type = models.CharField(max_length=10, choices=ITEM_TYPE_CHOICES)
     identifier_type = models.CharField(max_length=10, choices=IDENTIFIER_TYPE_CHOICES, default='imei')
@@ -374,14 +374,14 @@ class Category(models.Model):
         """Save category and queue for sync"""
         is_new = self.pk is None
         tenant_id = self.tenant_id
-        
+
         if not self.category_code:
             clean_name = self.name.strip().upper()
             clean_name = ''.join(e for e in clean_name if e.isalnum())
             self.category_code = clean_name[:20]
-        
+
         super().save(*args, **kwargs)
-        
+
         # ✅ If offline, queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -407,18 +407,20 @@ class Category(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.category_code})"
-    
+
     @property
     def is_single_item(self):
         return self.item_type == 'single'
-    
+
     @property
     def is_bulk_item(self):
         return self.item_type == 'bulk'
-    
+
     @property
     def requires_unique_id(self):
         return self.identifier_type in ['imei', 'serial']
+
+
 
 
 # ====================================
@@ -429,7 +431,7 @@ class Product(models.Model):
     Product SKU - Represents a PRODUCT VARIANT (not individual items)
     SKU is unique per tenant, not globally
     """
-    
+
     # ============================================
     # MULTI-TENANCY
     # ============================================
@@ -439,7 +441,7 @@ class Product(models.Model):
         related_name='products',
         verbose_name="Tenant"
     )
-    
+
     # ===========================================
     # BRANCH SHOPS
     # ===========================================
@@ -456,7 +458,7 @@ class Product(models.Model):
     # SKU IDENTIFICATION (Tenant-specific)
     # ============================================
     sku_code = models.CharField(
-        max_length=50, 
+        max_length=50,
         db_index=True,
         verbose_name="SKU Code",
         help_text="Unique product code per tenant (e.g., 001, 002 or custom)"
@@ -470,8 +472,8 @@ class Product(models.Model):
         db_index=True,
         verbose_name="Barcode",
         help_text="Product barcode (for bulk products)"
-    )    
-    
+    )
+
     # ============================================
     # PRODUCT VARIANT INFORMATION
     # ============================================
@@ -481,29 +483,29 @@ class Product(models.Model):
         verbose_name="Product Name",
         help_text="Display name (auto-generated if blank)"
     )
-    
+
     brand = models.CharField(
         max_length=100,
         db_index=True,
         verbose_name="Brand"
     )
-    
+
     model = models.CharField(
         max_length=200,
         db_index=True,
         verbose_name="Model"
     )
-    
+
     category = models.ForeignKey(
-        Category, 
-        on_delete=models.PROTECT, 
+        Category,
+        on_delete=models.PROTECT,
         related_name='products',
         verbose_name="Category"
     )
-    
+
     specifications = models.JSONField(
         default=dict,
-        blank=True, 
+        blank=True,
         verbose_name="Specifications",
         help_text="RAM, storage, color, etc. Example: {'ram': '4GB', 'storage': '128GB', 'color': 'Black'}"
     )
@@ -512,27 +514,27 @@ class Product(models.Model):
     # PRICING
     # ============================================
     buying_price = models.DecimalField(
-        max_digits=12, 
+        max_digits=12,
         decimal_places=2,
         default=Decimal('0'),
         verbose_name="Buying Price (KES)"
     )
-    
+
     selling_price = models.DecimalField(
-        max_digits=12, 
+        max_digits=12,
         decimal_places=2,
         default=Decimal('0'),
         verbose_name="Selling Price (KES)"
     )
-    
+
     best_price = models.DecimalField(
-        max_digits=12, 
+        max_digits=12,
         decimal_places=2,
         null=True,
         blank=True,
         verbose_name="Best/Retail Price (KES)"
     )
-    
+
     # ============================================
     # STOCK MANAGEMENT
     # ============================================
@@ -540,27 +542,27 @@ class Product(models.Model):
     available_quantity = models.PositiveIntegerField(default=0)
     reserved_quantity = models.PositiveIntegerField(default=0)
     damaged_quantity = models.PositiveIntegerField(default=0)
-    
+
     # For bulk items
     bulk_quantity = models.PositiveIntegerField(default=0)
     bulk_serial_number = models.CharField(max_length=100, blank=True, null=True)
-    
+
     # ============================================
     # SUPPLIER AND STOCK MANAGEMENT
     # ============================================
     supplier = models.ForeignKey(
-        Supplier, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
         related_name='products',
         verbose_name="Supplier"
     )
-    
+
     reorder_level = models.PositiveIntegerField(default=5)
     last_restocked = models.DateTimeField(null=True, blank=True)
     warranty_months = models.PositiveIntegerField(default=12)
-    
+
     # ============================================
     # IMAGES
     # ============================================
@@ -571,13 +573,13 @@ class Product(models.Model):
         verbose_name="Product Image"
     )
 
-    
+
     # ============================================
     # STATUS
     # ============================================
     is_active = models.BooleanField(default=True)
     is_discontinued = models.BooleanField(default=False)
-    
+
     # ============================================
     # AUDIT FIELDS (Using AUTH_USER_MODEL)
     # ============================================
@@ -597,7 +599,7 @@ class Product(models.Model):
         blank=True,
         related_name='modified_products'
     )
-    
+
     description = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -621,32 +623,32 @@ class Product(models.Model):
             ("can_edit_product", "Can edit products"),
             ("can_delete_product", "Can delete products"),
             ("can_manage_product", "Can manage products"),
-            
+
             # Category permissions
             ("can_view_category", "Can view categories"),
             ("can_add_category", "Can add categories"),
             ("can_edit_category", "Can edit categories"),
             ("can_delete_category", "Can delete categories"),
-            
+
             # Branch permissions
             ("can_view_branch", "Can view branches"),
             ("can_add_branch", "Can add branches"),
             ("can_edit_branch", "Can edit branches"),
             ("can_delete_branch", "Can delete branches"),
             ("can_manage_branch", "Can manage branches"),
-            
+
             # Supplier permissions
             ("can_view_supplier", "Can view suppliers"),
             ("can_add_supplier", "Can add suppliers"),
             ("can_edit_supplier", "Can edit suppliers"),
             ("can_delete_supplier", "Can delete suppliers"),
-            
+
             # Stock permissions
             ("can_view_stock", "Can view stock"),
             ("can_manage_stock", "Can manage stock"),
             ("can_adjust_stock", "Can adjust stock"),
             ("can_view_low_stock", "Can view low stock alerts"),
-            
+
             # Sales permissions
             ("can_view_sale", "Can view sales"),
             ("can_create_sale", "Can create sales"),
@@ -654,18 +656,18 @@ class Product(models.Model):
             ("can_delete_sale", "Can delete sales"),
             ("can_process_payment", "Can process payments"),
             ("can_view_receipt", "Can view receipts"),
-            
+
             # Staff permissions
             ("can_view_staff", "Can view staff"),
             ("can_add_staff", "Can add staff"),
             ("can_edit_staff", "Can edit staff"),
             ("can_delete_staff", "Can delete staff"),
             ("can_manage_staff", "Can manage staff"),
-            
+
             # Report permissions
             ("can_view_report", "Can view reports"),
             ("can_export_report", "Can export reports"),
-            
+
             # Settings permissions
             ("can_view_settings", "Can view settings"),
             ("can_manage_settings", "Can manage settings"),
@@ -677,7 +679,7 @@ class Product(models.Model):
         """Enhanced save with full sync support"""
         is_new = self.pk is None
         tenant_id = self.tenant_id
-        
+
         # Track previous state for conflict resolution
         if not is_new:
             try:
@@ -696,22 +698,22 @@ class Product(models.Model):
                 }
             except Product.DoesNotExist:
                 self._previous_data = None
-        
+
         # Existing save logic
         if 'modified_by' in kwargs:
             self.last_modified_by = kwargs.pop('modified_by')
         if 'created_by' in kwargs and not self.pk:
             self.created_by = kwargs.pop('created_by')
-        
+
         if not self.sku_code:
             self.sku_code = self._generate_sku_code()
-        
+
         if not self.name:
             self.name = self._generate_name()
-        
+
         self.clean()
         super().save(*args, **kwargs)
-        
+
         # ✅ Enhanced sync queuing with priority
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -721,7 +723,7 @@ class Product(models.Model):
                     priority = 8  # High priority for low stock
                 if self.is_discontinued:
                     priority = 3  # Low priority
-                    
+
                 SyncQueue.objects.create(
                     tenant_id=tenant_id,
                     model_name='Product',
@@ -763,10 +765,10 @@ class Product(models.Model):
                 logger.debug(f"✅ Queued Product sync: {self.sku_code} (Priority: {priority})")
             except Exception as e:
                 logger.error(f"Failed to queue Product sync: {e}")
-    
+
     def delete(self, *args, **kwargs):
         """Queue deletion for sync, then delete the object"""
-        
+
         # ✅ Queue the deletion for sync BEFORE deleting
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -785,32 +787,41 @@ class Product(models.Model):
                 logger.debug(f"✅ Queued Product deletion for sync: {self.sku_code}")
             except Exception as e:
                 logger.error(f"Failed to queue Product deletion sync: {e}")
-        
+
         # ✅ Call parent delete method and return its result
         return super().delete(*args, **kwargs)
-    
+
     def _generate_sku_code(self):
         """
         Generate tenant-specific sequential SKU code
         Examples: 000001, 000002, 000003, ... 999999, 1000000, 1000001, etc.
         """
         from django.db import transaction
-        
+        from django.db import connection
+
         with transaction.atomic():
-            # Get the last product for this tenant only
-            # Order by sku_code as integer for proper sequential ordering
-            last_product = Product.objects.filter(
-                tenant=self.tenant
-            ).extra(
-                select={'sku_int': 'CAST(sku_code AS INTEGER)'}
-            ).order_by('-sku_int').first()
-        
+            # ✅ MySQL-compatible CAST - detect database type
+            if connection.vendor == 'mysql':
+                # MySQL: Use SIGNED (MySQL doesn't have INTEGER)
+                last_product = Product.objects.filter(
+                    tenant=self.tenant
+                ).extra(
+                    select={'sku_int': 'CAST(sku_code AS SIGNED)'}
+                ).order_by('-sku_int').first()
+            else:
+                # SQLite/PostgreSQL: Use INTEGER
+                last_product = Product.objects.filter(
+                    tenant=self.tenant
+                ).extra(
+                    select={'sku_int': 'CAST(sku_code AS INTEGER)'}
+                ).order_by('-sku_int').first()
+
             if last_product and last_product.sku_code:
                 try:
                     # Try to convert existing SKU to integer
                     last_number = int(last_product.sku_code)
                     new_number = last_number + 1
-                    
+
                     # Format with leading zeros (6 digits for numbers under 1 million)
                     if new_number < 1000000:
                         return f"{new_number:06d}"  # 000001 to 999999
@@ -828,7 +839,7 @@ class Product(models.Model):
                         except:
                             pass
                     new_number = max_number + 1
-                    
+
                     if new_number < 1000000:
                         return f"{new_number:06d}"
                     else:
@@ -836,15 +847,15 @@ class Product(models.Model):
             else:
                 # First product for this tenant
                 return "000001"
-    
+
     def _generate_name(self):
         name_parts = [self.brand, self.model]
-        
+
         if self.specifications:
             storage = self.specifications.get('storage', '')
             ram = self.specifications.get('ram', '')
             color = self.specifications.get('color', '')
-            
+
             specs = []
             if ram:
                 specs.append(ram)
@@ -852,24 +863,24 @@ class Product(models.Model):
                 specs.append(storage)
             if color:
                 specs.append(color)
-            
+
             if specs:
                 name_parts.append(f"({' '.join(specs)})")
-        
+
         return ' '.join(name_parts)
-    
+
     def clean(self):
         if not self.category:
             raise ValidationError("Category is required")
-        
+
         if self.buying_price and self.selling_price:
             if self.buying_price > self.selling_price:
                 raise ValidationError("Buying price cannot exceed selling price")
-        
+
         if self.best_price and self.selling_price:
             if self.best_price > self.selling_price:
                 raise ValidationError("Best price cannot exceed selling price")
-    
+
     def update_quantities(self):
         if self.category.is_single_item:
             self.total_quantity = self.units.count()
@@ -879,73 +890,74 @@ class Product(models.Model):
             self.bulk_quantity = 0
         else:
             total_in = StockEntry.objects.filter(
-                product_sku=self, 
+                product_sku=self,
                 quantity__gt=0
             ).aggregate(total=Sum('quantity'))['total'] or 0
-            
+
             total_out = StockEntry.objects.filter(
-                product_sku=self, 
+                product_sku=self,
                 quantity__lt=0
             ).aggregate(total=Sum('quantity'))['total'] or 0
-            
+
             self.bulk_quantity = total_in + abs(total_out)
             self.total_quantity = self.bulk_quantity
             self.available_quantity = self.bulk_quantity
-        
+
         self.save(update_fields=[
-            'total_quantity', 'available_quantity', 
-            'reserved_quantity', 'damaged_quantity', 
+            'total_quantity', 'available_quantity',
+            'reserved_quantity', 'damaged_quantity',
             'bulk_quantity', 'updated_at'
         ])
-    
+
     @property
     def display_name(self):
         return f"{self.name} ({self.sku_code})"
-    
+
     @property
     def current_stock(self):
         if self.category.is_single_item:
             return self.available_quantity
         else:
             return self.bulk_quantity
-    
+
     @property
     def needs_reorder(self):
         if not self.is_active or self.is_discontinued:
             return False
         current = self.current_stock
         return current <= self.reorder_level and current > 0
-    
+
     @property
     def is_out_of_stock(self):
         return self.current_stock == 0
-    
+
     @property
     def is_low_stock(self):
         return 0 < self.current_stock <= self.reorder_level
-    
+
     @property
     def profit_margin(self):
         if self.buying_price and self.selling_price:
             return self.selling_price - self.buying_price
         return Decimal('0.00')
-    
+
     @property
     def profit_percentage(self):
         if self.buying_price and self.buying_price > 0:
             return (self.profit_margin / self.buying_price) * 100
         return Decimal('0.0')
-    
+
     @property
     def stock_value(self):
         return self.current_stock * self.buying_price
-    
+
     @property
     def retail_value(self):
         return self.current_stock * self.selling_price
-    
+
     def __str__(self):
         return self.display_name
+
 
 
 # ====================================
@@ -955,7 +967,7 @@ class ProductUnit(models.Model):
     """
     Individual physical items for single-item categories (phones, electronics)
     """
-    
+
     STATUS_CHOICES = [
         ('available', 'Available'),
         ('sold', 'Sold'),
@@ -966,7 +978,7 @@ class ProductUnit(models.Model):
         ('returned', 'Returned'),
         ('writeoff', 'Written Off'),
     ]
-    
+
     CONDITION_CHOICES = [
         ('new', 'Brand New'),
         ('refurbished', 'Refurbished'),
@@ -984,7 +996,7 @@ class ProductUnit(models.Model):
         on_delete=models.CASCADE,
         related_name='product_units'
     )
-    
+
     branch = models.ForeignKey(
         Branch,
         on_delete=models.SET_NULL,
@@ -993,7 +1005,7 @@ class ProductUnit(models.Model):
         related_name='product_units',
         verbose_name="Current Branch Location"
     )
-    
+
     last_branch_transfer_date = models.DateTimeField(null=True, blank=True)
     transferred_from_branch = models.ForeignKey(
         Branch,
@@ -1005,12 +1017,12 @@ class ProductUnit(models.Model):
     )
 
     product = models.ForeignKey(
-        Product, 
-        on_delete=models.CASCADE, 
+        Product,
+        on_delete=models.CASCADE,
         related_name='units',
         verbose_name="Product SKU"
     )
-    
+
     # ============================================
     # UNIQUE IDENTIFIERS (Unique per tenant)
     # ============================================
@@ -1021,7 +1033,7 @@ class ProductUnit(models.Model):
         db_index=True,
         verbose_name="IMEI Number"
     )
-    
+
     serial_number = models.CharField(
         max_length=200,
         null=True,
@@ -1029,20 +1041,20 @@ class ProductUnit(models.Model):
         db_index=True,
         verbose_name="Serial Number"
     )
-    
+
     # ============================================
     # UNIT-SPECIFIC OVERRIDES
     # ============================================
     unit_buying_price = models.DecimalField(
-        max_digits=12, 
+        max_digits=12,
         decimal_places=2,
         null=True,
         blank=True,
         verbose_name="Unit Buying Price"
     )
-    
+
     unit_selling_price = models.DecimalField(
-        max_digits=12, 
+        max_digits=12,
         decimal_places=2,
         null=True,
         blank=True,
@@ -1050,14 +1062,14 @@ class ProductUnit(models.Model):
     )
 
     best_price = models.DecimalField(
-        max_digits=12, 
+        max_digits=12,
         decimal_places=2,
         null=True,
         blank=True,
         verbose_name="Best/wholesale Price",
         help_text="whosale price for this specific unit (market price)"
     )
-    
+
     # ============================================
     # OWNERSHIP TRACKING (For Sales Agents)
     # ============================================
@@ -1070,13 +1082,13 @@ class ProductUnit(models.Model):
         verbose_name="Current Owner",
         help_text="Sales agent currently assigned to this unit"
     )
-    
+
     assigned_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Assigned Date"
     )
-    
+
     assigned_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -1085,36 +1097,36 @@ class ProductUnit(models.Model):
         related_name='assigned_units',
         verbose_name="Assigned By"
     )
-    
+
     # ============================================
     # STATUS AND CONDITION
     # ============================================
     status = models.CharField(
-        max_length=20, 
-        choices=STATUS_CHOICES, 
+        max_length=20,
+        choices=STATUS_CHOICES,
         default='available',
         db_index=True,
         verbose_name="Status"
     )
-    
+
     condition = models.CharField(
         max_length=20,
         choices=CONDITION_CHOICES,
         default='new',
         verbose_name="Condition"
     )
-    
+
     # ============================================
     # SALES INFORMATION
     # ============================================
     sold_at_price = models.DecimalField(
-        max_digits=12, 
+        max_digits=12,
         decimal_places=2,
         null=True,
         blank=True,
         verbose_name="Sold At Price"
     )
-    
+
     sold_date = models.DateTimeField(null=True, blank=True)
     sold_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1123,7 +1135,7 @@ class ProductUnit(models.Model):
         blank=True,
         related_name='sold_units'
     )
-    
+
     # ============================================
     # PURCHASE INFORMATION
     # ============================================
@@ -1135,13 +1147,13 @@ class ProductUnit(models.Model):
         blank=True
     )
     purchase_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    
+
     # ============================================
     # WARRANTY
     # ============================================
     warranty_start = models.DateTimeField(default=timezone.now)
     warranty_end = models.DateTimeField(null=True, blank=True)
-    
+
     # ============================================
     # THEFT / LOSS TRACKING
     # ============================================
@@ -1157,15 +1169,15 @@ class ProductUnit(models.Model):
     )
     loss_reported_date = models.DateTimeField(null=True, blank=True)
     loss_reported_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='reported_unit_losses'
     )
     loss_notes = models.TextField(blank=True, null=True)
     police_report_number = models.CharField(max_length=100, blank=True, null=True)
-    
+
     # ============================================
     # INSURANCE TRACKING
     # ============================================
@@ -1174,26 +1186,26 @@ class ProductUnit(models.Model):
     insurance_claim_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     insurance_payout_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     insurance_payout_date = models.DateTimeField(null=True, blank=True)
-    
+
     # ============================================
     # RECOVERY TRACKING
     # ============================================
     recovered_date = models.DateTimeField(null=True, blank=True)
     recovered_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='recovered_units'
     )
     recovery_notes = models.TextField(blank=True, null=True)
-    
+
     # ============================================
     # LOCATION TRACKING
     # ============================================
     warehouse_location = models.CharField(max_length=50, blank=True, null=True)
     shelf_location = models.CharField(max_length=50, blank=True, null=True)
-    
+
     # ============================================
     # NOTES & AUDIT
     # ============================================
@@ -1201,17 +1213,17 @@ class ProductUnit(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='created_units'
     )
     last_modified_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='modified_units'
     )
 
@@ -1227,7 +1239,7 @@ class ProductUnit(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['product', 'status']),
             models.Index(fields=['branch', 'status']),
-            models.Index(fields=['current_owner', 'status']), 
+            models.Index(fields=['current_owner', 'status']),
         ]
         verbose_name = 'Product Unit'
         verbose_name_plural = 'Product Units'
@@ -1237,7 +1249,7 @@ class ProductUnit(models.Model):
         is_new = self.pk is None
         tenant_id = self.tenant_id
         branch_id = self.branch_id if self.branch_id else None
-        
+
         # Track status changes for priority
         old_status = None
         if not is_new:
@@ -1252,28 +1264,28 @@ class ProductUnit(models.Model):
                 }
             except ProductUnit.DoesNotExist:
                 self._previous_data = None
-        
+
         # Existing validation
         if 'modified_by' in kwargs:
             self.last_modified_by = kwargs.pop('modified_by')
         if 'created_by' in kwargs and not self.pk:
             self.created_by = kwargs.pop('created_by')
-        
+
         if not self.imei_number and not self.serial_number:
             if self.product.category.requires_unique_id:
                 raise ValidationError("IMEI or Serial Number is required for this category")
-        
+
         if self.imei_number:
             if len(self.imei_number) != 15:
                 raise ValidationError("IMEI number must be exactly 15 digits")
             if not self.imei_number.isdigit():
                 raise ValidationError("IMEI number must contain only digits")
-        
+
         if not self.warranty_end and self.product.warranty_months:
             self.warranty_end = self.warranty_start + timedelta(days=self.product.warranty_months * 30)
-        
+
         super().save(*args, **kwargs)
-        
+
         # ✅ Enhanced sync queuing with priority based on status changes
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -1285,11 +1297,11 @@ class ProductUnit(models.Model):
                     priority = 8  # High priority - loss tracking
                 elif old_status and old_status != self.status:
                     priority = 7  # Status change is important
-                
+
                 # Branch transfer is high priority
                 if branch_id and hasattr(self, 'transferred_from_branch_id') and self.transferred_from_branch_id:
                     priority = 8
-                
+
                 SyncQueue.objects.create(
                     tenant_id=tenant_id,
                     model_name='ProductUnit',
@@ -1325,15 +1337,15 @@ class ProductUnit(models.Model):
                 logger.debug(f"✅ Queued ProductUnit sync: {self.unique_identifier} (Priority: {priority})")
             except Exception as e:
                 logger.error(f"Failed to queue ProductUnit sync: {e}")
-    
+
     @property
     def effective_buying_price(self):
         return self.unit_buying_price or self.product.buying_price
-    
+
     @property
     def effective_selling_price(self):
         return self.unit_selling_price or self.product.selling_price
-    
+
     @property
     def unique_identifier(self):
         if self.imei_number:
@@ -1341,7 +1353,7 @@ class ProductUnit(models.Model):
         elif self.serial_number:
             return f"S/N: {self.serial_number}"
         return "No identifier"
-    
+
     @property
     def is_in_warranty(self):
         """Check if product is still under warranty"""
@@ -1364,7 +1376,7 @@ class ProductUnit(models.Model):
             return max(0, remaining.days)
         except Exception:
             return 0
-    
+
     def mark_as_sold(self, price=None, sold_by=None):
         self.status = 'sold'
         self.sold_at_price = price or self.effective_selling_price
@@ -1373,7 +1385,7 @@ class ProductUnit(models.Model):
         self.save()
         self.product.update_quantities()
         return True
-    
+
     def mark_as_available(self):
         self.status = 'available'
         self.sold_at_price = None
@@ -1381,13 +1393,13 @@ class ProductUnit(models.Model):
         self.save()
         self.product.update_quantities()
         return True
-    
+
     def mark_as_reserved(self):
         self.status = 'reserved'
         self.save()
         self.product.update_quantities()
         return True
-    
+
     def mark_as_damaged(self, notes=None, reported_by=None):
         self.status = 'damaged'
         if notes:
@@ -1397,7 +1409,7 @@ class ProductUnit(models.Model):
         self.save()
         self.product.update_quantities()
         return True
-    
+
     def mark_as_stolen(self, reported_by, police_report=None, notes=None):
         self.status = 'stolen'
         self.loss_type = 'stolen'
@@ -1408,7 +1420,7 @@ class ProductUnit(models.Model):
         self.save()
         self.product.update_quantities()
         return True
-    
+
     def __str__(self):
         return f"{self.product.sku_code} - {self.unique_identifier}"
 
@@ -1418,42 +1430,42 @@ class ProductUnit(models.Model):
 # ====================================
 class BranchTransfer(models.Model):
     """Track product unit transfers between branches"""
-    
+
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('in_transit', 'In Transit'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
     ]
-    
+
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='branch_transfers')
     product_unit = models.ForeignKey(ProductUnit, on_delete=models.CASCADE, related_name='branch_transfers')
-    
+
     from_branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name='transfers_out')
     to_branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name='transfers_in')
-    
+
     quantity = models.PositiveIntegerField(default=1)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    
+
     transferred_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='initiated_transfers'
     )
     received_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='received_transfers'
     )
-    
+
     transfer_date = models.DateTimeField(auto_now_add=True)
     received_date = models.DateTimeField(null=True, blank=True)
-    
+
     reason = models.TextField(blank=True)
     notes = models.TextField(blank=True)
-    
+
     class Meta:
         ordering = ['-transfer_date']
         indexes = [
@@ -1463,14 +1475,14 @@ class BranchTransfer(models.Model):
         ]
         verbose_name = 'Branch Transfer'
         verbose_name_plural = 'Branch Transfers'
-    
+
     def save(self, *args, **kwargs):
         """Queue branch transfers for sync"""
         is_new = self.pk is None
         tenant_id = self.tenant_id
-        
+
         super().save(*args, **kwargs)
-        
+
         if getattr(settings, 'OFFLINE_MODE', False):
             SyncQueue.objects.create(
                 tenant_id=tenant_id,
@@ -1498,7 +1510,7 @@ class BranchTransfer(models.Model):
                 priority=7  # High priority for transfers
             )
             logger.debug(f"✅ Queued BranchTransfer sync: {self.product_unit.unique_identifier}")
-    
+
 
     def complete_transfer(self, received_by):
         """Override to add sync queue for completion"""
@@ -1506,12 +1518,12 @@ class BranchTransfer(models.Model):
         self.received_date = timezone.now()
         self.received_by = received_by
         self.save()
-        
+
         self.product_unit.branch = self.to_branch
         self.product_unit.last_branch_transfer_date = self.received_date
         self.product_unit.transferred_from_branch = self.from_branch
         self.product_unit.save()
-        
+
         # Queue the transfer completion
         if getattr(settings, 'OFFLINE_MODE', False):
             SyncQueue.objects.create(
@@ -1527,7 +1539,7 @@ class BranchTransfer(models.Model):
                 },
                 priority=7
             )
-    
+
     def __str__(self):
         return f"Transfer {self.product_unit.unique_identifier}: {self.from_branch.code} → {self.to_branch.code}"
 
@@ -1537,7 +1549,7 @@ class BranchTransfer(models.Model):
 # ====================================
 class StockEntry(models.Model):
     """Tracks all inventory movements for BOTH single and bulk items"""
-    
+
     ENTRY_TYPE_CHOICES = [
         ('purchase', 'Purchase'),
         ('sale', 'Sale'),
@@ -1557,20 +1569,20 @@ class StockEntry(models.Model):
     )
     product_unit = models.ForeignKey(ProductUnit, on_delete=models.CASCADE, null=True, blank=True, related_name='stock_entries')
     product_sku = models.ForeignKey(Product, on_delete=models.CASCADE, null=True, blank=True, related_name='stock_entries')
-    
+
     quantity = models.IntegerField(help_text="Positive for stock IN, Negative for stock OUT")
     entry_type = models.CharField(max_length=20, choices=ENTRY_TYPE_CHOICES)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
-    
+
     reference_id = models.CharField(max_length=255, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
-    
+
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='stock_entries'
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1590,18 +1602,18 @@ class StockEntry(models.Model):
         """Queue stock entries for sync"""
         is_new = self.pk is None
         tenant_id = self.tenant_id
-        
+
         if not self.total_amount and self.unit_price:
             self.total_amount = abs(self.quantity) * self.unit_price
-        
+
         super().save(*args, **kwargs)
-        
+
         # Update bulk quantities
         if self.product_sku and self.product_sku.category.is_bulk_item:
             total = StockEntry.objects.filter(product_sku=self.product_sku).aggregate(total=Sum('quantity'))['total'] or 0
             self.product_sku.bulk_quantity = max(0, total)
             self.product_sku.save(update_fields=['bulk_quantity', 'updated_at'])
-        
+
         # ✅ Queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -1615,7 +1627,7 @@ class StockEntry(models.Model):
                     'adjustment': 5,
                 }
                 priority = priority_map.get(self.entry_type, 5)
-                
+
                 SyncQueue.objects.create(
                     tenant_id=tenant_id,
                     model_name='StockEntry',
@@ -1656,19 +1668,19 @@ class StockEntry(models.Model):
 # ====================================
 class StockAlert(models.Model):
     """Alert when products are running low or out of stock"""
-    
+
     ALERT_TYPE_CHOICES = [
         ('lowstock', 'Low Stock'),
         ('needs_reorder', 'Needs Reorder'),
         ('outofstock', 'Out of Stock'),
     ]
-    
+
     SEVERITY_CHOICES = [
         ('warning', 'Warning'),
         ('danger', 'Danger'),
         ('critical', 'Critical'),
     ]
-    
+
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='stock_alerts')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='alerts')
     alert_type = models.CharField(max_length=20, choices=ALERT_TYPE_CHOICES)
@@ -1678,14 +1690,14 @@ class StockAlert(models.Model):
     is_active = models.BooleanField(default=True)
     is_dismissed = models.BooleanField(default=False)
     dismissed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True
     )
     dismissed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-severity', '-created_at']
         indexes = [
@@ -1694,10 +1706,10 @@ class StockAlert(models.Model):
         ]
         verbose_name = 'Stock Alert'
         verbose_name_plural = 'Stock Alerts'
-    
+
     def __str__(self):
         return f"{self.get_alert_type_display()}: {self.product.display_name}"
-    
+
     def dismiss(self, user=None, reason=""):
         self.is_active = False
         self.is_dismissed = True
@@ -1714,23 +1726,23 @@ class StockAlert(models.Model):
 class InvoiceCounter(models.Model):
     """Counter for generating sequential invoice numbers per tenant"""
     tenant = models.OneToOneField(
-        Tenant, 
+        Tenant,
         on_delete=models.CASCADE,
         related_name='invoice_counter'
     )
     last_number = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Invoice Counter'
         verbose_name_plural = 'Invoice Counters'
         indexes = [
             models.Index(fields=['tenant']),
         ]
-    
+
     def __str__(self):
         return f"{self.tenant.company_name} - {self.last_number}"
-    
+
     @classmethod
     def get_next_number(cls, tenant):
         """Get the next invoice number for a tenant"""
@@ -1738,7 +1750,7 @@ class InvoiceCounter(models.Model):
         counter.last_number += 1
         counter.save()
         return counter.last_number
-    
+
     @classmethod
     def reset_counter(cls, tenant, start_from=0):
         """Reset the counter for a tenant (admin use only)"""
@@ -1754,7 +1766,7 @@ class InvoiceCounter(models.Model):
 
 class SaleManager(models.Manager):
     """Custom manager for Sale model"""
-    
+
     def get_today_sales(self, tenant):
         """Get today's sales for a tenant"""
         today = timezone.now().date()
@@ -1763,7 +1775,7 @@ class SaleManager(models.Manager):
             created_at__date=today,
             status='completed'
         )
-    
+
     def get_month_sales(self, tenant):
         """Get current month's sales for a tenant"""
         now = timezone.now()
@@ -1773,7 +1785,7 @@ class SaleManager(models.Manager):
             created_at__gte=start_of_month,
             status='completed'
         )
-    
+
     def get_tenant_totals(self, tenant):
         """Get totals for a tenant"""
         return self.filter(
@@ -1786,7 +1798,7 @@ class SaleManager(models.Manager):
             total_sales=Count('id'),
             avg_sale=Avg('total')
         )
-    
+
     def get_by_date_range(self, tenant, start_date, end_date):
         """Get sales by date range"""
         return self.filter(
@@ -1803,7 +1815,7 @@ class SaleManager(models.Manager):
 
 class Sale(models.Model):
     """Sales model"""
-    
+
     PAYMENT_METHODS = [
         ('cash', 'Cash'),
         ('mpesa', 'M-Pesa'),
@@ -1811,70 +1823,70 @@ class Sale(models.Model):
         ('card', 'Card'),
         ('mobile', 'Mobile Money'),
     ]
-    
+
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
         ('refunded', 'Refunded'),
-        ('reversed', 'Reversed'), 
+        ('reversed', 'Reversed'),
     ]
-    
+
     objects = SaleManager()
-    
+
     # Tenant & Branch
     tenant = models.ForeignKey(
-        Tenant, 
-        on_delete=models.CASCADE, 
+        Tenant,
+        on_delete=models.CASCADE,
         related_name='sales'
     )
     branch = models.ForeignKey(
-        Branch, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        Branch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='sales'
     )
-    
+
     # Customer
     customer = models.ForeignKey(
-        Customer, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        Customer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='sales'
     )
     customer_name = models.CharField(max_length=200, blank=True, null=True)
     customer_phone = models.CharField(max_length=20, blank=True, null=True)
-    
+
     # Invoice - Auto-generated sequential number
     invoice_no = models.CharField(max_length=50, unique=True, db_index=True)
-    
+
     # Amounts
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
     tax = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
     discount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
     total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
-    
+
     # Payment
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='cash')
     payment_status = models.CharField(max_length=20, default='pending')
     tax_inclusive = models.BooleanField(default=True)
-    
+
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    
+
     # Audit
     cashier = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='sales'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -1882,14 +1894,14 @@ class Sale(models.Model):
             models.Index(fields=['tenant', 'status']),
             models.Index(fields=['tenant', 'created_at']),
         ]
-    
+
     def __str__(self):
         return f"{self.invoice_no} - {self.total}"
-    
+
     @property
     def items_count(self):
         return self.items.count()
-    
+
     def _generate_invoice_number(self):
         """
         Generate sequential invoice number per tenant using InvoiceCounter.
@@ -1904,18 +1916,18 @@ class Sale(models.Model):
             # Fallback: use timestamp-based number
             from datetime import datetime
             return f"#TMP-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    
+
     def save(self, *args, **kwargs):
         """Save sale and queue for sync"""
         is_new = self.pk is None
         tenant_id = self.tenant_id
-        
+
         # ✅ Generate invoice number only for new sales
         if is_new and not self.invoice_no:
             self.invoice_no = self._generate_invoice_number()
-        
+
         super().save(*args, **kwargs)
-        
+
         # ✅ If offline, queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -1966,9 +1978,9 @@ class Sale(models.Model):
                 logger.debug(f"✅ Queued Sale deletion sync: {self.invoice_no}")
             except Exception as e:
                 logger.error(f"Failed to queue Sale deletion sync: {e}")
-        
+
         return super().delete(*args, **kwargs)
-    
+
     def complete(self, cashier=None):
         """Mark sale as completed"""
         if cashier:
@@ -1976,7 +1988,7 @@ class Sale(models.Model):
         self.status = 'completed'
         self.payment_status = 'paid'
         self.save()
-        
+
         # Update stock quantities
         for item in self.items.all():
             if item.product_unit:
@@ -1986,12 +1998,12 @@ class Sale(models.Model):
                 item.product_unit.sold_at_price = item.price
                 item.product_unit.save()
                 item.product_unit.product.update_quantities()
-    
+
     def cancel(self):
         """Cancel the sale"""
         self.status = 'cancelled'
         self.save()
-        
+
         # Restore stock
         for item in self.items.all():
             if item.product_unit:
@@ -2001,12 +2013,12 @@ class Sale(models.Model):
                 item.product_unit.sold_at_price = None
                 item.product_unit.save()
                 item.product_unit.product.update_quantities()
-    
+
     def refund(self):
         """Refund the sale"""
         self.status = 'refunded'
         self.save()
-        
+
         # Restore stock
         for item in self.items.all():
             if item.product_unit:
@@ -2024,53 +2036,53 @@ class Sale(models.Model):
 
 class SaleItem(models.Model):
     """Sale items (line items)"""
-    
+
     sale = models.ForeignKey(
-        Sale, 
-        on_delete=models.CASCADE, 
+        Sale,
+        on_delete=models.CASCADE,
         related_name='items'
     )
     product = models.ForeignKey(
-        Product, 
-        on_delete=models.CASCADE, 
+        Product,
+        on_delete=models.CASCADE,
         related_name='sale_items'
     )
     product_unit = models.ForeignKey(
-        ProductUnit, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        ProductUnit,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='sale_items'
     )
-    
+
     quantity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
-    
+
     def save(self, *args, **kwargs):
         """Save sale item and update stock"""
         is_new = self.pk is None
-        
+
         # Calculate subtotal
         if self.price and self.quantity:
             self.subtotal = Decimal(str(self.price)) * Decimal(str(self.quantity))
-        
+
         super().save(*args, **kwargs)
-        
+
         # If this is a new item and it has a product unit, mark it as reserved
         if is_new and self.product_unit and self.product_unit.status == 'available':
             self.product_unit.status = 'reserved'
             self.product_unit.save()
             self.product_unit.product.update_quantities()
-        
+
         # ✅ Queue sync if offline
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -2113,7 +2125,7 @@ class SaleItem(models.Model):
                 logger.debug(f"✅ Queued SaleItem deletion sync: {self.id}")
             except Exception as e:
                 logger.error(f"Failed to queue SaleItem deletion sync: {e}")
-        
+
         return super().delete(*args, **kwargs)
 
 
@@ -2123,57 +2135,57 @@ class SaleItem(models.Model):
 
 class Return(models.Model):
     """Product returns model"""
-    
+
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
         ('completed', 'Completed'),
     ]
-    
+
     tenant = models.ForeignKey(
-        Tenant, 
-        on_delete=models.CASCADE, 
+        Tenant,
+        on_delete=models.CASCADE,
         related_name='returns'
     )
     sale = models.ForeignKey(
-        Sale, 
-        on_delete=models.CASCADE, 
+        Sale,
+        on_delete=models.CASCADE,
         related_name='returns'
     )
     product = models.ForeignKey(
-        Product, 
-        on_delete=models.CASCADE, 
+        Product,
+        on_delete=models.CASCADE,
         related_name='returns'
     )
-    
+
     quantity = models.PositiveIntegerField(default=1)
     amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
     reason = models.TextField()
-    
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    
+
     # Approval
     approved_by = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='approved_returns'
     )
     approved_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Audit
     created_by = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='created_returns'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -2181,17 +2193,17 @@ class Return(models.Model):
             models.Index(fields=['sale', 'product']),
             models.Index(fields=['tenant', 'created_at']),
         ]
-    
+
     def __str__(self):
         return f"Return #{self.id} - {self.product.name} ({self.status})"
-    
+
     def save(self, *args, **kwargs):
         """Save return and queue for sync"""
         is_new = self.pk is None
         tenant_id = self.tenant_id
-        
+
         super().save(*args, **kwargs)
-        
+
         # ✅ If offline, queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -2237,7 +2249,7 @@ class Return(models.Model):
                 logger.debug(f"✅ Queued Return deletion sync: #{self.id}")
             except Exception as e:
                 logger.error(f"Failed to queue Return deletion sync: {e}")
-        
+
         return super().delete(*args, **kwargs)
 
     def approve(self, approver):
@@ -2246,14 +2258,14 @@ class Return(models.Model):
         self.approved_by = approver
         self.approved_at = timezone.now()
         self.save()
-    
+
     def reject(self, approver):
         """Reject the return"""
         self.status = 'rejected'
         self.approved_by = approver
         self.approved_at = timezone.now()
         self.save()
-    
+
     def complete(self):
         """Complete the return"""
         self.status = 'completed'
@@ -2262,22 +2274,22 @@ class Return(models.Model):
 
 class CashDrawer(models.Model):
     """Cash drawer for tracking cash transactions"""
-    
+
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='cash_drawers')
     cashier = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cash_drawers')
     branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True)
-    
+
     # ✅ FIXED DecimalField defaults
     opening_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     closing_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
+
     opened_at = models.DateTimeField(default=timezone.now)
     closed_at = models.DateTimeField(null=True, blank=True)
-    
+
     is_open = models.BooleanField(default=True)
-    
+
     notes = models.TextField(blank=True)
-    
+
     class Meta:
         ordering = ['-opened_at']
         indexes = [
@@ -2285,17 +2297,17 @@ class CashDrawer(models.Model):
             models.Index(fields=['cashier', 'is_open']),
             models.Index(fields=['tenant', 'opened_at']),
         ]
-    
+
     def __str__(self):
         return f"Drawer - {self.cashier.username} - {self.opened_at.strftime('%Y-%m-%d %H:%M')}"
-    
+
     def save(self, *args, **kwargs):
         """Save cash drawer and queue for sync"""
         is_new = self.pk is None
         tenant_id = self.tenant_id
-        
+
         super().save(*args, **kwargs)
-        
+
         # ✅ If offline, queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -2320,12 +2332,12 @@ class CashDrawer(models.Model):
                 logger.debug(f"✅ Queued CashDrawer sync: {self.id}")
             except Exception as e:
                 logger.error(f"Failed to queue CashDrawer sync: {e}")
-    
+
     def total_sales(self):
         """Calculate total sales for this drawer session"""
         from apps.tech_master.models import Sale
         from django.db.models import Sum
-        
+
         try:
             result = Sale.objects.filter(
                 cashier=self.cashier,
@@ -2337,12 +2349,12 @@ class CashDrawer(models.Model):
         except Exception as e:
             logger.error(f"Error calculating total sales: {e}")
             return Decimal('0')
-    
+
     def expected_amount(self):
         """Calculate expected amount in drawer"""
         from apps.tech_master.models import Sale
         from django.db.models import Sum
-        
+
         try:
             # Get sales total
             sales_total = Sale.objects.filter(
@@ -2351,20 +2363,20 @@ class CashDrawer(models.Model):
                 created_at__lte=self.closed_at or timezone.now(),
                 status='completed'
             ).aggregate(total=Sum('total'))['total'] or Decimal('0')
-            
+
             # Get transactions
             transactions = self.transactions.all()
             deposit_total = transactions.filter(transaction_type='deposit').aggregate(total=Sum('amount'))['total'] or Decimal('0')
             withdrawal_total = transactions.filter(transaction_type='withdrawal').aggregate(total=Sum('amount'))['total'] or Decimal('0')
-            
+
             # Calculate expected
             expected = self.opening_amount + sales_total + deposit_total - withdrawal_total
             return expected
-            
+
         except Exception as e:
             logger.error(f"Error calculating expected amount: {e}")
             return Decimal('0')
-    
+
     def close(self, closing_amount, notes=None, user=None):
         """Close the cash drawer"""
         self.closing_amount = closing_amount
@@ -2373,7 +2385,7 @@ class CashDrawer(models.Model):
         if notes:
             self.notes = notes
         self.save()
-        
+
         # Create closing transaction record
         try:
             from .models import CashTransaction
@@ -2386,40 +2398,40 @@ class CashDrawer(models.Model):
             )
         except Exception as e:
             logger.error(f"Error creating closing transaction: {e}")
-        
+
         return True
 
 
 class CashTransaction(models.Model):
     """Cash transactions within a drawer"""
-    
+
     TRANSACTION_TYPES = [
         ('deposit', 'Deposit'),
         ('withdrawal', 'Withdrawal'),
     ]
-    
+
     drawer = models.ForeignKey(CashDrawer, on_delete=models.CASCADE, related_name='transactions')
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
     reason = models.CharField(max_length=200)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='cash_transactions')
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['drawer', 'transaction_type']),
             models.Index(fields=['drawer', 'created_at']),
         ]
-    
+
     def __str__(self):
         return f"{self.transaction_type} - {self.amount} by {self.created_by.username if self.created_by else 'Unknown'}"
-    
+
     def save(self, *args, **kwargs):
         """Save cash transaction and queue for sync"""
         is_new = self.pk is None
         super().save(*args, **kwargs)
-        
+
         # ✅ If offline, queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
@@ -2452,7 +2464,7 @@ class CashTransaction(models.Model):
 
 class Staff(models.Model):
     """Tech Master Staff - Employees working in branches"""
-    
+
     # ============================================
     # STAFF ROLES (Matching Food Master pattern)
     # ============================================
@@ -2471,20 +2483,20 @@ class Staff(models.Model):
     # ============================================
     tenant = models.ForeignKey(CompanyTenant, on_delete=models.CASCADE, related_name='tech_staff')
     branch = models.ForeignKey(
-        'Branch', 
-        on_delete=models.CASCADE, 
-        related_name='staff', 
-        null=True, 
+        'Branch',
+        on_delete=models.CASCADE,
+        related_name='staff',
+        null=True,
         blank=True
     )
     user = models.OneToOneField(
-        User, 
-        on_delete=models.CASCADE, 
-        related_name='tech_staff_profile', 
-        null=True, 
+        User,
+        on_delete=models.CASCADE,
+        related_name='tech_staff_profile',
+        null=True,
         blank=True
     )
-    
+
     # ============================================
     # STAFF DETAILS
     # ============================================
@@ -2494,7 +2506,7 @@ class Staff(models.Model):
     email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20)
     hire_date = models.DateField(null=True, blank=True)
-    
+
     # ============================================
     # STATUS
     # ============================================
@@ -2569,7 +2581,7 @@ class Staff(models.Model):
 
 class StaffAttendance(models.Model):
     """Tech Master Staff Attendance - Matching Food Master pattern"""
-    
+
     # ============================================
     # ATTENDANCE STATUS
     # ============================================
@@ -2581,14 +2593,14 @@ class StaffAttendance(models.Model):
         ('leave', 'On Leave'),
         ('holiday', 'Holiday'),
     ]
-    
+
     # ============================================
     # RELATIONSHIPS
     # ============================================
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='attendances')
     tenant = models.ForeignKey(CompanyTenant, on_delete=models.CASCADE, related_name='tech_staff_attendances')
     branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='staff_attendances')
-    
+
     # ============================================
     # ATTENDANCE DETAILS
     # ============================================
@@ -2598,11 +2610,11 @@ class StaffAttendance(models.Model):
     check_out_time = models.TimeField(null=True, blank=True)
     check_in_location = models.CharField(max_length=255, blank=True)
     check_out_location = models.CharField(max_length=255, blank=True)
-    
+
     # Work Details
     hours_worked = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
     overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
-    
+
     # Notes
     notes = models.TextField(blank=True)
     approved_by = models.ForeignKey(
@@ -2613,13 +2625,13 @@ class StaffAttendance(models.Model):
         related_name='approved_tech_attendances'
     )
     approved_at = models.DateTimeField(null=True, blank=True)
-    
+
     # ============================================
     # TIMESTAMPS
     # ============================================
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Staff Attendance'
         verbose_name_plural = 'Staff Attendances'
@@ -2629,10 +2641,10 @@ class StaffAttendance(models.Model):
             models.Index(fields=['tenant', 'date']),
         ]
         unique_together = ['staff', 'date']
-    
+
     def __str__(self):
         return f"{self.staff.name} - {self.date} ({self.get_status_display()})"
-    
+
     def calculate_hours(self):
         """Calculate hours worked"""
         if self.check_in_time and self.check_out_time:
@@ -2644,7 +2656,7 @@ class StaffAttendance(models.Model):
             self.hours_worked = Decimal(str(round(hours, 2)))
             return self.hours_worked
         return Decimal('0.00')
-    
+
     def save(self, *args, **kwargs):
         """Calculate hours before saving"""
         if self.check_in_time and self.check_out_time:
@@ -2654,7 +2666,7 @@ class StaffAttendance(models.Model):
 
 class StaffLeave(models.Model):
     """Tech Master Staff Leave - Matching Food Master pattern"""
-    
+
     # ============================================
     # LEAVE TYPES
     # ============================================
@@ -2667,7 +2679,7 @@ class StaffLeave(models.Model):
         ('study', 'Study Leave'),
         ('other', 'Other'),
     ]
-    
+
     # ============================================
     # LEAVE STATUS
     # ============================================
@@ -2677,7 +2689,7 @@ class StaffLeave(models.Model):
         ('rejected', 'Rejected'),
         ('cancelled', 'Cancelled'),
     ]
-    
+
     # ============================================
     # RELATIONSHIPS
     # ============================================
@@ -2690,7 +2702,7 @@ class StaffLeave(models.Model):
         blank=True,
         related_name='approved_tech_leaves'
     )
-    
+
     # ============================================
     # LEAVE DETAILS
     # ============================================
@@ -2700,11 +2712,11 @@ class StaffLeave(models.Model):
     end_date = models.DateField()
     reason = models.TextField()
     notes = models.TextField(blank=True)
-    
+
     # Approval
     approved_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True)
-    
+
     # ============================================
     # TIMESTAMPS
     # ============================================
@@ -2717,7 +2729,7 @@ class StaffLeave(models.Model):
         blank=True,
         related_name='created_tech_leaves'
     )
-    
+
     class Meta:
         verbose_name = 'Staff Leave'
         verbose_name_plural = 'Staff Leaves'
@@ -2726,22 +2738,22 @@ class StaffLeave(models.Model):
             models.Index(fields=['staff', 'status']),
             models.Index(fields=['tenant', 'status']),
         ]
-    
+
     def __str__(self):
         return f"{self.staff.name} - {self.get_leave_type_display()} ({self.get_status_display()})"
-    
+
     @property
     def days(self):
         """Calculate number of leave days"""
         return (self.end_date - self.start_date).days + 1
-    
+
     def approve(self, approver):
         """Approve leave request"""
         self.status = 'approved'
         self.approved_by = approver
         self.approved_at = timezone.now()
         self.save()
-    
+
     def reject(self, reason, approver):
         """Reject leave request"""
         self.status = 'rejected'
@@ -2767,11 +2779,11 @@ def create_stock_alerts(sender, instance, created, **kwargs):
     try:
         if not instance.is_active or instance.is_discontinued:
             return
-        
+
         current_stock = instance.current_stock
         alert_type = None
         severity = 'warning'
-        
+
         if current_stock == 0:
             alert_type = 'outofstock'
             severity = 'critical'
@@ -2781,7 +2793,7 @@ def create_stock_alerts(sender, instance, created, **kwargs):
         elif current_stock <= 5:
             alert_type = 'lowstock'
             severity = 'warning'
-        
+
         if alert_type:
             StockAlert.objects.update_or_create(
                 tenant=instance.tenant,
@@ -2798,7 +2810,7 @@ def create_stock_alerts(sender, instance, created, **kwargs):
         else:
             StockAlert.objects.filter(
                 tenant=instance.tenant,
-                product=instance, 
+                product=instance,
                 is_active=True
             ).update(is_active=False, is_dismissed=True)
     except Exception as e:
@@ -2814,7 +2826,7 @@ def validate_unit_identifiers(sender, instance, **kwargs):
         ).exclude(pk=instance.pk)
         if existing.exists():
             raise ValidationError(f"IMEI {instance.imei_number} already exists for this tenant")
-    
+
     if instance.serial_number:
         existing = ProductUnit.objects.filter(
             tenant=instance.tenant,
@@ -2828,10 +2840,10 @@ __all__ = [
     'Branch',
     'BranchStock',
     'Supplier',
-    'Category', 
+    'Category',
     'Product',
     'ProductUnit',
-    'BranchTransfer', 
+    'BranchTransfer',
     'StockEntry',
     'StockAlert',
 ]
