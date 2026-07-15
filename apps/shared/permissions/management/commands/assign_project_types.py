@@ -12,7 +12,7 @@ class Command(BaseCommand):
         self.stdout.write('🔄 Assigning project types to roles...')
         
         # Get project types
-        tech_master = ProjectType.objects.filter(code='TECH_MASTER').first()
+        tronic_master = ProjectType.objects.filter(code='TRONIC_MASTER').first()
         hotel_master = ProjectType.objects.filter(code='HOTEL_MASTER').first()
         food_master = ProjectType.objects.filter(code='FOOD_MASTER').first()
         retail_master = ProjectType.objects.filter(code='RETAIL_MASTER').first()
@@ -22,9 +22,9 @@ class Command(BaseCommand):
         # Define which roles belong to which project type
         role_project_mapping = {
             # Tech Master Roles
-            'cashier': tech_master,
+            'cashier': tronic_master,
             'manager': None,  # None = All projects
-            'sales_agent': tech_master,
+            'sales_agent': tronic_master,
             'viewer': None,  # Viewer is global
             
             # Hotel Master Roles

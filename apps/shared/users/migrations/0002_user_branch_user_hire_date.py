@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tech_master', '0002_alter_product_options'),
+        ('tronic_master', '0002_alter_product_options'),
         ('users', '0001_initial'),
     ]
 
@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='user',
             name='branch',
-            field=models.ForeignKey(blank=True, help_text='Branch this user is assigned to', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='users', to='tech_master.branch'),
+            field=models.ForeignKey(blank=True, help_text='Branch this user is assigned to', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='users', to='tronic_master.branch'),
         ),
         migrations.AddField(
             model_name='user',

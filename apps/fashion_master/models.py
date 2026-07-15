@@ -17,12 +17,12 @@ logger = logging.getLogger(__name__)
 class FashionBranch(models.Model):
     """
     Fashion-specific branch extensions
-    Links to the main Branch model from tech_master
+    Links to the main Branch model from tronic_master
     """
     
     # Link to the main branch
     branch = models.OneToOneField(
-        'tech_master.Branch',
+        'tronic_master.Branch',
         on_delete=models.CASCADE,
         related_name='fashion_settings'
     )
@@ -178,8 +178,8 @@ class FashionProduct(models.Model):
     # ============================================
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='fashion_products')
     category = models.ForeignKey(FashionCategory, on_delete=models.PROTECT, related_name='fashion_products')
-    branch = models.ForeignKey('tech_master.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_products')
-    supplier = models.ForeignKey('tech_master.Supplier', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_products')
+    branch = models.ForeignKey('tronic_master.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_products')
+    supplier = models.ForeignKey('tronic_master.Supplier', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_products')
     
     # ============================================
     # PRODUCT IDENTIFICATION
@@ -382,7 +382,7 @@ class FashionStaff(models.Model):
     # ============================================
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='fashion_staff')
     branch = models.ForeignKey(
-        'tech_master.Branch', 
+        'tronic_master.Branch', 
         on_delete=models.CASCADE, 
         related_name='fashion_staff', 
         null=True, 
@@ -506,7 +506,7 @@ class FashionStaffAttendance(models.Model):
     # ============================================
     staff = models.ForeignKey(FashionStaff, on_delete=models.CASCADE, related_name='attendances')
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='fashion_staff_attendances')
-    branch = models.ForeignKey('tech_master.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_staff_attendances')
+    branch = models.ForeignKey('tronic_master.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_staff_attendances')
     
     # ============================================
     # ATTENDANCE DETAILS
@@ -764,7 +764,7 @@ class FashionSale(models.Model):
     ]
     
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='fashion_sales')
-    branch = models.ForeignKey('tech_master.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_sales')
+    branch = models.ForeignKey('tronic_master.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_sales')
     
     # ✅ Fix: Use correct app reference for Customer
     customer = models.ForeignKey(
@@ -876,7 +876,7 @@ class FashionInventoryMovement(models.Model):
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='fashion_movements')
     product = models.ForeignKey(FashionProduct, on_delete=models.CASCADE, related_name='movements')
     variant = models.ForeignKey(FashionVariant, on_delete=models.SET_NULL, null=True, blank=True, related_name='movements')
-    branch = models.ForeignKey('tech_master.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_movements')
+    branch = models.ForeignKey('tronic_master.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='fashion_movements')
     
     movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES)
     quantity = models.IntegerField(help_text="Positive for IN, Negative for OUT")

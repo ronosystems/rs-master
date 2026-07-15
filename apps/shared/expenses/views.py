@@ -1,4 +1,4 @@
-# apps/tech_master/expenses/views.py
+# apps/tronic_master/expenses/views.py
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -72,7 +72,7 @@ def expense_list(request):
         'date_filter': date_filter,
         'search': search,
     }
-    return render(request, 'tech_master/expenses/list.html', context)
+    return render(request, 'tronic_master/expenses/list.html', context)
 
 
 # ============================================
@@ -98,7 +98,7 @@ def add_expense(request):
         
         if not title or not amount or not date:
             messages.error(request, 'Please fill all required fields')
-            return redirect('tech_master:add_expense')
+            return redirect('tronic_master:add_expense')
         
         category = None
         if category_id:
@@ -117,7 +117,7 @@ def add_expense(request):
         )
         
         messages.success(request, f'Expense "{title}" added successfully')
-        return redirect('tech_master:expense_detail', expense_id=expense.id)
+        return redirect('tronic_master:expense_detail', expense_id=expense.id)
     
     categories = ExpenseCategory.objects.filter(tenant=tenant, is_active=True)
     
@@ -125,7 +125,7 @@ def add_expense(request):
         'tenant': tenant,
         'categories': categories,
     }
-    return render(request, 'tech_master/expenses/add.html', context)
+    return render(request, 'tronic_master/expenses/add.html', context)
 
 
 # ============================================
@@ -147,7 +147,7 @@ def expense_detail(request, expense_id):
         'tenant': tenant,
         'expense': expense,
     }
-    return render(request, 'tech_master/expenses/detail.html', context)
+    return render(request, 'tronic_master/expenses/detail.html', context)
 
 
 # ============================================
@@ -168,16 +168,16 @@ def approve_expense(request, expense_id):
     # Check permission - only admin or manager can approve
     if request.user.role not in ['admin', 'manager', 'tenant_admin']:
         messages.error(request, 'You do not have permission to approve expenses')
-        return redirect('tech_master:expense_list')
+        return redirect('tronic_master:expense_list')
     
     # Check if already approved
     if expense.status == 'approved':
         messages.warning(request, f'Expense "{expense.title}" is already approved')
-        return redirect('tech_master:expense_detail', expense_id=expense.id)
+        return redirect('tronic_master:expense_detail', expense_id=expense.id)
     
     expense.approve(request.user)
     messages.success(request, f'Expense "{expense.title}" approved successfully')
-    return redirect('tech_master:expense_detail', expense_id=expense.id)
+    return redirect('tronic_master:expense_detail', expense_id=expense.id)
 
 
 # ============================================
@@ -198,16 +198,16 @@ def reject_expense(request, expense_id):
     # Check permission
     if request.user.role not in ['admin', 'manager', 'tenant_admin']:
         messages.error(request, 'You do not have permission to reject expenses')
-        return redirect('tech_master:expense_list')
+        return redirect('tronic_master:expense_list')
     
     # Check if already rejected
     if expense.status == 'rejected':
         messages.warning(request, f'Expense "{expense.title}" is already rejected')
-        return redirect('tech_master:expense_detail', expense_id=expense.id)
+        return redirect('tronic_master:expense_detail', expense_id=expense.id)
     
     expense.reject(request.user)
     messages.success(request, f'Expense "{expense.title}" rejected')
-    return redirect('tech_master:expense_detail', expense_id=expense.id)
+    return redirect('tronic_master:expense_detail', expense_id=expense.id)
 
 
 # ============================================
@@ -228,16 +228,16 @@ def mark_expense_paid(request, expense_id):
     # Check permission
     if request.user.role not in ['admin', 'manager', 'tenant_admin']:
         messages.error(request, 'You do not have permission to mark expenses as paid')
-        return redirect('tech_master:expense_list')
+        return redirect('tronic_master:expense_list')
     
     # Check if already paid
     if expense.status == 'paid':
         messages.warning(request, f'Expense "{expense.title}" is already marked as paid')
-        return redirect('tech_master:expense_detail', expense_id=expense.id)
+        return redirect('tronic_master:expense_detail', expense_id=expense.id)
     
     expense.mark_paid()
     messages.success(request, f'Expense "{expense.title}" marked as paid')
-    return redirect('tech_master:expense_detail', expense_id=expense.id)
+    return redirect('tronic_master:expense_detail', expense_id=expense.id)
 
 
 # ============================================
@@ -352,7 +352,7 @@ def expense_report(request):
         'start_date': start_date,
         'end_date': end_date,
     }
-    return render(request, 'tech_master/expenses/report.html', context)
+    return render(request, 'tronic_master/expenses/report.html', context)
 
 
 # ============================================
@@ -374,7 +374,7 @@ def category_list(request):
         'tenant': tenant,
         'categories': categories,
     }
-    return render(request, 'tech_master/expenses/category_list.html', context)
+    return render(request, 'tronic_master/expenses/category_list.html', context)
 
 
 @login_required
@@ -393,11 +393,11 @@ def add_category(request):
         
         if not name:
             messages.error(request, 'Category name is required')
-            return redirect('tech_master:add_expense_category')
+            return redirect('tronic_master:add_expense_category')
         
         if ExpenseCategory.objects.filter(tenant=tenant, name__iexact=name).exists():
             messages.error(request, f'Category "{name}" already exists')
-            return redirect('tech_master:add_expense_category')
+            return redirect('tronic_master:add_expense_category')
         
         category = ExpenseCategory.objects.create(
             tenant=tenant,
@@ -407,9 +407,9 @@ def add_category(request):
         )
         
         messages.success(request, f'Category "{category.name}" created successfully!')
-        return redirect('tech_master:expense_category_list')
+        return redirect('tronic_master:expense_category_list')
     
-    return render(request, 'tech_master/expenses/add_category.html', {'tenant': tenant})
+    return render(request, 'tronic_master/expenses/add_category.html', {'tenant': tenant})
 
 
 @login_required
@@ -430,11 +430,11 @@ def edit_category(request, category_id):
         
         if not name:
             messages.error(request, 'Category name is required')
-            return redirect('tech_master:edit_expense_category', category_id=category.id)
+            return redirect('tronic_master:edit_expense_category', category_id=category.id)
         
         if ExpenseCategory.objects.filter(tenant=tenant, name__iexact=name).exclude(id=category.id).exists():
             messages.error(request, f'Category "{name}" already exists')
-            return redirect('tech_master:edit_expense_category', category_id=category.id)
+            return redirect('tronic_master:edit_expense_category', category_id=category.id)
         
         category.name = name
         category.description = description
@@ -442,13 +442,13 @@ def edit_category(request, category_id):
         category.save()
         
         messages.success(request, f'Category "{category.name}" updated successfully!')
-        return redirect('tech_master:expense_category_list')
+        return redirect('tronic_master:expense_category_list')
     
     context = {
         'tenant': tenant,
         'category': category,
     }
-    return render(request, 'tech_master/expenses/edit_category.html', context)
+    return render(request, 'tronic_master/expenses/edit_category.html', context)
 
 
 @login_required
@@ -464,9 +464,9 @@ def delete_category(request, category_id):
     
     if category.expenses.exists():
         messages.error(request, f'Cannot delete "{category.name}" because it has expenses associated with it.')
-        return redirect('tech_master:expense_category_list')
+        return redirect('tronic_master:expense_category_list')
     
     category_name = category.name
     category.delete()
     messages.success(request, f'Category "{category_name}" deleted successfully!')
-    return redirect('tech_master:expense_category_list')
+    return redirect('tronic_master:expense_category_list')

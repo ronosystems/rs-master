@@ -4,10 +4,10 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 PROJECT_URLS = {
-    'TECH_MASTER': {
-        'dashboard': 'tech_master:dashboard',
-        'pos': 'tech_master:pos',
-        'login_redirect': 'tech_master:dashboard',
+    'TRONIC_MASTER': {
+        'dashboard': 'tronic_master:dashboard',
+        'pos': 'tronic_master:pos',
+        'login_redirect': 'tronic_master:dashboard',
     },
     'HOTEL_MASTER': {
         'dashboard': 'hotel_master:dashboard',
@@ -37,8 +37,8 @@ PROJECT_URLS = {
 }
 
 # ✅ Default fallback
-DEFAULT_PROJECT = 'TECH_MASTER'
-DEFAULT_REDIRECT = 'tech_master:dashboard'
+DEFAULT_PROJECT = 'TRONIC_MASTER'
+DEFAULT_REDIRECT = 'tronic_master:dashboard'
 
 def get_project_redirect(project_code: str, redirect_type: str = 'dashboard') -> str:
     """

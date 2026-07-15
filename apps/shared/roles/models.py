@@ -9,7 +9,7 @@ class ProjectRole(models.Model):
     """
     
     PROJECT_CHOICES = [
-        ('tech_master', 'Tech Master'),
+        ('tronic_master', 'Tech Master'),
         ('food_master', 'Food Master'),
         ('hotel_master', 'Hotel Master'),
         ('retail_master', 'Retail Master'),
@@ -22,7 +22,7 @@ class ProjectRole(models.Model):
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, related_name='project_roles')
     
     # Which project this role belongs to
-    project_type = models.CharField(max_length=20, choices=PROJECT_CHOICES, default='tech_master')
+    project_type = models.CharField(max_length=20, choices=PROJECT_CHOICES, default='tronic_master')
     
     # Role details
     name = models.CharField(max_length=100)

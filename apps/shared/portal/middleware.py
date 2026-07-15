@@ -58,7 +58,7 @@ class ProjectTypeMiddleware:
         
         # Define the correct base path for each project
         project_paths = {
-            'TECH_MASTER': '/tech/',
+            'TRONIC_MASTER': '/tronic/',
             'HOTEL_MASTER': '/hotel/',
             'FOOD_MASTER': '/food/',
             'RETAIL_MASTER': '/retail/',

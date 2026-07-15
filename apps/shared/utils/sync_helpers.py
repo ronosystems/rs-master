@@ -165,7 +165,7 @@ def process_pulled_change(change, tenant):
     try:
         # Find the model
         model = None
-        app_names = ['tech_master.inventory', 'tech_master.sales', 'shared.tenants', 'shared.users']
+        app_names = ['tronic_master.inventory', 'tronic_master.sales', 'shared.tenants', 'shared.users']
         for app_name in app_names:
             try:
                 model = apps.get_model(app_name, model_name)

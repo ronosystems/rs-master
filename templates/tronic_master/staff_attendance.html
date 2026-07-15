@@ -1,0 +1,162 @@
+<!-- templates/tronic_master/staff_attendance.html -->
+{% extends "tronic_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Staff Attendance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-calendar-check text-primary me-2"></i>Staff Attendance
+            </h4>
+            <p class="text-muted mb-0">Track staff attendance records</p>
+        </div>
+        <div>
+            <a href="{% url 'tronic_master:staff_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small">Staff</label>
+                    <select name="user" class="form-select">
+                        <option value="">All Staff</option>
+                        {% for member in staff_members %}
+                        <option value="{{ member.id }}" {% if request.GET.user == member.id|stringformat:"s" %}selected{% endif %}>
+                            {{ member.get_full_name|default:member.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        {% for status_code, status_name in statuses %}
+                        <option value="{{ status_code }}" {% if request.GET.status == status_code %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Date From</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Date To</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                    <a href="{% url 'tronic_master:staff_attendance' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Attendance Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Staff</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>Hours</th>
+                            <th>Branch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attendance in attendances %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ attendance.user.get_full_name|default:attendance.user.username }}</div>
+                            </td>
+                            <td>{{ attendance.date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if attendance.status == 'present' %}bg-success
+                                    {% elif attendance.status == 'absent' %}bg-danger
+                                    {% elif attendance.status == 'late' %}bg-warning text-dark
+                                    {% elif attendance.status == 'half_day' %}bg-info
+                                    {% elif attendance.status == 'leave' %}bg-secondary
+                                    {% else %}bg-light text-dark{% endif %}">
+                                    {{ attendance.get_status_display|default:attendance.status|title }}
+                                </span>
+                            </td>
+                            <td>{{ attendance.check_in_time|default:"-" }}</td>
+                            <td>{{ attendance.check_out_time|default:"-" }}</td>
+                            <td>{{ attendance.hours_worked|default:"0.00" }}</td>
+                            <td>{{ attendance.branch.name|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="fas fa-calendar fa-3x d-block mb-3 opacity-50"></i>
+                                No attendance records found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Showing {{ attendances.start_index }} to {{ attendances.end_index }} of {{ attendances.paginator.count }} records
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if attendances.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ attendances.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">{{ attendances.number }}</span>
+                        </li>
+
+                        {% if attendances.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ attendances.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ attendances.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

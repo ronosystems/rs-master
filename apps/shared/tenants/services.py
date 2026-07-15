@@ -82,7 +82,7 @@ class TenantLimitService:
         return self.product_limit
     
     def get_product_count(self):
-        from apps.tech_master.models import Product
+        from apps.tronic_master.models import Product
         return Product.objects.filter(
             tenant=self.tenant,
             is_active=True,
@@ -111,7 +111,7 @@ class TenantLimitService:
         return self.branch_limit
     
     def get_branch_count(self):
-        from apps.tech_master.models import Branch
+        from apps.tronic_master.models import Branch
         return Branch.objects.filter(
             tenant=self.tenant,
             is_active=True
@@ -144,7 +144,7 @@ class TenantLimitService:
         total_bytes = 0
         
         try:
-            from apps.tech_master.models import Product
+            from apps.tronic_master.models import Product
             from apps.shared.expenses.models import Expense
             
             # 1. Product Images

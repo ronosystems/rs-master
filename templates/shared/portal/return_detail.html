@@ -51,7 +51,7 @@
             {% endif %}
             
             <div class="mt-3">
-                <a href="{% url 'tech_master:return_list' %}" class="btn btn-secondary">Back to Returns</a>
+                <a href="{% url 'tronic_master:return_list' %}" class="btn btn-secondary">Back to Returns</a>
                 {% if return.status == 'approved' %}
                 <a href="{% url 'receipt' return.original_sale.id %}" class="btn btn-info">View Credit Note</a>
                 {% endif %}

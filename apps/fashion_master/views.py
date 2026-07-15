@@ -13,7 +13,7 @@ from .models import (
     FashionSale, FashionSaleItem, FashionInventoryMovement,
     FashionReturn
 )
-from apps.tech_master.models import Branch, Supplier
+from apps.tronic_master.models import Branch, Supplier
 
 from django.http import JsonResponse
 from django.utils import timezone
@@ -27,13 +27,13 @@ from .models import (
     FashionSale, FashionSaleItem, FashionInventoryMovement,
     FashionReturn
 )
-from apps.tech_master.models import Branch, Supplier
+from apps.tronic_master.models import Branch, Supplier
 from apps.shared.customers.models import Customer
 from django.contrib.auth import get_user_model
 import logging
 
 from apps.shared.users.models import User
-from apps.tech_master.models import Branch
+from apps.tronic_master.models import Branch
 
 from .models import FashionProduct, FashionVariant, FashionCategory
 from django.http import HttpResponse, JsonResponse
@@ -48,7 +48,7 @@ import logging
 
 from apps.shared.users.models import User
 from apps.shared.expenses.models import Expense
-from apps.tech_master.models import Branch
+from apps.tronic_master.models import Branch
 
 from .models import FashionProduct, FashionVariant, FashionCategory, FashionSale, FashionSaleItem, FashionReturn
 

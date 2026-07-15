@@ -62,7 +62,7 @@ def tenant_context(request):
         
         # Count products (Tech Master)
         try:
-            from apps.tech_master.models import Product
+            from apps.tronic_master.models import Product
             product_count = Product.objects.filter(tenant=tenant, is_active=True).count()
         except:
             pass
@@ -180,7 +180,7 @@ def project_type_access(request):
         'has_fashion': False,
         'has_health': False,
         'has_retail': False,
-        'is_tech_master': False,
+        'is_tronic_master': False,
         'is_food_master': False,
         'is_hotel_master': False,
         'is_retail_master': False,
@@ -203,12 +203,12 @@ def project_type_access(request):
     if project_type:
         context['project_type'] = project_type
         code = project_type.code.upper()
-        context['is_tech_master'] = code in ['TECH_MASTER', 'TECHMASTER', 'PRJ-001']
+        context['is_tronic_master'] = code in ['TRONIC_MASTER', 'TECHMASTER', 'PRJ-001']
         context['is_food_master'] = code in ['FOOD_MASTER', 'FOODMASTER', 'PRJ-002']
         context['is_hotel_master'] = code in ['HOTEL_MASTER', 'HOTELMASTER', 'PRJ-003']
         context['is_retail_master'] = code in ['RETAIL_MASTER', 'RETAILMASTER', 'PRJ-004']
         context['is_health_master'] = code in ['HEALTH_MASTER', 'HEALTHMASTER', 'PRJ-005']
         context['is_fashion_master'] = code in ['FASHION_MASTER', 'FASHIONMASTER', 'PRJ-006']
-        context['project_under_development'] = not context['is_tech_master']
+        context['project_under_development'] = not context['is_tronic_master']
     
     return context

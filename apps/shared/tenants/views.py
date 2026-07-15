@@ -7,7 +7,7 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta, datetime
 from .models import Tenant, ProjectType, SubscriptionPlan, SubscriptionInvoice
-from apps.tech_master.models import Product, Branch 
+from apps.tronic_master.models import Product, Branch 
 from django.db.models import Count
 from django.core.paginator import Paginator
 from apps.shared.users.models import User

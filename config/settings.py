@@ -70,9 +70,9 @@ LOGOUT_REDIRECT_URL = '/login/'
 # PROJECT TYPES (YOUR ORIGINAL BUSINESS LOGIC)
 # ============================================
 PROJECT_TYPES = {
-    'TECH_MASTER': {
-        'name': 'TECH MASTER',
-        'code': 'TECH_MASTER',
+    'TRONIC_MASTER': {
+        'name': 'TRONIC MASTER',
+        'code': 'TRONIC_MASTER',
         'icon': 'fa-microchip',
         'color': '#0d6efd',
         'active': True,
@@ -164,7 +164,7 @@ INSTALLED_APPS = [
     'apps.shared.reports',
 
     # Tech_master apps
-    'apps.tech_master',
+    'apps.tronic_master',
 
     # Hotel_master apps
     'apps.hotel_master',
@@ -586,7 +586,7 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
-        'apps.tech_master': {
+        'apps.tronic_master': {
             'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': False,

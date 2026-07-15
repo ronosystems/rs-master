@@ -116,7 +116,7 @@ class Command(BaseCommand):
                     'add_sale', 'add_customer',
                     'change_sale',
                 ],
-                'project_type': 'TECH_MASTER'
+                'project_type': 'TRONIC_MASTER'
             },
             {
                 'codename': 'sales_agent',
@@ -127,7 +127,7 @@ class Command(BaseCommand):
                     'add_sale', 'add_customer',
                     'change_sale', 'change_customer',
                 ],
-                'project_type': 'TECH_MASTER'
+                'project_type': 'TRONIC_MASTER'
             },
             {
                 'codename': 'manager',
@@ -379,7 +379,7 @@ class Command(BaseCommand):
         self.stdout.write('\n📋 Assigning project types to project roles...')
         
         # Get project types
-        tech_master = ProjectType.objects.filter(code='TECH_MASTER').first()
+        tronic_master = ProjectType.objects.filter(code='TRONIC_MASTER').first()
         hotel_master = ProjectType.objects.filter(code='HOTEL_MASTER').first()
         food_master = ProjectType.objects.filter(code='FOOD_MASTER').first()
         retail_master = ProjectType.objects.filter(code='RETAIL_MASTER').first()

@@ -1,0 +1,261 @@
+{% extends 'tronic_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Add Single Product{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Add Single Product (IMEI/Serial Tracked)</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="productForm">
+                        {% csrf_token %}
+                        
+                        <!-- TWO COLUMN LAYOUT -->
+                        <div class="row">
+                            
+                            <!-- LEFT SECTION: Product Details Form -->
+                            <div class="col-md-6">
+                                <div class="card border-primary mb-3">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Product Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i>
+                                            <strong>SKU Code:</strong> Will be auto-generated as <strong>000001, 000002, 000003...</strong>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-12 mb-3">
+                                                <label for="name" class="form-label">Product Name *</label>
+                                                <input type="text" class="form-control" id="name" name="name" required 
+                                                       placeholder="e.g., Samsung Galaxy A07">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="brand" class="form-label">Brand</label>
+                                                <input type="text" class="form-control" id="brand" name="brand" 
+                                                       placeholder="e.g., Samsung">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="model" class="form-label">Model</label>
+                                                <input type="text" class="form-control" id="model" name="model" 
+                                                       placeholder="e.g., A07">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="color" class="form-label">Color</label>
+                                                <input type="text" class="form-control" id="color" name="color" 
+                                                       placeholder="e.g., Black, Blue, Silver">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="category_id" class="form-label">Category</label>
+                                                <select class="form-control" id="category_id" name="category_id" required>
+                                                    <option value="">Select Category</option>
+                                                    {% for cat in categories %}
+                                                    <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.get_item_type_display }})</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="branch_id" class="form-label">Branch *</label>
+                                                <select class="form-control" id="branch_id" name="branch_id" required>
+                                                    <option value="">Select Branch</option>
+                                                    {% for branch in branches %}
+                                                    <option value="{{ branch.id }}">{{ branch.name }} ({{ branch.code }})</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="supplier_id" class="form-label">Supplier</label>
+                                                <select class="form-control" id="supplier_id" name="supplier_id">
+                                                    <option value="">Select Supplier</option>
+                                                    {% for supplier in suppliers %}
+                                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="specifications" class="form-label">Specifications</label>
+                                            <textarea class="form-control" id="specifications" name="specifications" rows="2" 
+                                                      placeholder="e.g., 4GB RAM, 64GB Storage, 6.5 inch display"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Pricing Section -->
+                                <div class="card border-success mb-3">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Pricing Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-2 mb-3">
+                                                <label for="buying_price" class="form-label">Buying Price (KES)</label>
+                                                <input type="number" step="0.01" class="form-control" id="buying_price" name="buying_price" 
+                                                       placeholder="0.00">
+                                            </div>
+                                            <div class="col-md-2 mb-3">
+                                                <label for="selling_price" class="form-label">Selling Price (KES) *</label>
+                                                <input type="number" step="0.01" class="form-control" id="selling_price" name="selling_price" 
+                                                       required placeholder="0.00">
+                                            </div>
+                                            <div class="col-md-2 mb-3">
+                                                <label for="best_price" class="form-label">Best/Retail Price (KES)</label>
+                                                <input type="number" step="0.01" class="form-control" id="best_price" name="best_price" 
+                                                       placeholder="0.00">
+                                            </div>
+                                            <div class="col-md-2 mb-3">
+                                                <label for="reorder_level" class="form-label">Reorder Devices Level</label>
+                                                <input type="number" class="form-control" id="reorder_level" name="reorder_level" 
+                                                       value="5">
+                                            </div>
+                                            <div class="col-md-2 mb-3">
+                                                <label for="warranty_months" class="form-label">Warranty (Months)</label>
+                                                <input type="number" class="form-control" id="warranty_months" name="warranty_months" 
+                                                       value="12">
+                                            </div>                                         
+                                        </div>
+                                        
+                                        <div class="row">
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- RIGHT SECTION: Identifiers Textarea -->
+                            <div class="col-md-6">
+                                <div class="card border-warning mb-3">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h5 class="mb-0"><i class="fas fa-qrcode"></i> Device Identifiers</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i> 
+                                            Enter one IMEI or Serial Number per line. Each line will create a separate unit.
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="imei_textarea" class="form-label fw-bold">IMEI/Serial Numbers *</label>
+                                            <textarea class="form-control font-monospace" id="imei_textarea" name="imei_textarea" rows="15" 
+                                                      placeholder="356123456789001
+356123456789002
+356123456789003
+SN001
+SN002"
+                                                      required></textarea>
+                                            <small class="text-muted mt-2 d-block">
+                                                <i class="fas fa-info-circle"></i> 
+                                                Enter each IMEI or Serial number on a new line.
+                                                <br>• IMEI numbers should be 15 digits
+                                                <br>• Serial numbers can be alphanumeric
+                                                <br>• <span id="lineCount" class="badge bg-info">0</span> units will be created
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <button type="button" class="btn btn-outline-success btn-sm w-100" id="validateBtn">
+                                                    <i class="fas fa-check-circle"></i> Validate Numbers
+                                                </button>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <button type="button" class="btn btn-outline-danger btn-sm w-100" id="clearBtn">
+                                                    <i class="fas fa-trash"></i> Clear All
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card border-warning mb-3">
+                                    <div class="text-center mt-4">
+                                        <button type="submit" class="btn btn-success btn-lg px-5">
+                                            <i class="fas fa-save"></i> Save Product & Units
+                                        </button>
+                                        <a href="{% url 'tronic_master:product_list' %}" class="btn btn-secondary btn-lg px-5">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </a>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateCounts() {
+        const textarea = document.getElementById('imei_textarea');
+        const lines = textarea.value.split('\n').filter(line => line.trim().length > 0);
+        const count = lines.length;
+        document.getElementById('lineCount').innerText = count;
+    }
+    
+    function validateIdentifiers() {
+        const textarea = document.getElementById('imei_textarea');
+        const lines = textarea.value.split('\n').filter(line => line.trim().length > 0);
+        let validCount = 0;
+        let invalidCount = 0;
+        let invalidList = [];
+        
+        lines.forEach(line => {
+            const identifier = line.trim();
+            if (/^\d{15}$/.test(identifier)) {
+                validCount++;
+            } else if (/^[A-Za-z0-9]+$/.test(identifier) && identifier.length >= 4) {
+                validCount++;
+            } else {
+                invalidCount++;
+                invalidList.push(identifier);
+            }
+        });
+        
+        if (invalidCount > 0) {
+            alert(`⚠️ Found ${invalidCount} invalid identifier(s):\n${invalidList.slice(0, 5).join('\n')}`);
+        } else if (validCount > 0) {
+            alert(`✅ All ${validCount} identifier(s) are valid!`);
+        } else {
+            alert('No identifiers entered.');
+        }
+    }
+    
+    function clearTextarea() {
+        if (confirm('Clear all identifiers?')) {
+            document.getElementById('imei_textarea').value = '';
+            updateCounts();
+        }
+    }
+    
+    document.getElementById('imei_textarea').addEventListener('input', updateCounts);
+    document.getElementById('validateBtn').addEventListener('click', validateIdentifiers);
+    document.getElementById('clearBtn').addEventListener('click', clearTextarea);
+    
+    updateCounts();
+</script>
+
+<style>
+    .font-monospace {
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}

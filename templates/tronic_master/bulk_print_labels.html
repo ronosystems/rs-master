@@ -1,0 +1,666 @@
+<!-- templates/tronic_master/inventory/bulk_print_labels.html -->
+{% extends 'tronic_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Bulk Print Barcode Labels{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <h5 class="mb-0">
+                    <i class="fas fa-print text-primary me-2"></i> Bulk Print Barcode Labels
+                </h5>
+                <div class="mt-2 mt-sm-0">
+                    <span class="badge bg-info me-2" id="totalCount">Total: <span id="totalItemsCount">0</span> items</span>
+                    <button type="button" id="selectAllBtn" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-check-square me-1"></i> Select All
+                    </button>
+                    <button type="button" id="deselectAllBtn" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-square me-1"></i> Deselect All
+                    </button>
+                    <button type="button" id="printSelectedBtn" class="btn btn-primary btn-sm">
+                        <i class="fas fa-print me-1"></i> Print Selected (<span id="selectedCount">0</span>)
+                    </button>
+                    <a href="{% url 'tronic_master:barcode_labels_list' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="barcodeTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="masterCheckbox" style="width: 16px; height: 16px;">
+                            </th>
+                            <th style="width: 15%;">PRODUCT</th>
+                            <th style="width: 15%;">IDENTIFIER</th>
+                            <th style="width: 12%;">BRAND / MODEL</th>
+                            <th style="width: 10%;">CATEGORY</th>
+                            <th style="width: 8%;">TYPE</th>
+                            <th style="width: 15%;">BARCODE PREVIEW</th>
+                            <th style="width: 10%;">PRICE</th>
+                            <th style="width: 5%;">STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="barcodeTableBody">
+                        {% for item in items %}
+                        <tr id="item-row-{{ item.id }}">
+                            <td class="text-center">
+                                <input type="checkbox" class="item-checkbox" 
+                                       data-item-id="{{ item.id }}"
+                                       data-item-type="{{ item.type }}"
+                                       data-item-name="{{ item.name }}"
+                                       data-item-identifier="{{ item.identifier }}"
+                                       data-item-brand="{{ item.brand|default:'' }}"
+                                       data-item-model="{{ item.model|default:'' }}"
+                                       data-item-price="{{ item.price }}"
+                                       data-item-category="{{ item.category|default:'' }}"
+                                       data-item-is-single="{{ item.is_single|yesno:'true,false' }}"
+                                       style="width: 16px; height: 16px;">
+                            </td>
+                            <td class="fw-semibold">
+                                <i class="fas {% if item.is_single %}fa-microchip text-primary{% else %}fa-box text-secondary{% endif %} me-2"></i>
+                                {{ item.name|truncatechars:30 }}
+                            </td>
+                            <td>
+                                <code class="bg-light px-2 py-1 rounded" style="font-size: 0.8rem;">
+                                    {{ item.identifier }}
+                                </code>
+                            </td>
+                            <td>
+                                <strong>{{ item.brand|default:"—" }}</strong><br>
+                                <small class="text-muted">{{ item.model|default:"—" }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ item.category|default:"Uncategorized" }}</span>
+                            </td>
+                            <td>
+                                {% if item.is_single %}
+                                <span class="badge bg-purple text-white">Single</span>
+                                {% else %}
+                                <span class="badge bg-info text-white">Bulk</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div id="barcode-preview-{{ item.id }}" class="barcode-preview" 
+                                     data-barcode="{{ item.identifier }}" 
+                                     style="min-width: 100px; max-width: 120px;">
+                                    <div style="width: 100px; height: 35px;"></div>
+                                </div>
+                            </td>
+                            <td class="text-nowrap text-success fw-bold">
+                                KES {{ item.price|floatformat:2 }}
+                            </td>
+                            <td>
+                                {% if item.is_single %}
+                                    <span class="badge bg-success" style="font-size: 10px;">Available</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark" style="font-size: 10px;">Bulk</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
+                                <p>No items found</p>
+                                <a href="{% url 'tronic_master:add_product_selection' %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus me-1"></i> Add Product
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Modal -->
+<div class="modal fade" id="printModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-print me-2"></i> Bulk Print Barcode Labels
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="printContent" style="background: white;">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Generating barcode labels...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="doPrintBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .barcode-preview {
+        min-width: 100px;
+        max-width: 120px;
+        min-height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .barcode-preview canvas {
+        width: 100px !important;
+        height: auto !important;
+        max-height: 35px;
+    }
+    .table th, .table td {
+        vertical-align: middle;
+        padding: 8px 6px;
+        font-size: 0.85rem;
+    }
+    
+    /* Label styles for print */
+    .label-container {
+        display: inline-block;
+        width: 250px;
+        margin: 8px;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        text-align: center;
+        background: white;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .label-container .product-name {
+        font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 3px;
+        color: #2c3e50;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .label-container .product-identifier {
+        font-size: 9px;
+        font-family: monospace;
+        color: #0d6efd;
+        margin-bottom: 3px;
+        background: #e3f2fd;
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    .label-container .product-brand-model {
+        font-size: 9px;
+        color: #666;
+        margin-bottom: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .label-container .product-specs {
+        font-size: 8px;
+        color: #888;
+        margin-bottom: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .label-container .price {
+        font-size: 11px;
+        font-weight: bold;
+        color: green;
+        margin-top: 3px;
+    }
+    .label-container .barcode-img {
+        margin: 5px 0;
+    }
+    .label-container .barcode-img canvas {
+        width: 200px !important;
+        height: auto !important;
+        max-height: 40px;
+    }
+    .label-container .barcode-img svg {
+        width: 200px;
+        height: auto;
+        max-height: 40px;
+    }
+    .label-container .sku {
+        font-size: 8px;
+        color: #999;
+        margin-top: 4px;
+    }
+    .label-container .type-badge {
+        font-size: 7px;
+        padding: 1px 6px;
+        border-radius: 10px;
+        display: inline-block;
+        margin-top: 2px;
+    }
+    .label-container .type-badge.single {
+        background: #6f42c1;
+        color: white;
+    }
+    .label-container .type-badge.bulk {
+        background: #17a2b8;
+        color: white;
+    }
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+    
+    @media print {
+        .navbar, .card-header, .modal-footer, #selectAllBtn, #deselectAllBtn, #printSelectedBtn, .btn-close, .btn-secondary, .pagination {
+            display: none !important;
+        }
+        .modal {
+            position: absolute;
+            left: 0;
+            top: 0;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+        }
+        .modal-dialog {
+            margin: 0;
+            width: 100%;
+            max-width: 100%;
+        }
+        .modal-content {
+            border: none;
+            box-shadow: none;
+        }
+        .modal-body {
+            padding: 10px;
+        }
+        .label-container {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+    }
+</style>
+
+<script>
+    // Store all items data
+    let allItems = [];
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Collect all items data
+        document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+            allItems.push({
+                id: checkbox.getAttribute('data-item-id'),
+                type: checkbox.getAttribute('data-item-type'),
+                name: checkbox.getAttribute('data-item-name'),
+                identifier: checkbox.getAttribute('data-item-identifier'),
+                brand: checkbox.getAttribute('data-item-brand'),
+                model: checkbox.getAttribute('data-item-model'),
+                price: checkbox.getAttribute('data-item-price'),
+                category: checkbox.getAttribute('data-item-category'),
+                is_single: checkbox.getAttribute('data-item-is-single') === 'true'
+            });
+        });
+        
+        // Update total count
+        document.getElementById('totalItemsCount').textContent = allItems.length;
+        
+        generateBarcodes();
+        updateSelectedCount();
+    });
+    
+    function generateBarcodes() {
+        const barcodeDivs = document.querySelectorAll('.barcode-preview');
+        
+        barcodeDivs.forEach(div => {
+            const barcodeValue = div.getAttribute('data-barcode');
+            if (barcodeValue && barcodeValue !== 'None' && barcodeValue !== '') {
+                try {
+                    div.innerHTML = '';
+                    const canvas = document.createElement('canvas');
+                    div.appendChild(canvas);
+                    JsBarcode(canvas, barcodeValue, {
+                        format: "CODE128",
+                        width: 1.2,
+                        height: 30,
+                        displayValue: true,
+                        fontSize: 8,
+                        margin: 2,
+                        textMargin: 1
+                    });
+                } catch(e) {
+                    console.error('Barcode error:', e);
+                    div.innerHTML = '<span class="text-muted small" style="font-size: 9px;">Error</span>';
+                }
+            } else {
+                div.innerHTML = '<span class="text-muted small" style="font-size: 9px;">No barcode</span>';
+            }
+        });
+    }
+    
+    // Master checkbox functionality
+    const masterCheckbox = document.getElementById('masterCheckbox');
+    
+    function updateMasterCheckbox() {
+        if (!masterCheckbox) return;
+        const allCheckboxes = document.querySelectorAll('.item-checkbox');
+        const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+        const someChecked = Array.from(allCheckboxes).some(cb => cb.checked);
+        masterCheckbox.checked = allChecked;
+        masterCheckbox.indeterminate = someChecked && !allChecked;
+    }
+    
+    if (masterCheckbox) {
+        masterCheckbox.addEventListener('change', function() {
+            const allCheckboxes = document.querySelectorAll('.item-checkbox');
+            allCheckboxes.forEach(checkbox => {
+                checkbox.checked = masterCheckbox.checked;
+            });
+            updateSelectedCount();
+        });
+    }
+    
+    function attachCheckboxEvents() {
+        const allCheckboxes = document.querySelectorAll('.item-checkbox');
+        allCheckboxes.forEach(checkbox => {
+            checkbox.removeEventListener('change', handleCheckboxChange);
+            checkbox.addEventListener('change', handleCheckboxChange);
+        });
+    }
+    
+    function handleCheckboxChange() {
+        updateSelectedCount();
+        updateMasterCheckbox();
+    }
+    
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('.item-checkbox:checked');
+        const selectedCount = document.getElementById('selectedCount');
+        if (selectedCount) {
+            selectedCount.innerText = selected.length;
+        }
+    }
+    
+    attachCheckboxEvents();
+    
+    // Select All button
+    document.getElementById('selectAllBtn')?.addEventListener('click', function() {
+        const allCheckboxes = document.querySelectorAll('.item-checkbox');
+        allCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        if (masterCheckbox) masterCheckbox.checked = true;
+        updateSelectedCount();
+    });
+    
+    // Deselect All button
+    document.getElementById('deselectAllBtn')?.addEventListener('click', function() {
+        const allCheckboxes = document.querySelectorAll('.item-checkbox');
+        allCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        if (masterCheckbox) masterCheckbox.checked = false;
+        updateSelectedCount();
+    });
+    
+    // Print Selected button
+    document.getElementById('printSelectedBtn')?.addEventListener('click', function() {
+        const selected = document.querySelectorAll('.item-checkbox:checked');
+        
+        if (selected.length === 0) {
+            Swal.fire({
+                title: 'No Selection',
+                text: 'Please select at least one item to print',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+        
+        // Collect selected item data
+        const selectedItems = [];
+        selected.forEach(checkbox => {
+            selectedItems.push({
+                id: checkbox.getAttribute('data-item-id'),
+                type: checkbox.getAttribute('data-item-type'),
+                name: checkbox.getAttribute('data-item-name'),
+                identifier: checkbox.getAttribute('data-item-identifier'),
+                brand: checkbox.getAttribute('data-item-brand'),
+                model: checkbox.getAttribute('data-item-model'),
+                price: checkbox.getAttribute('data-item-price'),
+                category: checkbox.getAttribute('data-item-category'),
+                is_single: checkbox.getAttribute('data-item-is-single') === 'true'
+            });
+        });
+        
+        generatePrintContent(selectedItems);
+    });
+    
+    function generatePrintContent(items) {
+        const printContent = document.getElementById('printContent');
+        
+        let html = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h3>Product Barcode Labels</h3>
+                <p style="font-size: 11px;">Generated on: ${new Date().toLocaleString()} | Total Labels: ${items.length}</p>
+                <hr>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+        `;
+        
+        items.forEach((item, index) => {
+            const cleanName = item.name.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+            
+            const typeLabel = item.is_single ? 'Single' : 'Bulk';
+            const typeClass = item.is_single ? 'single' : 'bulk';
+            
+            html += `
+                <div class="label-container" id="label-${index}">
+                    <div class="product-name" title="${cleanName}">${cleanName.substring(0, 28)}${cleanName.length > 28 ? '...' : ''}</div>
+                    <div class="product-identifier">${item.identifier}</div>
+                    <div class="product-brand-model">${item.brand || '—'} | ${item.model || '—'}</div>
+                    <div class="barcode-img" id="print-barcode-${item.id}"></div>
+                    <div class="price">KES ${parseFloat(item.price).toLocaleString()}</div>
+                    <div style="display: flex; justify-content: center; gap: 8px; margin-top: 4px;">
+                        <span class="type-badge ${typeClass}">${typeLabel}</span>
+                        <span style="font-size: 7px; color: #999;">SKU: ${item.id.substring(0, 10)}</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+        
+        printContent.innerHTML = html;
+        
+        // Generate barcodes for print
+        items.forEach(item => {
+            const barcodeContainer = document.getElementById(`print-barcode-${item.id}`);
+            if (barcodeContainer) {
+                const barcodeValue = item.identifier;
+                if (barcodeValue && barcodeValue !== 'None' && barcodeValue !== '') {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        barcodeContainer.appendChild(canvas);
+                        JsBarcode(canvas, barcodeValue.toString(), {
+                            format: "CODE128",
+                            width: 1.5,
+                            height: 35,
+                            displayValue: true,
+                            fontSize: 9,
+                            margin: 3,
+                            textMargin: 2
+                        });
+                    } catch(e) {
+                        barcodeContainer.innerHTML = '<span class="text-muted" style="font-size: 9px;">Error</span>';
+                    }
+                } else {
+                    barcodeContainer.innerHTML = '<span class="text-muted" style="font-size: 9px;">No barcode</span>';
+                }
+            }
+        });
+        
+        // Show modal
+        const printModal = new bootstrap.Modal(document.getElementById('printModal'));
+        printModal.show();
+    }
+    
+    // Print button in modal
+    document.getElementById('doPrintBtn')?.addEventListener('click', function() {
+        const printContents = document.getElementById('printContent').innerHTML;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Print Barcode Labels</title>
+                <meta charset="utf-8">
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 10px;
+                    }
+                    .label-container {
+                        display: inline-block;
+                        width: 230px;
+                        margin: 6px;
+                        padding: 6px;
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        text-align: center;
+                        background: white;
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                    }
+                    .label-container .product-name {
+                        font-size: 11px;
+                        font-weight: bold;
+                        margin-bottom: 2px;
+                        color: #2c3e50;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .label-container .product-identifier {
+                        font-size: 9px;
+                        font-family: monospace;
+                        color: #0d6efd;
+                        margin-bottom: 2px;
+                        background: #e3f2fd;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        display: inline-block;
+                    }
+                    .label-container .product-brand-model {
+                        font-size: 8px;
+                        color: #666;
+                        margin-bottom: 2px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .label-container .price {
+                        font-size: 10px;
+                        font-weight: bold;
+                        color: green;
+                        margin-top: 2px;
+                    }
+                    .label-container .barcode-img {
+                        margin: 3px 0;
+                    }
+                    .label-container .barcode-img canvas {
+                        width: 180px !important;
+                        height: auto !important;
+                        max-height: 35px;
+                    }
+                    .label-container .type-badge {
+                        font-size: 7px;
+                        padding: 1px 6px;
+                        border-radius: 10px;
+                        display: inline-block;
+                        margin-top: 2px;
+                    }
+                    .label-container .type-badge.single {
+                        background: #6f42c1;
+                        color: white;
+                    }
+                    .label-container .type-badge.bulk {
+                        background: #17a2b8;
+                        color: white;
+                    }
+                    @media print {
+                        body {
+                            margin: 0;
+                            padding: 5px;
+                        }
+                        .label-container {
+                            page-break-inside: avoid;
+                            break-inside: avoid;
+                        }
+                    }
+                </style>
+                <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+            </head>
+            <body>
+                ${printContents}
+                <script>
+                    document.querySelectorAll('[id^="print-barcode-"]').forEach(function(container) {
+                        const itemId = container.id.replace('print-barcode-', '');
+                        const barcodeValue = itemId;
+                        if (barcodeValue) {
+                            try {
+                                const canvas = document.createElement('canvas');
+                                container.appendChild(canvas);
+                                JsBarcode(canvas, barcodeValue, {
+                                    format: "CODE128",
+                                    width: 1.5,
+                                    height: 35,
+                                    displayValue: true,
+                                    fontSize: 9,
+                                    margin: 3,
+                                    textMargin: 2
+                                });
+                            } catch(e) {
+                                container.innerHTML = '<span style="font-size: 9px;">Error</span>';
+                            }
+                        }
+                    });
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.print();
+                            setTimeout(function() { window.close(); }, 1000);
+                        }, 300);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    });
+</script>
+{% endblock %}

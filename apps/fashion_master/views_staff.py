@@ -13,7 +13,7 @@ import logging
 
 from apps.shared.users.models import User
 from apps.shared.permissions.models import UserRoleAssignment
-from apps.tech_master.models import Branch
+from apps.tronic_master.models import Branch
 
 from .models import FashionStaff, FashionStaffAttendance
 from apps.fashion_master.models import FashionRole
@@ -186,7 +186,7 @@ def staff_create(request):
         is_active=True
     ).order_by('name')
     
-    # Get branches through tech_master.Branch
+    # Get branches through tronic_master.Branch
     branches = Branch.objects.filter(tenant=tenant, is_active=True).order_by('name')
     
     if request.method == 'POST':
@@ -352,7 +352,7 @@ def staff_edit(request, staff_id):
             user_custom_role = role
             break
     
-    # Get branches through tech_master.Branch
+    # Get branches through tronic_master.Branch
     branches = Branch.objects.filter(tenant=tenant, is_active=True).order_by('name')
     
     if request.method == 'POST':

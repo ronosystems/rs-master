@@ -1,0 +1,258 @@
+<!-- templates/tronic_master/branch_stock_detail.html -->
+{% extends "tronic_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Branch Stock Detail{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-store text-primary me-2"></i>{{ branch.name }}
+            </h4>
+            <p class="text-muted mb-0">
+                Stock details for {{ branch.name }} 
+                <span class="badge bg-secondary ms-2">{{ branch.code }}</span>
+                {% if branch.is_main_branch %}
+                <span class="badge bg-primary">Main Branch</span>
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'tronic_master:transfer_stock' %}" class="btn btn-primary">
+                <i class="fas fa-exchange-alt me-2"></i>Transfer Stock
+            </a>
+            <a href="{% url 'tronic_master:branch_stock_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Items</h6>
+                            <h3 class="fw-bold mb-0">{{ total_items|default:0 }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-box text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Bulk Items</h6>
+                            <h3 class="fw-bold mb-0 text-success">{{ bulk_count|default:0 }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-3">
+                            <i class="fas fa-archive text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Single Items</h6>
+                            <h3 class="fw-bold mb-0 text-info">{{ single_count|default:0 }}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded p-3">
+                            <i class="fas fa-microchip text-info fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Value</h6>
+                            <h3 class="fw-bold mb-0 text-warning">
+                                KES {{ total_value|floatformat:0 }}
+                            </h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded p-3">
+                            <i class="fas fa-money-bill-wave text-warning fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Branch Info -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-map-pin text-primary me-2"></i>
+                        <div>
+                            <div class="small text-muted">Address</div>
+                            <div>{{ branch.address|default:"Not set" }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-phone text-primary me-2"></i>
+                        <div>
+                            <div class="small text-muted">Phone</div>
+                            <div>{{ branch.phone|default:"Not set" }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-envelope text-primary me-2"></i>
+                        <div>
+                            <div class="small text-muted">Email</div>
+                            <div>{{ branch.email|default:"Not set" }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user text-primary me-2"></i>
+                        <div>
+                            <div class="small text-muted">Manager</div>
+                            <div>{{ branch.manager_name|default:"Not assigned" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-boxes me-2"></i>Stock Items
+                    <span class="badge bg-secondary ms-2">{{ all_items|length }}</span>
+                </h6>
+                <div>
+                    <span class="badge bg-success me-1">Bulk: {{ bulk_count|default:0 }}</span>
+                    <span class="badge bg-info me-1">Single: {{ single_count|default:0 }}</span>
+                    <span class="badge bg-warning text-dark">Total Value: KES {{ total_value|floatformat:0 }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Type</th>
+                            <th>SKU</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Identifier</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in all_items %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                {% if item.type == 'bulk' %}
+                                <span class="badge bg-success">Bulk</span>
+                                {% else %}
+                                <span class="badge bg-info">Single</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ item.product.sku_code }}</span>
+                            </td>
+                            <td>
+                                <div>
+                                    <div class="fw-semibold">{{ item.product.name }}</div>
+                                    <small class="text-muted">{{ item.product.brand }} {{ item.product.model }}</small>
+                                </div>
+                            </td>
+                            <td>{{ item.category|default:"-" }}</td>
+                            <td>
+                                {% if item.type == 'single' %}
+                                <span class="badge bg-warning text-dark">{{ item.identifier|default:"No ID" }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-bold 
+                                    {% if item.quantity == 0 %}text-danger
+                                    {% elif item.quantity <= item.product.reorder_level %}text-warning
+                                    {% else %}text-success{% endif %}">
+                                    {{ item.quantity }}
+                                </span>
+                                {% if item.type == 'bulk' and item.quantity <= item.product.reorder_level and item.quantity > 0 %}
+                                <span class="badge bg-warning text-dark ms-1">Low</span>
+                                {% elif item.type == 'bulk' and item.quantity == 0 %}
+                                <span class="badge bg-danger ms-1">Out</span>
+                                {% endif %}
+                            </td>
+                            <td>KES {{ item.unit_price|floatformat:0 }}</td>
+                            <td>
+                                <span class="fw-bold">
+                                    KES {{ item.total_value|floatformat:0 }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4 text-muted">
+                                <i class="fas fa-box fa-3x d-block mb-3 opacity-50"></i>
+                                No stock items found for this branch.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="6" class="fw-bold text-end">Totals:</td>
+                            <td class="fw-bold">{{ total_quantity|default:0 }}</td>
+                            <td></td>
+                            <td class="fw-bold">KES {{ total_value|floatformat:0 }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Total Items: <span class="fw-bold">{{ all_items|length }}</span>
+                    | Bulk: <span class="fw-bold">{{ bulk_count|default:0 }}</span>
+                    | Single: <span class="fw-bold">{{ single_count|default:0 }}</span>
+                    | Total Value: <span class="fw-bold">KES {{ total_value|floatformat:0 }}</span>
+                </div>
+                <div>
+                    <a href="{% url 'tronic_master:transfer_stock' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-exchange-alt me-1"></i>Transfer Stock
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

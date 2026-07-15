@@ -9,9 +9,9 @@ from django.utils import timezone
 import json
 from decimal import Decimal
 
-from apps.tech_master.models import Product, ProductUnit
+from apps.tronic_master.models import Product, ProductUnit
 from apps.shared.customers.models import Customer
-from apps.tech_master.models import Sale, SaleItem
+from apps.tronic_master.models import Sale, SaleItem
 
 
 # ============================================

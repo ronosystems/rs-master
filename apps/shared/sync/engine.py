@@ -223,10 +223,10 @@ def save_remote_record(record):
         
         # Try common app names
         app_names = [
-            'tech_master.inventory',
-            'tech_master.sales',
-            'tech_master.cashier',
-            'tech_master.expenses',
+            'tronic_master.inventory',
+            'tronic_master.sales',
+            'tronic_master.cashier',
+            'tronic_master.expenses',
             'shared.tenants',
             'shared.users'
         ]

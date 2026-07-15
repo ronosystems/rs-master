@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
             name='ProjectRole',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('project_type', models.CharField(choices=[('tech_master', 'Tech Master'), ('food_master', 'Food Master'), ('hotel_master', 'Hotel Master'), ('retail_master', 'Retail Master'), ('health_master', 'Health Master'), ('fashion_master', 'Fashion Master'), ('rental_master', 'Rental_Master')], default='tech_master', max_length=20)),
+                ('project_type', models.CharField(choices=[('tronic_master', 'Tech Master'), ('food_master', 'Food Master'), ('hotel_master', 'Hotel Master'), ('retail_master', 'Retail Master'), ('health_master', 'Health Master'), ('fashion_master', 'Fashion Master'), ('rental_master', 'Rental_Master')], default='tronic_master', max_length=20)),
                 ('name', models.CharField(max_length=100)),
                 ('description', models.TextField(blank=True)),
                 ('permissions', models.JSONField(default=list, help_text='List of permission codenames')),

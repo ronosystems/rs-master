@@ -18,7 +18,7 @@ class Command(BaseCommand):
         
         # Try to import models - some may not exist yet
         try:
-            from apps.tech_master.inventory.models import Category
+            from apps.tronic_master.inventory.models import Category
             categories = Category.objects.filter(tenant=tenant)
             for category in categories:
                 OfflineCache.objects.create(
@@ -37,7 +37,7 @@ class Command(BaseCommand):
             self.stdout.write('⚠️  Category model not found - skipping')
         
         try:
-            from apps.tech_master.inventory.models import Product
+            from apps.tronic_master.inventory.models import Product
             products = Product.objects.filter(tenant=tenant)
             for product in products:
                 OfflineCache.objects.create(
@@ -59,7 +59,7 @@ class Command(BaseCommand):
             self.stdout.write('⚠️  Product model not found - skipping')
         
         try:
-            from apps.tech_master.inventory.models import Branch
+            from apps.tronic_master.inventory.models import Branch
             branches = Branch.objects.filter(tenant=tenant)
             for branch in branches:
                 OfflineCache.objects.create(

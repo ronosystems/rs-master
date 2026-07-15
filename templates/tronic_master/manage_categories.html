@@ -1,0 +1,291 @@
+<!-- templates/tronic_master/manage_categories.html -->
+{% extends "tronic_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Manage Categories{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-tags text-primary me-2"></i>Manage Categories
+            </h4>
+            <p class="text-muted mb-0">Manage all product categories with bulk actions</p>
+        </div>
+        <div>
+            <a href="{% url 'tronic_master:add_category' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add Category
+            </a>
+            <a href="{% url 'tronic_master:category_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Categories
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Categories</h6>
+                            <h3 class="fw-bold mb-0">{{ categories|length }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-tags text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Active Categories</h6>
+                            <h3 class="fw-bold mb-0 text-success">{{ active_count|default:0 }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-3">
+                            <i class="fas fa-check-circle text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Products</h6>
+                            <h3 class="fw-bold mb-0">{{ total_products|default:0 }}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded p-3">
+                            <i class="fas fa-box text-info fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Form -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <form method="post" id="bulkActionForm">
+                {% csrf_token %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="40">
+                                    <input type="checkbox" id="selectAll" class="form-check-input">
+                                </th>
+                                <th>#</th>
+                                <th>Category Name</th>
+                                <th>Category Code</th>
+                                <th>Item Type</th>
+                                <th>Identifier Type</th>
+                                <th>Products</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in categories %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="category_ids" value="{{ category.id }}" 
+                                           class="form-check-input category-checkbox">
+                                </td>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <div class="fw-semibold">{{ category.name }}</div>
+                                    <small class="text-muted">ID: {{ category.id }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ category.category_code|default:"-" }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge 
+                                        {% if category.item_type == 'single' %}bg-primary
+                                        {% else %}bg-success{% endif %}">
+                                        {{ category.get_item_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        {{ category.get_identifier_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ category.product_count|default:0 }}</span>
+                                </td>
+                                <td>
+                                    {% if category.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'tronic_master:edit_category' category.id %}" 
+                                           class="btn btn-outline-secondary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-outline-danger" 
+                                                onclick="confirmDelete('{{ category.id }}', '{{ category.name }}', {{ category.product_count|default:0 }} > 0)"
+                                                title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    <i class="fas fa-tags fa-3x d-block mb-3 opacity-50"></i>
+                                    No categories found.
+                                    <br>
+                                    <a href="{% url 'tronic_master:add_category' %}" class="btn btn-sm btn-primary mt-2">
+                                        <i class="fas fa-plus me-1"></i>Add Category
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bulk Actions -->
+                {% if categories %}
+                <div class="p-3 bg-light border-top">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-auto">
+                            <span class="fw-semibold">Bulk Actions:</span>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="action" class="form-select form-select-sm" id="bulkAction">
+                                <option value="">Select Action</option>
+                                <option value="activate">Activate</option>
+                                <option value="deactivate">Deactivate</option>
+                                <option value="delete">Delete</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-sm btn-primary" onclick="return confirmBulkAction()">
+                                <i class="fas fa-check me-1"></i>Apply
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto">
+                            <small class="text-muted">
+                                <span id="selectedCount">0</span> categories selected
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Showing <span class="fw-bold">{{ categories|length }}</span> categories
+                </div>
+                <div>
+                    <a href="{% url 'tronic_master:category_list' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-list me-1"></i>View All Categories
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteCategoryName"></strong>?</p>
+                <p class="text-danger small">This action cannot be undone.</p>
+                <div id="deleteWarning" class="alert alert-warning d-none">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    This category has products associated with it. You cannot delete it until the products are reassigned or removed.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.category-checkbox');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateSelectedCount();
+    });
+    
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+    
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.category-checkbox:checked').length;
+        selectedCount.textContent = checked;
+    }
+});
+
+function confirmDelete(categoryId, categoryName, hasProducts) {
+    document.getElementById('deleteCategoryName').textContent = categoryName;
+    document.getElementById('deleteForm').action = `/tronic/categories/${categoryId}/delete/`;
+    
+    if (hasProducts) {
+        document.getElementById('deleteWarning').classList.remove('d-none');
+    } else {
+        document.getElementById('deleteWarning').classList.add('d-none');
+    }
+    
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function confirmBulkAction() {
+    const action = document.getElementById('bulkAction').value;
+    const checked = document.querySelectorAll('.category-checkbox:checked').length;
+    
+    if (!action) {
+        alert('Please select an action.');
+        return false;
+    }
+    
+    if (checked === 0) {
+        alert('Please select at least one category.');
+        return false;
+    }
+    
+    if (action === 'delete') {
+        return confirm(`Are you sure you want to delete ${checked} category(s)? This action cannot be undone.`);
+    }
+    
+    return confirm(`Are you sure you want to ${action} ${checked} category(s)?`);
+}
+</script>
+{% endblock %}

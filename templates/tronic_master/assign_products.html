@@ -1,0 +1,443 @@
+<!-- templates/tronic_master/assign_products.html -->
+{% extends "tronic_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Assign Products to Agent{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-user-plus text-primary me-2"></i>Assign Products to Agent
+            </h4>
+            <p class="text-muted mb-0">Assign product units to sales agents</p>
+        </div>
+        <div>
+            <a href="{% url 'tronic_master:move_product_ownership' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Available Products</h6>
+                            <h3 class="fw-bold mb-0">{{ products|length }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-3">
+                            <i class="fas fa-box text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Sales Agents</h6>
+                            <h3 class="fw-bold mb-0">{{ sales_agents|length }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-3">
+                            <i class="fas fa-users text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Unassigned Units</h6>
+                            <h3 class="fw-bold mb-0">{{ products|length }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded p-3">
+                            <i class="fas fa-user-slash text-warning fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="fas fa-list me-2"></i>Available Products
+                        </h6>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <!-- Product Search -->
+                            <div class="input-group input-group-sm" style="max-width: 250px;">
+                                <span class="input-group-text bg-white">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" id="productSearch" class="form-control" 
+                                       placeholder="Search products...">
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllBtn">
+                                <i class="fas fa-check-double me-1"></i>Select All
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllBtn">
+                                <i class="fas fa-times me-1"></i>Deselect All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <form method="post" id="assignForm">
+                        {% csrf_token %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="productTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAll" class="form-check-input">
+                                        </th>
+                                        <th>Product</th>
+                                        <th>SKU</th>
+                                        <th>Brand</th>
+                                        <th>Identifier</th>
+                                        <th>Price (KES)</th>
+                                        <th>Branch</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in products %}
+                                    <tr class="product-row">
+                                        <td>
+                                            <input type="checkbox" name="product_ids" value="{{ product.id }}" 
+                                                   class="form-check-input product-checkbox">
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold product-name">{{ product.name }}</div>
+                                            <small class="text-muted product-model">{{ product.model|default:"" }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary product-sku">{{ product.sku }}</span>
+                                        </td>
+                                        <td class="product-brand">{{ product.brand|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge bg-info product-identifier">{{ product.imei|default:product.serial|default:"No ID" }}</span>
+                                        </td>
+                                        <td class="fw-bold product-price">{{ product.selling_price|floatformat:0 }}</td>
+                                        <td class="product-branch">{{ product.branch_name|default:"Main Shop" }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <i class="fas fa-box fa-3x d-block mb-3 opacity-50"></i>
+                                            No available products to assign.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment Panel -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="fas fa-user-check me-2"></i>Assign to Agent
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Agent Search -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Sales Agent <span class="text-danger">*</span></label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-white">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="agentSearch" class="form-control" 
+                                   placeholder="Search agent by name...">
+                        </div>
+                        <select name="agent_id" class="form-select" form="assignForm" required id="agentSelect" size="5">
+                            <option value="">Select Agent</option>
+                            {% for agent in sales_agents %}
+                            <option value="{{ agent.id }}" class="agent-option" 
+                                    data-name="{{ agent.get_full_name|default:agent.username|lower }}"
+                                    data-username="{{ agent.username|lower }}">
+                                {{ agent.get_full_name|default:agent.username }}
+                                ({{ agent.username }})
+                                {% if agent.role %}
+                                - {{ agent.get_role_display|default:agent.role|title }}
+                                {% endif %}
+                            </option>
+                            {% empty %}
+                            <option value="">No agents available</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Choose the sales agent to assign products to</small>
+                    </div>
+
+                    <!-- Check if no agents found -->
+                    {% if not sales_agents %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>No agents found!</strong>
+                        <p class="mb-0 small">Please create users with role "user" or assign custom roles to users.</p>
+                        <a href="{% url 'tronic_master:staff_create' %}" class="btn btn-sm btn-primary mt-2">
+                            <i class="fas fa-user-plus me-1"></i>Create User
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Selected Products</label>
+                        <div class="bg-light rounded p-3" id="selectedCountDisplay">
+                            <span class="fw-bold" id="selectedCount">0</span> products selected
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" form="assignForm" id="assignBtn" 
+                                {% if not sales_agents %}disabled{% endif %}>
+                            <i class="fas fa-user-plus me-2"></i>Assign to Agent
+                        </button>
+                        <a href="{% url 'tronic_master:move_product_ownership' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="alert alert-info small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            <strong>Note:</strong> Products assigned to agents can only be sold by that agent.
+                            Unassigned products are available for anyone to sell.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.product-checkbox');
+    const selectedCount = document.getElementById('selectedCount');
+    const assignBtn = document.getElementById('assignBtn');
+    const agentSelect = document.getElementById('agentSelect');
+    const productSearch = document.getElementById('productSearch');
+    const agentSearch = document.getElementById('agentSearch');
+    const productRows = document.querySelectorAll('.product-row');
+    const agentOptions = document.querySelectorAll('.agent-option');
+    
+    // ============================================
+    // PRODUCT SEARCH
+    // ============================================
+    productSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        productRows.forEach(row => {
+            const name = row.querySelector('.product-name')?.textContent?.toLowerCase() || '';
+            const sku = row.querySelector('.product-sku')?.textContent?.toLowerCase() || '';
+            const brand = row.querySelector('.product-brand')?.textContent?.toLowerCase() || '';
+            const model = row.querySelector('.product-model')?.textContent?.toLowerCase() || '';
+            const identifier = row.querySelector('.product-identifier')?.textContent?.toLowerCase() || '';
+            const branch = row.querySelector('.product-branch')?.textContent?.toLowerCase() || '';
+            
+            const match = name.includes(searchTerm) || 
+                         sku.includes(searchTerm) || 
+                         brand.includes(searchTerm) || 
+                         model.includes(searchTerm) || 
+                         identifier.includes(searchTerm) ||
+                         branch.includes(searchTerm);
+            
+            row.style.display = match ? '' : 'none';
+        });
+        
+        updateSelectAllState();
+    });
+    
+    // ============================================
+    // AGENT SEARCH
+    // ============================================
+    agentSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        agentOptions.forEach(option => {
+            const name = option.getAttribute('data-name') || '';
+            const username = option.getAttribute('data-username') || '';
+            const text = option.textContent.toLowerCase();
+            
+            const match = name.includes(searchTerm) || 
+                         username.includes(searchTerm) || 
+                         text.includes(searchTerm);
+            
+            option.style.display = match ? '' : 'none';
+        });
+    });
+    
+    // ============================================
+    // SELECT ALL / DESELECT ALL
+    // ============================================
+    function updateSelectAllState() {
+        const visibleRows = document.querySelectorAll('.product-row:not([style*="display: none"])');
+        const visibleCheckboxes = [];
+        visibleRows.forEach(row => {
+            const cb = row.querySelector('.product-checkbox');
+            if (cb) visibleCheckboxes.push(cb);
+        });
+        
+        const checked = visibleCheckboxes.filter(cb => cb.checked).length;
+        const total = visibleCheckboxes.length;
+        
+        if (total === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (checked === total) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else if (checked > 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        }
+        
+        updateSelectedCount();
+    }
+    
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.product-checkbox:checked').length;
+        selectedCount.textContent = checked;
+        assignBtn.disabled = checked === 0 || !agentSelect.value;
+    }
+    
+    // Select All (master checkbox)
+    selectAll.addEventListener('change', function() {
+        const visibleRows = document.querySelectorAll('.product-row:not([style*="display: none"])');
+        visibleRows.forEach(row => {
+            const cb = row.querySelector('.product-checkbox');
+            if (cb) cb.checked = this.checked;
+        });
+        updateSelectedCount();
+    });
+    
+    // Individual checkboxes
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectAllState);
+    });
+    
+    // Select All button
+    document.getElementById('selectAllBtn').addEventListener('click', function() {
+        const visibleRows = document.querySelectorAll('.product-row:not([style*="display: none"])');
+        visibleRows.forEach(row => {
+            const cb = row.querySelector('.product-checkbox');
+            if (cb) cb.checked = true;
+        });
+        updateSelectAllState();
+    });
+    
+    // Deselect All button
+    document.getElementById('deselectAllBtn').addEventListener('click', function() {
+        const visibleRows = document.querySelectorAll('.product-row:not([style*="display: none"])');
+        visibleRows.forEach(row => {
+            const cb = row.querySelector('.product-checkbox');
+            if (cb) cb.checked = false;
+        });
+        updateSelectAllState();
+    });
+    
+    // Agent selection
+    agentSelect.addEventListener('change', function() {
+        updateSelectedCount();
+    });
+    
+    // ============================================
+    // FORM VALIDATION
+    // ============================================
+    document.getElementById('assignForm').addEventListener('submit', function(e) {
+        const checked = document.querySelectorAll('.product-checkbox:checked').length;
+        const agent = agentSelect.value;
+        
+        if (checked === 0) {
+            e.preventDefault();
+            alert('Please select at least one product to assign.');
+            return false;
+        }
+        
+        if (!agent) {
+            e.preventDefault();
+            alert('Please select a sales agent.');
+            agentSelect.focus();
+            return false;
+        }
+        
+        const agentName = agentSelect.options[agentSelect.selectedIndex].text;
+        const confirmMsg = `Are you sure you want to assign ${checked} product(s) to ${agentName}?`;
+        if (!confirm(confirmMsg)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+    // Initial update
+    updateSelectAllState();
+    
+    // Clear search on page load
+    productSearch.value = '';
+    agentSearch.value = '';
+});
+</script>
+
+<style>
+/* Make agent select scrollable and nice */
+#agentSelect {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#agentSelect option {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#agentSelect option:hover {
+    background-color: #e3f2fd;
+}
+
+.agent-option[style*="display: none"] {
+    display: none !important;
+}
+
+.product-row[style*="display: none"] {
+    display: none !important;
+}
+
+/* Search input styling */
+.input-group-sm .form-control {
+    font-size: 0.875rem;
+}
+
+#selectedCountDisplay {
+    min-height: 45px;
+    display: flex;
+    align-items: center;
+}
+</style>
+{% endblock %}

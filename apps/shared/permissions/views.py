@@ -39,7 +39,7 @@ def role_list(request):
             # Define which roles are valid for each project type
             # Map project types to their valid role codenames
             project_role_mapping = {
-                'TECH_MASTER': ['cashier', 'manager', 'sales_agent', 'viewer'],
+                'TRONIC_MASTER': ['cashier', 'manager', 'sales_agent', 'viewer'],
                 'HOTEL_MASTER': ['receptionist', 'hotel_manager', 'manager', 'viewer'],
                 'FOOD_MASTER': ['waiter', 'kitchen', 'chef', 'manager', 'viewer'],
                 'RETAIL_MASTER': ['retail_sales', 'manager', 'viewer'],
@@ -152,7 +152,7 @@ def role_create(request):
         
         # Define which models are relevant for each project type
         project_model_mapping = {
-            'TECH_MASTER': ['product', 'category', 'sale', 'saleitem', 'customer', 'supplier', 'branch', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
+            'TRONIC_MASTER': ['product', 'category', 'sale', 'saleitem', 'customer', 'supplier', 'branch', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
             'HOTEL_MASTER': ['room', 'booking', 'guest', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
             'FOOD_MASTER': ['product', 'sale', 'customer', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
             'RETAIL_MASTER': ['product', 'category', 'sale', 'customer', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
@@ -269,7 +269,7 @@ def role_edit(request, role_id):
         project_code = project_type.code.upper()
         
         project_model_mapping = {
-            'TECH_MASTER': ['product', 'category', 'sale', 'saleitem', 'customer', 'supplier', 'branch', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
+            'TRONIC_MASTER': ['product', 'category', 'sale', 'saleitem', 'customer', 'supplier', 'branch', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
             'HOTEL_MASTER': ['room', 'booking', 'guest', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
             'FOOD_MASTER': ['product', 'sale', 'customer', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
             'RETAIL_MASTER': ['product', 'category', 'sale', 'customer', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
@@ -573,7 +573,7 @@ def system_permissions(request):
         
         # Define which models are relevant for each project type
         project_model_mapping = {
-            'TECH_MASTER': ['product', 'category', 'sale', 'saleitem', 'customer', 'supplier', 'branch', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
+            'TRONIC_MASTER': ['product', 'category', 'sale', 'saleitem', 'customer', 'supplier', 'branch', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
             'HOTEL_MASTER': ['room', 'booking', 'guest', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
             'FOOD_MASTER': ['product', 'sale', 'customer', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],
             'RETAIL_MASTER': ['product', 'category', 'sale', 'customer', 'expense', 'user', 'role', 'settings', 'receiptsetting', 'paymentsetting', 'report'],

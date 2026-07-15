@@ -1,4 +1,4 @@
-# apps/tech_master/expenses/models.py
+# apps/tronic_master/expenses/models.py
 
 from django.db import models
 from django.conf import settings

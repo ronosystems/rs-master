@@ -1,0 +1,255 @@
+<!-- templates/tronic_master/sales/my_stock_sell.html -->
+{% extends 'tronic_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Sell Unit - {{ unit.imei_number|default:unit.serial_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>Sell Product Unit
+                    </h5>
+                    <small class="text-white-50">Complete the sale of this product unit</small>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'tronic_master:my_stock_sell' unit.id %}">
+                        {% csrf_token %}
+                        
+                        <!-- Product Summary Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-box me-2"></i>Product Summary</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td class="text-muted" style="width: 40%;">Product Name:</td>
+                                            <td><strong>{{ unit.product.name }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">SKU Code:</td>
+                                            <td><code>{{ unit.product.sku_code }}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Brand:</td>
+                                            <td>{{ unit.product.brand|default:"-" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Model:</td>
+                                            <td>{{ unit.product.model|default:"-" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td class="text-muted" style="width: 40%;">IMEI Number:</td>
+                                            <td><code class="bg-light p-1 rounded">{{ unit.imei_number|default:"-" }}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Serial Number:</td>
+                                            <td><code class="bg-light p-1 rounded">{{ unit.serial_number|default:"-" }}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Condition:</td>
+                                            <td>{{ unit.get_condition_display|default:"-" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Status:</td>
+                                            <td>
+                                                {% if unit.status == 'available' %}
+                                                <span class="badge bg-success">Available</span>
+                                                {% else %}
+                                                <span class="badge bg-warning">{{ unit.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Customer Details Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-user-circle me-2"></i>Customer Details</h6>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label class="form-label fw-semibold">Full Name *</label>
+                                    <input type="text" name="customer_name" id="customerName" class="form-control" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Phone Number *</label>
+                                    <input type="tel" name="customer_phone" id="customerPhone" class="form-control" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">ID Number</label>
+                                    <input type="text" name="customer_id_number" id="customerIdNumber" class="form-control" placeholder="ID / Passport">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Next of Kin Details Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-users me-2"></i>Next of Kin Details</h6>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label class="form-label fw-semibold">Full Name</label>
+                                    <input type="text" name="next_of_kin_name" id="nextOfKinName" class="form-control" placeholder="Next of kin full name">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Phone Number</label>
+                                    <input type="tel" name="next_of_kin_phone" id="nextOfKinPhone" class="form-control" placeholder="Next of kin phone">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Relationship</label>
+                                    <input type="text" name="next_of_kin_relationship" id="nextOfKinRelationship" class="form-control" placeholder="e.g., Spouse, Parent">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Product & Price Section -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-microchip me-2"></i>Product & Pricing</h6>
+                            
+                            <div class="row g-3">
+                                <!-- IMEI Display (Read-only) -->
+                                <div class="col-md-8">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-barcode me-1"></i>IMEI / Serial Number
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" 
+                                           value="{% if unit.imei_number %}{{ unit.imei_number }}{% else %}{{ unit.serial_number }}{% endif %}" 
+                                           readonly disabled>
+                                    <small class="text-muted">This unit's unique identifier</small>
+                                </div>
+                                
+                                <!-- Price Field (Editable) -->
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-tag me-1"></i>Selling Price (KES) *
+                                    </label>
+                                    <input type="number" name="selling_price" id="sellingPrice" class="form-control form-control-lg" 
+                                           value="{{ unit.unit_selling_price|default:unit.product.selling_price }}"
+                                           step="0.01" min="0" required>
+                                    <small class="text-muted">Default: KES {{ unit.unit_selling_price|default:unit.product.selling_price|floatformat:2 }}</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Selected Product Preview -->
+                            <div id="selectedProductInfo" class="mt-3">
+                                <div class="alert alert-success">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                        <div>
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            <strong>{{ unit.product.name }}</strong>
+                                            <div class="small text-muted mt-1">
+                                                <i class="fas fa-microchip me-1"></i>
+                                                Identifier: <code>{% if unit.imei_number %}{{ unit.imei_number }}{% else %}{{ unit.serial_number }}{% endif %}</code>
+                                            </div>
+                                        </div>
+                                        <div class="text-end mt-2 mt-sm-0">
+                                            <span class="fw-bold text-success fs-4" id="selectedProductPriceDisplay">KES {{ unit.unit_selling_price|default:unit.product.selling_price|floatformat:2 }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sale Type Section and Actions -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-credit-card me-2"></i>Sale Type</h6>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Payment Method *</label>
+                                    <select name="payment_method" id="paymentMethod" class="form-select form-select-lg" required>
+                                        <option value="credit" selected>Credit</option>
+                                        <option value="cash">Cash</option>
+                                        <option value="mpesa">M-Pesa</option>
+                                        <option value="card">Card</option>
+                                        <option value="bank">Bank Transfer</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">&nbsp;</label>
+                                    <button type="submit" class="btn btn-success btn-lg w-100" id="submitBtn" onclick="return confirm('Confirm sale of this unit?')">
+                                        <i class="fas fa-check-circle me-2"></i>Complete Sale
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">&nbsp;</label>
+                                    <a href="{% url 'tronic_master:my_stock' %}" class="btn btn-secondary btn-lg w-100">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-section {
+        background: var(--card-bg, #ffffff);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
+        border: 1px solid var(--sidebar-border, #e9ecef);
+    }
+    .form-section h6 {
+        color: #0f67b3;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--sidebar-border, #e9ecef);
+    }
+    
+    .btn-lg {
+        padding: 10px 16px;
+        font-size: 1rem;
+    }
+    
+    /* Dark mode support */
+    [data-bs-theme="dark"] .form-section {
+        background: #1a1a2e;
+        border-color: #2d2d44;
+    }
+    [data-bs-theme="dark"] .form-section h6 {
+        color: #e0e0e0;
+        border-color: #2d2d44;
+    }
+    
+    .table-borderless td {
+        padding: 4px 0;
+    }
+</style>
+
+<script>
+    // Update price display when selling price changes
+    const sellingPriceInput = document.getElementById('sellingPrice');
+    const priceDisplay = document.getElementById('selectedProductPriceDisplay');
+    
+    sellingPriceInput.addEventListener('input', function() {
+        const price = parseFloat(this.value) || 0;
+        priceDisplay.textContent = 'KES ' + price.toFixed(2);
+    });
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const price = sellingPriceInput.value.trim();
+        
+        if (!price || parseFloat(price) <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid selling price');
+            sellingPriceInput.focus();
+            return false;
+        }
+    });
+</script>
+{% endblock %}

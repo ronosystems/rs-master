@@ -8,7 +8,7 @@ from django.conf import settings
 # ============================================
 
 PROJECT_TEMPLATE_DIRS = {
-    'TECH_MASTER': 'tech_master',
+    'TRONIC_MASTER': 'tronic_master',
     'HOTEL_MASTER': 'hotel_master',
     'FOOD_MASTER': 'food_master',
     'RETAIL_MASTER': 'retail_master',
@@ -21,13 +21,13 @@ PROJECT_TEMPLATE_DIRS = {
 # ============================================
 
 PROJECT_ROLE_MAPPINGS = {
-    'TECH_MASTER': {
-        'cashier': 'tech_master:pos',
-        'sales_agent': 'tech_master:my_sales',
-        'manager': 'tech_master:dashboard',
-        'admin': 'tech_master:dashboard',
-        'tenant_admin': 'tech_master:dashboard',
-        'default': 'tech_master:dashboard',
+    'TRONIC_MASTER': {
+        'cashier': 'tronic_master:pos',
+        'sales_agent': 'tronic_master:my_sales',
+        'manager': 'tronic_master:dashboard',
+        'admin': 'tronic_master:dashboard',
+        'tenant_admin': 'tronic_master:dashboard',
+        'default': 'tronic_master:dashboard',
     },
     'HOTEL_MASTER': {
         'cashier': 'hotel_master:pos',
@@ -79,7 +79,7 @@ PROJECT_ROLE_MAPPINGS = {
 # ============================================
 
 PROJECT_DASHBOARDS = {
-    'TECH_MASTER': 'tech_master:dashboard',
+    'TRONIC_MASTER': 'tronic_master:dashboard',
     'HOTEL_MASTER': 'hotel_master:dashboard',
     'FOOD_MASTER': 'food_master:dashboard',
     'RETAIL_MASTER': 'retail_master:dashboard',
@@ -88,7 +88,7 @@ PROJECT_DASHBOARDS = {
 }
 
 PROJECT_NAMES = {
-    'TECH_MASTER': 'Tech Master',
+    'TRONIC_MASTER': 'Tech Master',
     'HOTEL_MASTER': 'Hotel Master',
     'FOOD_MASTER': 'Food Master',
     'RETAIL_MASTER': 'Retail Master',
@@ -97,7 +97,7 @@ PROJECT_NAMES = {
 }
 
 PROJECT_ICONS = {
-    'TECH_MASTER': 'fa-microchip',
+    'TRONIC_MASTER': 'fa-microchip',
     'HOTEL_MASTER': 'fa-hotel',
     'FOOD_MASTER': 'fa-utensils',
     'RETAIL_MASTER': 'fa-store',
@@ -114,12 +114,12 @@ def is_project_active(project_code):
 
 def get_project_template_dir(project_code):
     """Get the template directory for a project"""
-    return PROJECT_TEMPLATE_DIRS.get(project_code, 'tech_master')
+    return PROJECT_TEMPLATE_DIRS.get(project_code, 'tronic_master')
 
 
 def get_project_dashboard_url(project_code):
     """Get the dashboard URL for a project"""
-    return PROJECT_DASHBOARDS.get(project_code, 'tech_master:dashboard')
+    return PROJECT_DASHBOARDS.get(project_code, 'tronic_master:dashboard')
 
 
 def get_project_name(project_code):
@@ -136,19 +136,19 @@ def get_project_context(tenant):
     """Get project context for templates"""
     if not tenant:
         return {
-            'project_code': 'TECH_MASTER',
+            'project_code': 'TRONIC_MASTER',
             'project_name': 'Tech Master',
             'project_icon': 'fa-microchip',
-            'project_template_dir': 'tech_master',
+            'project_template_dir': 'tronic_master',
         }
     
     project_type = getattr(tenant, 'project_type', None)
     if not project_type:
         return {
-            'project_code': 'TECH_MASTER',
+            'project_code': 'TRONIC_MASTER',
             'project_name': 'Tech Master',
             'project_icon': 'fa-microchip',
-            'project_template_dir': 'tech_master',
+            'project_template_dir': 'tronic_master',
         }
     
     code = project_type.code.upper()
@@ -163,19 +163,19 @@ def get_project_context(tenant):
 def redirect_project_dashboard(tenant):
     """Redirect to the appropriate project dashboard"""
     if not tenant:
-        return redirect('tech_master:dashboard')
+        return redirect('tronic_master:dashboard')
     
     project_type = getattr(tenant, 'project_type', None)
     if not project_type:
-        return redirect('tech_master:dashboard')
+        return redirect('tronic_master:dashboard')
     
     code = project_type.code.upper()
     
     # Check if project is active
     if not is_project_active(code):
-        return redirect('tech_master:dashboard')
+        return redirect('tronic_master:dashboard')
     
-    return redirect(PROJECT_DASHBOARDS.get(code, 'tech_master:dashboard'))
+    return redirect(PROJECT_DASHBOARDS.get(code, 'tronic_master:dashboard'))
 
 
 

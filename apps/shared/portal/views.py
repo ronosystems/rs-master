@@ -8,8 +8,8 @@ from django.contrib.auth import update_session_auth_hash
 from django.db.models import Sum, F
 from django.utils import timezone
 from apps.shared.users.models import User
-from apps.tech_master.models import Product, Category, Branch
-from apps.tech_master.models import Sale
+from apps.tronic_master.models import Product, Category, Branch
+from apps.tronic_master.models import Sale
 from apps.shared.customers.models import Customer
 from apps.shared.permissions.models import UserRoleAssignment
 from django.http import JsonResponse
@@ -61,7 +61,7 @@ def portal_login(request):
             # ✅ If user has project type, redirect to the correct project
             if project_code:
                 project_redirects = {
-                    'TECH_MASTER': 'tech_master:dashboard',
+                    'TRONIC_MASTER': 'tronic_master:dashboard',
                     'HOTEL_MASTER': 'hotel_master:dashboard',
                     'FOOD_MASTER': 'food_master:dashboard',
                     'RETAIL_MASTER': 'retail_master:dashboard',
@@ -270,8 +270,8 @@ def support(request):
     """Support page showing project information"""
     from apps.shared.tenants.models import Tenant
     from apps.shared.users.models import User
-    from apps.tech_master.models import Sale
-    from apps.tech_master.models import Product
+    from apps.tronic_master.models import Sale
+    from apps.tronic_master.models import Product
     from apps.shared.settings.models import SystemSetting
 
     # Get platform stats
@@ -401,7 +401,7 @@ def tech_pos(request):
 
     if not has_cashier_role:
         messages.error(request, 'You do not have permission to access POS. Cashier role required.')
-        return redirect('tech_master:dashboard')
+        return redirect('tronic_master:dashboard')
 
     # ✅ Check if PIN is set
     if not request.user.pin_code:
@@ -410,7 +410,7 @@ def tech_pos(request):
 
     # ✅ Check if PIN is verified in session
     if not request.session.get('pos_pin_verified', False):
-        return redirect('tech_master:verify_pin')
+        return redirect('tronic_master:verify_pin')
 
     # ✅ Check if PIN verification expired (e.g., after 30 minutes)
     verified_at = request.session.get('pos_pin_verified_at')
@@ -423,7 +423,7 @@ def tech_pos(request):
                 del request.session['pos_pin_verified']
                 del request.session['pos_pin_verified_at']
                 messages.warning(request, 'PIN verification expired. Please verify again.')
-                return redirect('tech_master:verify_pin')
+                return redirect('tronic_master:verify_pin')
         except:
             pass
 
@@ -431,7 +431,7 @@ def tech_pos(request):
         'tenant': tenant,
         'active_tab': 'pos',
     }
-    return render(request, 'tech_master/pos.html', context)
+    return render(request, 'tronic_master/pos.html', context)
 
 
 @login_required
@@ -451,27 +451,27 @@ def verify_pin(request):
 
     if not has_cashier_role:
         messages.error(request, 'You do not have permission to access POS.')
-        return redirect('tech_master:dashboard')
+        return redirect('tronic_master:dashboard')
 
     if request.method == 'POST':
         pin = request.POST.get('pin', '').strip()
 
         if not pin:
             messages.error(request, 'Please enter your PIN')
-            return redirect('tech_master:verify_pin')
+            return redirect('tronic_master:verify_pin')
 
         # Check if PIN matches
         if request.user.pin_code and pin == request.user.pin_code:
             request.session['pos_pin_verified'] = True
             request.session['pos_pin_verified_at'] = timezone.now().isoformat()
             messages.success(request, 'PIN verified successfully!')
-            return redirect('tech_master:pos')
+            return redirect('tronic_master:pos')
         else:
             messages.error(request, 'Invalid PIN. Please try again.')
-            return redirect('tech_master:verify_pin')
+            return redirect('tronic_master:verify_pin')
 
     # GET request - show PIN form
-    return render(request, 'tech_master/verify_pin.html', {
+    return render(request, 'tronic_master/verify_pin.html', {
         'tenant': request.user.tenant,
         'user': request.user,
     })
@@ -487,7 +487,7 @@ def verify_pin_ajax(request):
 def clear_pin_verification(request):
     """Clear PIN verification - DEPRECATED"""
     messages.info(request, 'PIN verification cleared')
-    return redirect('tech_master:pos')
+    return redirect('tronic_master:pos')
 
 
 @login_required
@@ -547,7 +547,7 @@ def tech_dashboard(request):
             'low_stock_count': low_stock_count,
             **manager_context,  # ✅ Merge manager context
         }
-        return render(request, 'tech_master/dashboard_tech.html', context)
+        return render(request, 'tronic_master/dashboard_tech.html', context)
 
     # ✅ Regular users - Check project roles
     has_manager_role = UserRoleAssignment.objects.filter(
@@ -577,15 +577,15 @@ def tech_dashboard(request):
             'active_tab': 'dashboard',
             **manager_context,  # ✅ Merge manager context
         }
-        return render(request, 'tech_master/manager_dashboard.html', context)
+        return render(request, 'tronic_master/manager_dashboard.html', context)
 
     if has_cashier_role:
         messages.info(request, 'Redirecting to POS...')
-        return redirect('tech_master:pos')
+        return redirect('tronic_master:pos')
 
     if has_sales_agent_role:
         messages.info(request, 'Redirecting to Sales Dashboard...')
-        return redirect('tech_master:my_sales')
+        return redirect('tronic_master:my_sales')
 
     # No project role assigned
     messages.warning(request, 'You have not been assigned a project role. Please contact your administrator.')
@@ -611,8 +611,8 @@ def report_dashboard(request):
         return redirect('dashboard')
 
     from django.db.models import Sum
-    from apps.tech_master.models import Sale
-    from apps.tech_master.models import Product
+    from apps.tronic_master.models import Sale
+    from apps.tronic_master.models import Product
     from apps.shared.expenses.models import Expense
     from apps.shared.customers.models import Customer
     from django.utils import timezone
@@ -696,7 +696,7 @@ def report_dashboard(request):
         'expense_growth': 8,
         'active_tab': 'reports',
     }
-    return render(request, 'tech_master/reports.html', context)
+    return render(request, 'tronic_master/reports.html', context)
 
 
 @login_required
@@ -932,7 +932,7 @@ def platform_settings(request):
 
     from apps.shared.tenants.models import Tenant, ProjectType, SubscriptionPlan
     from apps.shared.users.models import User
-    from apps.tech_master.models import Product, Branch
+    from apps.tronic_master.models import Product, Branch
     from apps.shared.settings.models import SystemSetting
     from django.core.cache import cache
     from django.core.files.storage import default_storage
@@ -1024,7 +1024,7 @@ def platform_settings_stats(request):
 
     from apps.shared.tenants.models import Tenant, ProjectType, SubscriptionPlan
     from apps.shared.users.models import User
-    from apps.tech_master.models import Product, Branch
+    from apps.tronic_master.models import Product, Branch
 
     return JsonResponse({
         'total_tenants': Tenant.objects.count(),
@@ -1145,7 +1145,7 @@ def manager_dashboard(request):
     tenant = request.user.tenant
 
     # Get stats
-    from apps.tech_master.models import Product, Category, Branch, Sale
+    from apps.tronic_master.models import Product, Category, Branch, Sale
     from apps.shared.customers.models import Customer
     from django.db.models import Sum, F
     from django.utils import timezone
@@ -1169,7 +1169,7 @@ def manager_dashboard(request):
     # Redirect with success message
     messages.success(request, 'Redirected to tech dashboard with full context')
 
-    return redirect('tech_master:dashboard')
+    return redirect('tronic_master:dashboard')
 
 
 

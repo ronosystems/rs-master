@@ -1,0 +1,243 @@
+{% extends 'tronic_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Add Bulk Product{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">Add Bulk Product (Quantity Tracked)</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- TWO COLUMN LAYOUT -->
+                        <div class="row">
+                            
+                            <!-- LEFT SECTION: Product Information -->
+                            <div class="col-md-6">
+                                <div class="card border-primary mb-3">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Product Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i>
+                                            <strong>SKU Code:</strong> Will be auto-generated as <strong>000001, 000002, 000003...</strong>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-12 mb-3">
+                                                <label for="name" class="form-label">Product Name *</label>
+                                                <input type="text" class="form-control" id="name" name="name" required 
+                                                       placeholder="e.g., USB-C Cable">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="brand" class="form-label">Brand</label>
+                                                <input type="text" class="form-control" id="brand" name="brand" 
+                                                       placeholder="e.g., Oraimo">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="model" class="form-label">Model</label>
+                                                <input type="text" class="form-control" id="model" name="model" 
+                                                       placeholder="e.g., ORM-01">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="color" class="form-label">Color</label>
+                                                <input type="text" class="form-control" id="color" name="color" 
+                                                       placeholder="e.g., White, Black">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="category_id" class="form-label">Category</label>
+                                                <select class="form-control" id="category_id" name="category_id" required>
+                                                    <option value="">Select Category</option>
+                                                    {% for cat in categories %}
+                                                    <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.get_item_type_display }})</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="branch_id" class="form-label">Branch *</label>
+                                                <select class="form-control" id="branch_id" name="branch_id" required>
+                                                    <option value="">Select Branch</option>
+                                                    {% for branch in branches %}
+                                                    <option value="{{ branch.id }}">{{ branch.name }} ({{ branch.code }})</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="supplier_id" class="form-label">Supplier</label>
+                                                <select class="form-control" id="supplier_id" name="supplier_id">
+                                                    <option value="">Select Supplier</option>
+                                                    {% for supplier in suppliers %}
+                                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="barcode" class="form-label">Barcode *</label>
+                                                <input type="text" class="form-control" id="barcode" name="barcode" required 
+                                                       placeholder="Enter product barcode (e.g., 9900000000000)">
+                                                <small class="text-muted">This is the product barcode for scanning</small>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="stock_quantity" class="form-label">Initial Stock Quantity *</label>
+                                                <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" 
+                                                       required value="1" min="1">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="specifications" class="form-label">Specifications</label>
+                                            <textarea class="form-control" id="specifications" name="specifications" rows="3" 
+                                                      placeholder="e.g., 1 meter length, Type-C connector, Fast charging support"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- RIGHT SECTION: Pricing Information -->
+                            <div class="col-md-6">
+                                <div class="card border-success mb-3">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Pricing Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label for="buying_price" class="form-label">Buying Price (KES)</label>
+                                                <input type="number" step="0.01" class="form-control" id="buying_price" name="buying_price" 
+                                                       placeholder="0.00">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label for="selling_price" class="form-label">Selling Price (KES) *</label>
+                                                <input type="number" step="0.01" class="form-control" id="selling_price" name="selling_price" 
+                                                       required placeholder="0.00">
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label for="best_price" class="form-label">Best/Retail Price (KES)</label>
+                                                <input type="number" step="0.01" class="form-control" id="best_price" name="best_price" 
+                                                       placeholder="0.00">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="reorder_level" class="form-label">Reorder Level</label>
+                                                <input type="number" class="form-control" id="reorder_level" name="reorder_level" 
+                                                       value="5">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="warranty_months" class="form-label">Warranty (Months)</label>
+                                                <input type="number" class="form-control" id="warranty_months" name="warranty_months" 
+                                                       value="12">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Summary Card -->
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Summary</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-md-4">
+                                                <h6>SKU:</h6>
+                                                <h5 class="text-primary">Auto-generated</h5>
+                                                <small>000001, 000002...</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <h6>Stock:</h6>
+                                                <h2 id="stockQty" class="text-success">0</h2>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <h6>Total Value:</h6>
+                                                <h2 id="totalValue" class="text-primary">KES 0</h2>
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <small><strong>Buying:</strong> <span id="summaryBuying">0</span></small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small><strong>Selling:</strong> <span id="summarySelling">0</span></small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small><strong>Profit/Unit:</strong> <span id="summaryProfit" class="text-success">0</span></small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Note:</strong> 
+                                    <ul class="mb-0 mt-2">
+                                        <li><strong>SKU</strong> is auto-generated as sequential numbers (000001, 000002...)</li>
+                                        <li><strong>Barcode</strong> is what you enter and can be scanned (e.g., 9900000000000)</li>
+                                        <li>Bulk products are tracked by quantity only</li>
+                                        <li>You can add more stock later using the "Restock" option</li>
+                                    </ul>
+                                </div>
+
+                                <div class="card border-info">
+                                    <div class="text-center mt-4">
+                                        <button type="submit" class="btn btn-success btn-lg px-5">
+                                            <i class="fas fa-save"></i> Save Product
+                                        </button>
+                                        <a href="{% url 'tronic_master:product_list' %}" class="btn btn-secondary btn-lg px-5">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateSummary() {
+        const stockQty = parseInt(document.getElementById('stock_quantity').value) || 0;
+        const buyingPrice = parseFloat(document.getElementById('buying_price').value) || 0;
+        const sellingPrice = parseFloat(document.getElementById('selling_price').value) || 0;
+        
+        const totalValue = stockQty * sellingPrice;
+        const profitPerUnit = sellingPrice - buyingPrice;
+        
+        document.getElementById('stockQty').innerText = stockQty;
+        document.getElementById('totalValue').innerHTML = `KES ${totalValue.toFixed(2)}`;
+        document.getElementById('summaryBuying').innerText = buyingPrice.toFixed(2);
+        document.getElementById('summarySelling').innerText = sellingPrice.toFixed(2);
+        document.getElementById('summaryProfit').innerHTML = `${profitPerUnit.toFixed(2)}`;
+    }
+    
+    document.getElementById('stock_quantity').addEventListener('input', updateSummary);
+    document.getElementById('buying_price').addEventListener('input', updateSummary);
+    document.getElementById('selling_price').addEventListener('input', updateSummary);
+    
+    updateSummary();
+</script>
+{% endblock %}

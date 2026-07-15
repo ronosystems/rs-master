@@ -25,7 +25,7 @@ def get_template_path(template_name, tenant):
     """
     Get the correct template path based on tenant's project type.
     If tenant has HOTEL_MASTER -> uses hotel_master/template_name
-    If tenant has TECH_MASTER -> uses tech_master/template_name
+    If tenant has TRONIC_MASTER -> uses tronic_master/template_name
     """
     if tenant:
         project_type = getattr(tenant, 'project_type', None)

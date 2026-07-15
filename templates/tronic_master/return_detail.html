@@ -1,0 +1,124 @@
+<!-- templates/tronic_master/sales/return_detail.html -->
+{% extends 'tronic_master/base_tech.html' %}
+
+{% block title %}Return Detail - Tech Master{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>
+                <i class="fas fa-undo-alt text-warning me-2"></i>
+                Return #{{ return.id }}
+            </h5>
+            <div>
+                <a href="{% url 'tronic_master:return_list' %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Invoice</th>
+                            <td>
+                                <a href="{% url 'tronic_master:sale_detail' return.sale.id %}">
+                                    {{ return.sale.invoice_no }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Customer</th>
+                            <td>
+                                {% if return.sale.customer %}
+                                {{ return.sale.customer.name }}
+                                {% else %}
+                                {{ return.sale.customer_name|default:"Walk-in" }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Product</th>
+                            <td>
+                                {% if return.product %}
+                                {{ return.product.name }}
+                                <br>
+                                <small class="text-muted">SKU: {{ return.product.sku_code }}</small>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Quantity</th>
+                            <td>{{ return.quantity }}</td>
+                        </tr>
+                        <tr>
+                            <th>Amount</th>
+                            <td><strong>KES {{ return.amount|floatformat:2 }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Status</th>
+                            <td>
+                                {% if return.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif return.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                                {% elif return.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                                {% elif return.status == 'completed' %}
+                                <span class="badge bg-info">Completed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Reason</th>
+                            <td>{{ return.reason }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date</th>
+                            <td>{{ return.created_at|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Actions</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if return.status == 'pending' %}
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'tronic_master:approve_return' return.id %}" class="btn btn-success" onclick="return confirm('Approve this return?')">
+                                    <i class="fas fa-check me-2"></i>Approve Return
+                                </a>
+                                <a href="{% url 'tronic_master:reject_return' return.id %}" class="btn btn-danger" onclick="return confirm('Reject this return?')">
+                                    <i class="fas fa-times me-2"></i>Reject Return
+                                </a>
+                            </div>
+                            {% elif return.status == 'approved' %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                This return has been approved. The refund will be processed.
+                            </div>
+                            {% elif return.status == 'rejected' %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                This return has been rejected.
+                            </div>
+                            {% elif return.status == 'completed' %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                This return has been completed.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

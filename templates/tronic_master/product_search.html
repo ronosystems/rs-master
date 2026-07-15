@@ -1,0 +1,257 @@
+<!-- templates/tronic_master/product_search.html -->
+{% extends "tronic_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Product Search{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-search text-primary me-2"></i>Product Search
+            </h4>
+            <p class="text-muted mb-0">Quick search for products by name, SKU, or barcode</p>
+        </div>
+        <div>
+            <a href="{% url 'tronic_master:product_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-8">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="q" class="form-control" 
+                               placeholder="Search by product name, SKU, barcode, brand, or model..." 
+                               value="{{ search_query }}"
+                               autofocus>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Search
+                        </button>
+                    </div>
+                    <small class="text-muted">Try searching for product name, SKU code, barcode, brand, or model</small>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'tronic_master:product_search' %}" class="btn btn-outline-secondary w-100 h-100">
+                        <i class="fas fa-undo me-2"></i>Clear Search
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-boxes me-2"></i>Products
+                    <span class="badge bg-secondary ms-2">{{ products|length }}</span>
+                </h6>
+                {% if search_query %}
+                <span class="text-muted">
+                    <i class="fas fa-filter me-1"></i>Showing results for: "<strong>{{ search_query }}</strong>"
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if products %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>SKU</th>
+                            <th>Product</th>
+                            <th>Brand</th>
+                            <th>Model</th>
+                            <th>Category</th>
+                            <th>Price (KES)</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-secondary">{{ product.sku_code }}</span>
+                                {% if product.barcode %}
+                                <br><small class="text-muted">Barcode: {{ product.barcode }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if product.image %}
+                                    <img src="{{ product.image.url }}" alt="{{ product.name }}" 
+                                         style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 10px;">
+                                    {% else %}
+                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                         style="width: 40px; height: 40px; margin-right: 10px;">
+                                        <i class="fas fa-box text-secondary"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-semibold">{{ product.name }}</div>
+                                        <small class="text-muted">{{ product.sku_code }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ product.brand|default:"-" }}</td>
+                            <td>{{ product.model|default:"-" }}</td>
+                            <td>{{ product.category.name|default:"-" }}</td>
+                            <td>
+                                <div class="fw-bold">Sell: KES {{ product.selling_price|floatformat:0 }}</div>
+                                {% if product.best_price %}
+                                <div class="text-success">Best: KES {{ product.best_price|floatformat:0 }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-bold 
+                                    {% if product.available_quantity == 0 %}text-danger
+                                    {% elif product.is_low_stock %}text-warning
+                                    {% else %}text-success{% endif %}">
+                                    {{ product.available_quantity }}
+                                </span>
+                                <small class="text-muted d-block">Reorder: {{ product.reorder_level }}</small>
+                            </td>
+                            <td>
+                                {% if product.is_discontinued %}
+                                <span class="badge bg-danger">Discontinued</span>
+                                {% elif not product.is_active %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% elif product.available_quantity == 0 %}
+                                <span class="badge bg-danger">Out of Stock</span>
+                                {% elif product.is_low_stock %}
+                                <span class="badge bg-warning text-dark">Low Stock</span>
+                                {% else %}
+                                <span class="badge bg-success">In Stock</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'tronic_master:product_detail' product.id %}" 
+                                       class="btn btn-outline-primary" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'tronic_master:edit_product' product.id %}" 
+                                       class="btn btn-outline-secondary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'tronic_master:barcode_label' product.id %}" 
+                                       class="btn btn-outline-info" title="Barcode" target="_blank">
+                                        <i class="fas fa-barcode"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                {% if search_query %}
+                <i class="fas fa-search fa-4x d-block mb-3 text-muted opacity-25"></i>
+                <h5>No products found</h5>
+                <p class="text-muted">No products match your search for "<strong>{{ search_query }}</strong>"</p>
+                <p class="text-muted small">Try using different keywords or check your spelling</p>
+                <a href="{% url 'tronic_master:product_search' %}" class="btn btn-primary mt-2">
+                    <i class="fas fa-undo me-2"></i>Clear Search
+                </a>
+                {% else %}
+                <i class="fas fa-box fa-4x d-block mb-3 text-muted opacity-25"></i>
+                <h5>Search for products</h5>
+                <p class="text-muted">Enter a product name, SKU, barcode, brand, or model to search</p>
+                <p class="text-muted small">Example: "iPhone", "A07", "Samsung", or "123456"</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% if products %}
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    Found <span class="fw-bold">{{ products|length }}</span> products
+                </div>
+                <div>
+                    <a href="{% url 'tronic_master:product_list' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-list me-1"></i>View All Products
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row g-3 mt-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-plus-circle text-primary fa-2x mb-2"></i>
+                    <h6>Add New Product</h6>
+                    <p class="text-muted small">Create a new product in inventory</p>
+                    <a href="{% url 'tronic_master:add_product_selection' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i>Add Product
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-import text-success fa-2x mb-2"></i>
+                    <h6>Import Products</h6>
+                    <p class="text-muted small">Bulk import products from Excel</p>
+                    <a href="{% url 'tronic_master:import_products' %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-file-upload me-1"></i>Import
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-barcode text-info fa-2x mb-2"></i>
+                    <h6>Barcode Labels</h6>
+                    <p class="text-muted small">Generate barcode labels for products</p>
+                    <a href="{% url 'tronic_master:barcode_labels_list' %}" class="btn btn-info btn-sm">
+                        <i class="fas fa-print me-1"></i>Print Labels
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus search input
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput) {
+        searchInput.focus();
+        
+        // Auto-submit on Enter key
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.closest('form').submit();
+            }
+        });
+    }
+    
+    // Live search suggestion (optional feature)
+    // You can add AJAX autocomplete here if needed
+});
+</script>
+{% endblock %}

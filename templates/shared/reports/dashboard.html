@@ -1,5 +1,5 @@
-<!-- templates/tech_master/reports/dashboard.html -->
-{% extends 'tech_master/base_tech.html' %}
+<!-- templates/tronic_master/reports/dashboard.html -->
+{% extends 'tronic_master/base_tech.html' %}
 
 {% block title %}Reports Dashboard - Tech Master{% endblock %}
 
@@ -51,7 +51,7 @@
                     <!-- Report Cards -->
                     <div class="row">
                         <div class="col-md-4">
-                            <div class="report-card" onclick="location.href='{% url 'tech_master:sales_report' %}'" style="cursor: pointer; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; text-align: center; transition: all 0.3s;">
+                            <div class="report-card" onclick="location.href='{% url 'tronic_master:sales_report' %}'" style="cursor: pointer; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; text-align: center; transition: all 0.3s;">
                                 <div class="report-icon">
                                     <i class="fas fa-chart-line fa-3x text-primary"></i>
                                 </div>
@@ -61,7 +61,7 @@
                         </div>
                         
                         <div class="col-md-4">
-                            <div class="report-card" onclick="location.href='{% url 'tech_master:inventory_report' %}'" style="cursor: pointer; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; text-align: center; transition: all 0.3s;">
+                            <div class="report-card" onclick="location.href='{% url 'tronic_master:inventory_report' %}'" style="cursor: pointer; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; text-align: center; transition: all 0.3s;">
                                 <div class="report-icon">
                                     <i class="fas fa-boxes fa-3x text-success"></i>
                                 </div>
@@ -71,7 +71,7 @@
                         </div>
                         
                         <div class="col-md-4">
-                            <div class="report-card" onclick="location.href='{% url 'tech_master:expense_report' %}'" style="cursor: pointer; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; text-align: center; transition: all 0.3s;">
+                            <div class="report-card" onclick="location.href='{% url 'tronic_master:expense_report' %}'" style="cursor: pointer; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; text-align: center; transition: all 0.3s;">
                                 <div class="report-icon">
                                     <i class="fas fa-receipt fa-3x text-warning"></i>
                                 </div>

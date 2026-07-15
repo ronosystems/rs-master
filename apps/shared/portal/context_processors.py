@@ -1,6 +1,6 @@
 # apps/shared/portal/context_processors.py
 
-from apps.tech_master.models import Product, Branch
+from apps.tronic_master.models import Product, Branch
 from apps.shared.users.models import User
 from apps.shared.tenants.models import SubscriptionPlan
 
@@ -16,7 +16,7 @@ def user_role(request):
         'tenant': None,
         'project_type': None,
         'project_under_development': False,
-        'is_tech_master': False,
+        'is_tronic_master': False,
         'is_food_master': False,
         'is_hotel_master': False,
         'is_retail_master': False,
@@ -43,14 +43,14 @@ def user_role(request):
         if project_type:
             context['project_type'] = project_type
             code = project_type.code.upper() if project_type.code else ''
-            context['is_tech_master'] = code in ['TECH_MASTER', 'TECHMASTER', 'PRJ-001']
+            context['is_tronic_master'] = code in ['TRONIC_MASTER', 'TECHMASTER', 'PRJ-001']
             context['is_food_master'] = code in ['FOOD_MASTER', 'FOODMASTER', 'PRJ-002']
             context['is_hotel_master'] = code in ['HOTEL_MASTER', 'HOTELMASTER', 'PRJ-003']
             context['is_retail_master'] = code in ['RETAIL_MASTER', 'RETAILMASTER', 'PRJ-004']
             context['is_health_master'] = code in ['HEALTH_MASTER', 'HEALTHMASTER', 'PRJ-005']
             context['is_fashion_master'] = code in ['FASHION_MASTER', 'FASHIONMASTER', 'PRJ-006']
             context['is_rental_master'] = code in ['RENTAL_MASTER', 'RENTALMASTER', 'PRJ-007']
-            context['project_under_development'] = not context['is_tech_master']
+            context['project_under_development'] = not context['is_tronic_master']
     
     return context
 
@@ -237,7 +237,7 @@ def project_context(request):
         'project_code': None,
         'project_name': None,
         'project_url': None,
-        'project_base_template': 'tech_master/base_tech.html',
+        'project_base_template': 'tronic_master/base_tech.html',
     }
     
     if request.user and request.user.is_authenticated:
@@ -251,7 +251,7 @@ def project_context(request):
             
             # ✅ Map project code to URL path
             project_url_map = {
-                'TECH_MASTER': '/tech/',
+                'TRONIC_MASTER': '/tronic/',
                 'HOTEL_MASTER': '/hotel/',
                 'FOOD_MASTER': '/food/',
                 'RETAIL_MASTER': '/retail/',
@@ -263,7 +263,7 @@ def project_context(request):
             
             # Map project code to base template
             template_map = {
-                'TECH_MASTER': 'tech_master/base_tech.html',
+                'TRONIC_MASTER': 'tronic_master/base_tech.html',
                 'HOTEL_MASTER': 'hotel_master/base_hotel.html',
                 'FOOD_MASTER': 'food_master/base_food.html',
                 'RETAIL_MASTER': 'retail_master/base_retail.html',
@@ -271,7 +271,7 @@ def project_context(request):
                 'FASHION_MASTER': 'fashion_master/base_fashion.html',
                 'RENTAL_MASTER': 'rental_master/base_rental.html',
             }
-            context['project_base_template'] = template_map.get(project_code, 'tech_master/base_tech.html')
+            context['project_base_template'] = template_map.get(project_code, 'tronic_master/base_tech.html')
             
             # Also check tenant for fallback
             tenant = getattr(request.user, 'tenant', None)

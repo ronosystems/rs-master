@@ -1,0 +1,467 @@
+{% extends "tronic_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Reports Dashboard - Tech Master{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-chart-pie me-2 text-info"></i>Reports Dashboard</h4>
+        <div>
+            <button onclick="window.print()" class="btn btn-primary btn-sm">
+                <i class="fas fa-print me-1"></i> Print
+            </button>
+            <a href="{% url 'tronic_master:sales_report' %}" class="btn btn-success btn-sm">
+                <i class="fas fa-chart-line me-1"></i> Sales Report
+            </a>
+            <a href="{% url 'tronic_master:inventory_report' %}" class="btn btn-warning btn-sm">
+                <i class="fas fa-boxes me-1"></i> Inventory Report
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- QUICK STATS CARDS -->
+    <!-- ============================================ -->
+    <div class="row g-4 mb-4">
+        <!-- Total Sales -->
+        <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Sales</h6>
+                            <h3 class="mb-0 text-primary">KES {{ total_sales|floatformat:0 }}</h3>
+                            <small class="text-muted">{{ total_sales_count }} transactions</small>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-shopping-cart fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Sales -->
+        <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-muted mb-1">Today's Sales</h6>
+                            <h3 class="mb-0 text-success">KES {{ today_sales|floatformat:0 }}</h3>
+                            <small class="text-muted">{{ today_sales_count }} transactions</small>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-calendar-day fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gross Profit -->
+        <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="card shadow-sm h-100 border-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-muted mb-1">Gross Profit</h6>
+                            <h3 class="mb-0 text-warning">KES {{ gross_profit|floatformat:0 }}</h3>
+                            <small class="text-muted">Margin: {{ profit_margin|floatformat:1 }}%</small>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-chart-line fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Value -->
+        <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="card shadow-sm h-100 border-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-muted mb-1">Stock Value</h6>
+                            <h3 class="mb-0 text-info">KES {{ total_stock_value|floatformat:0 }}</h3>
+                            <small class="text-muted">{{ total_products }} products</small>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded-3">
+                            <i class="fas fa-boxes fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECOND ROW STATS -->
+    <!-- ============================================ -->
+    <div class="row g-4 mb-4">
+        <!-- Monthly Sales -->
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-alt fa-2x text-primary mb-2"></i>
+                    <h6 class="text-muted mb-1">This Month</h6>
+                    <h4 class="mb-0">KES {{ month_sales|floatformat:0 }}</h4>
+                    <small class="text-muted">vs last month: KES {{ last_month_sales|floatformat:0 }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expenses -->
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-receipt fa-2x text-danger mb-2"></i>
+                    <h6 class="text-muted mb-1">Total Expenses</h6>
+                    <h4 class="mb-0 text-danger">KES {{ total_expenses|floatformat:0 }}</h4>
+                    <small class="text-muted">Pending: KES {{ pending_expenses|floatformat:0 }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customers -->
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x text-success mb-2"></i>
+                    <h6 class="text-muted mb-1">Total Customers</h6>
+                    <h4 class="mb-0">{{ total_customers }}</h4>
+                    <small class="text-muted">{{ new_customers_month }} new this month</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Staff -->
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-tie fa-2x text-info mb-2"></i>
+                    <h6 class="text-muted mb-1">Staff Members</h6>
+                    <h4 class="mb-0">{{ total_users }}</h4>
+                    <small class="text-muted">
+                        {% for role in role_counts %}
+                            {{ role.role|title }}: {{ role.count }}
+                            {% if not forloop.last %}|{% endif %}
+                        {% endfor %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- CHARTS SECTION -->
+    <!-- ============================================ -->
+    <div class="row g-4 mb-4">
+        <!-- Daily Sales Chart -->
+        <div class="col-xl-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-2"></i> Daily Sales (Last 30 Days)
+                </div>
+                <div class="card-body">
+                    <canvas id="dailySalesChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expenses by Category -->
+        <div class="col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <i class="fas fa-pie-chart me-2"></i> Expenses by Category
+                </div>
+                <div class="card-body">
+                    <canvas id="expensesChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- TOP PRODUCTS & RECENT ACTIVITY -->
+    <!-- ============================================ -->
+    <div class="row g-4">
+        <!-- Top Products -->
+        <div class="col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <i class="fas fa-trophy me-2 text-warning"></i> Top Performing Products
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th>Sold</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_products %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ product.product__name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ product.product__sku_code }}</small>
+                                    </td>
+                                    <td>{{ product.total_sold }}</td>
+                                    <td><strong>KES {{ product.total_revenue|floatformat:0 }}</strong></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                                        No sales data available
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <i class="fas fa-clock me-2 text-info"></i> Recent Sales Activity
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for sale in recent_sales %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-shopping-bag me-2 text-success"></i>
+                                <strong>#{{ sale.id }}</strong>
+                                <span class="text-muted ms-2">
+                                    {{ sale.customer.name|default:"Walk-in" }}
+                                </span>
+                                <br>
+                                <small class="text-muted">
+                                    {{ sale.created_at|date:"M d, Y H:i" }}
+                                    by {{ sale.cashier.get_full_name|default:sale.cashier.username }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success">KES {{ sale.total|floatformat:0 }}</span>
+                                <br>
+                                <small class="text-muted">{{ sale.payment_method|title }}</small>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-clock fa-2x d-block mb-2"></i>
+                            No recent sales
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- INVENTORY ALERTS -->
+    <!-- ============================================ -->
+    <div class="row g-4 mt-2">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-exclamation-triangle text-warning fa-2x me-3"></i>
+                            <span class="h6 mb-0">Low Stock Alert</span>
+                        </div>
+                        <span class="badge bg-warning fs-6">{{ low_stock_products }}</span>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0">
+                        {{ low_stock_products }} products are below reorder level
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-times-circle text-danger fa-2x me-3"></i>
+                            <span class="h6 mb-0">Out of Stock</span>
+                        </div>
+                        <span class="badge bg-danger fs-6">{{ out_of_stock_products }}</span>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0">
+                        {{ out_of_stock_products }} products are completely out of stock
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ============================================
+    // DAILY SALES CHART
+    // ============================================
+    const ctx1 = document.getElementById('dailySalesChart').getContext('2d');
+    
+    const dailyLabels = [];
+    const dailyData = [];
+    
+    {% for item in daily_sales_data %}
+    dailyLabels.push('{{ item.day }}');
+    dailyData.push({{ item.total|floatformat:0 }});
+    {% endfor %}
+    
+    new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: dailyLabels,
+            datasets: [{
+                label: 'Daily Sales (KES)',
+                data: dailyData,
+                backgroundColor: 'rgba(13, 110, 253, 0.6)',
+                borderColor: '#0d6efd',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'KES ' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Revenue (KES)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return 'KES ' + value.toLocaleString();
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45,
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // ============================================
+    // EXPENSES BY CATEGORY CHART
+    // ============================================
+    const ctx2 = document.getElementById('expensesChart').getContext('2d');
+    
+    const expenseLabels = [];
+    const expenseData = [];
+    const expenseColors = [
+        '#dc3545', '#fd7e14', '#ffc107', '#198754', 
+        '#0d6efd', '#6f42c1', '#d63384', '#20c997'
+    ];
+    
+    {% for item in expenses_by_category %}
+    expenseLabels.push('{{ item.category__name|default:"Uncategorized" }}');
+    expenseData.push({{ item.total|floatformat:0 }});
+    {% endfor %}
+    
+    // If no data, show placeholder
+    if (expenseLabels.length === 0) {
+        expenseLabels.push('No Data');
+        expenseData.push(1);
+    }
+    
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: expenseLabels,
+            datasets: [{
+                data: expenseData,
+                backgroundColor: expenseColors.slice(0, expenseLabels.length),
+                borderWidth: 2,
+                borderColor: '#ffffff',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 10,
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': KES ' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+
+<style>
+@media print {
+    .btn {
+        display: none !important;
+    }
+    .card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .card-header {
+        background-color: #f8f9fa !important;
+    }
+}
+</style>
+{% endblock %}

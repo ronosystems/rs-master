@@ -1,0 +1,196 @@
+<!-- templates/tronic_master/staff_form.html -->
+{% extends "tronic_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}{% if staff %}Edit{% else %}Add{% endif %} Staff{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-user me-2"></i>
+                        {% if staff %}Edit{% else %}Add{% endif %} Staff Member
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <!-- Username -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
+                                <input type="text" name="username" class="form-control" 
+                                       value="{{ staff.username|default:'' }}" required
+                                       placeholder="Enter username">
+                            </div>
+
+                            <!-- Password (only for new users) -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    {% if staff %}New Password{% else %}Password <span class="text-danger">*</span>{% endif %}
+                                </label>
+                                <input type="password" name="password" class="form-control" 
+                                       {% if not staff %}required{% endif %}
+                                       placeholder="{% if staff %}Leave blank to keep current{% else %}Enter password{% endif %}"
+                                       minlength="8">
+                                {% if staff %}
+                                <small class="text-muted">Leave blank to keep current password</small>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- First Name -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
+                                <input type="text" name="first_name" class="form-control" 
+                                       value="{{ staff.first_name|default:'' }}" required
+                                       placeholder="Enter first name">
+                            </div>
+
+                            <!-- Last Name -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" name="last_name" class="form-control" 
+                                       value="{{ staff.last_name|default:'' }}" required
+                                       placeholder="Enter last name">
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                                <input type="email" name="email" class="form-control" 
+                                       value="{{ staff.email|default:'' }}" required
+                                       placeholder="staff@example.com">
+                            </div>
+                            
+                            <!-- Phone Number -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone Number</label>
+                                <input type="text" name="phone_number" class="form-control" 
+                                       value="{{ staff.phone_number|default:'' }}"
+                                       placeholder="0712345678">
+                            </div>
+                            
+                            <!-- System Role (only admin and user) -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">System Role <span class="text-danger">*</span></label>
+                                <select name="system_role" class="form-select" required>
+                                    <option value="">Select System Role</option>
+                                    {% for role_code, role_name in system_roles %}
+                                    <option value="{{ role_code }}" {% if staff.role == role_code %}selected{% endif %}>
+                                        {{ role_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">System-level role determines basic permissions</small>
+                            </div>
+
+                            <!-- Custom Role (from Role model) -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Custom Role</label>
+                                <select name="custom_role" class="form-select">
+                                    <option value="">No Custom Role</option>
+                                    {% for custom_role in custom_roles %}
+                                    <option value="{{ custom_role.id }}" 
+                                        {% if staff_custom_role and staff_custom_role.id == custom_role.id %}selected{% endif %}>
+                                        {{ custom_role.name }}
+                                        {% if custom_role.is_system_role %}(System){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Custom roles provide additional permissions</small>
+                            </div>
+                            
+                            <!-- Branch -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Branch</label>
+                                <select name="branch" class="form-select">
+                                    <option value="">Select Branch</option>
+                                    {% for branch in branches %}
+                                    <option value="{{ branch.id }}" {% if staff.branch.id == branch.id %}selected{% endif %}>
+                                        {{ branch.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <!-- Hire Date -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Hire Date</label>
+                                <input type="date" name="hire_date" class="form-control" 
+                                       value="{{ staff.hire_date|date:'Y-m-d'|default:'' }}">
+                            </div>
+                            
+                            <!-- PIN -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">PIN (4 digits)</label>
+                                <input type="password" name="pin" class="form-control" 
+                                       maxlength="4" placeholder="1234"
+                                       pattern="[0-9]{4}" title="Enter 4 digits">
+                                <small class="text-muted">4-digit PIN for POS access</small>
+                            </div>
+                            
+                            <!-- Active Status -->
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input type="checkbox" name="is_active" class="form-check-input" id="isActive"
+                                           {% if staff.is_active or not staff %}checked{% endif %}>
+                                    <label class="form-check-label fw-semibold" for="isActive">
+                                        <i class="fas fa-circle text-{% if staff.is_active or not staff %}success{% else %}secondary{% endif %} me-1" style="font-size: 0.6rem;"></i>
+                                        Active Status
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="col-12 mt-4">
+                                <hr>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>
+                                        {% if staff %}Update{% else %}Create{% endif %} Staff
+                                    </button>
+                                    <a href="{% url 'tronic_master:staff_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Password validation for new users
+    const passwordInput = document.querySelector('input[name="password"]');
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            if (this.value && this.value.length < 8) {
+                this.setCustomValidity('Password must be at least 8 characters');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    }
+    
+    // PIN validation
+    const pinInput = document.querySelector('input[name="pin"]');
+    if (pinInput) {
+        pinInput.addEventListener('input', function() {
+            if (this.value && !/^\d{4}$/.test(this.value)) {
+                this.setCustomValidity('PIN must be exactly 4 digits');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

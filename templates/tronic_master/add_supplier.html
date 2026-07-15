@@ -1,0 +1,108 @@
+<!-- templates/tronic_master/add_supplier.html -->
+{% extends "tronic_master/base_tech.html" %}
+{% load static %}
+
+{% block title %}Add Supplier{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-truck me-2"></i>Add New Supplier
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <!-- Supplier Name -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Supplier Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" 
+                                       value="{{ supplier.name|default:'' }}" required
+                                       placeholder="Enter supplier name">
+                            </div>
+                            
+                            <!-- Contact Person -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Contact Person</label>
+                                <input type="text" name="contact_person" class="form-control" 
+                                       value="{{ supplier.contact_person|default:'' }}"
+                                       placeholder="Enter contact person name">
+                            </div>
+                            
+                            <!-- Phone -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone <span class="text-danger">*</span></label>
+                                <input type="text" name="phone" class="form-control" 
+                                       value="{{ supplier.phone|default:'' }}" required
+                                       placeholder="0712345678">
+                            </div>
+                            
+                            <!-- Email -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Email</label>
+                                <input type="email" name="email" class="form-control" 
+                                       value="{{ supplier.email|default:'' }}"
+                                       placeholder="supplier@example.com">
+                            </div>
+                            
+                            <!-- Address -->
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Address</label>
+                                <textarea name="address" class="form-control" rows="2"
+                                          placeholder="Enter full address">{{ supplier.address|default:'' }}</textarea>
+                            </div>
+                            
+                            <!-- Tax ID -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Tax ID / PIN</label>
+                                <input type="text" name="tax_id" class="form-control" 
+                                       value="{{ supplier.tax_id|default:'' }}"
+                                       placeholder="Enter tax ID or PIN">
+                            </div>
+                            
+                            <!-- Payment Terms -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Payment Terms</label>
+                                <input type="text" name="payment_terms" class="form-control" 
+                                       value="{{ supplier.payment_terms|default:'' }}"
+                                       placeholder="e.g., Net 30, Cash on Delivery">
+                            </div>
+                            
+                            <!-- Active Status -->
+                            <div class="col-md-12">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="is_active" class="form-check-input" id="isActive" checked>
+                                    <label class="form-check-label fw-semibold" for="isActive">
+                                        <i class="fas fa-circle text-success me-1" style="font-size: 0.6rem;"></i>
+                                        Active Supplier
+                                    </label>
+                                </div>
+                                <small class="text-muted">Inactive suppliers will not appear in product selection</small>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="col-12 mt-4">
+                                <hr>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Add Supplier
+                                    </button>
+                                    <a href="{% url 'tronic_master:supplier_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

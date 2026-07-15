@@ -1,0 +1,239 @@
+<!-- templates/tronic_master/sales/reverse_sale.html -->
+{% extends "tronic_master/base_tech.html" %}
+
+{% block title %}Reverse Sale - {{ sale.invoice_no }}{% endblock %}
+
+{% block content %}
+<style>
+    .identifier-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.7rem;
+        margin: 1px 2px;
+    }
+    
+    .identifier-badge.imei {
+        background: #e3f2fd;
+        color: #0d6efd;
+    }
+    
+    .identifier-badge.serial {
+        background: #f3e5f5;
+        color: #6f42c1;
+    }
+    
+    .identifier-badge.barcode {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+    
+    .identifier-badge.none {
+        background: #f5f5f5;
+        color: #6c757d;
+    }
+    
+    .item-identifier-row {
+        font-size: 0.75rem;
+        margin-top: 2px;
+    }
+    
+    [data-bs-theme="dark"] .identifier-badge.imei {
+        background: #1a2a4e;
+        color: #80b8ff;
+    }
+    
+    [data-bs-theme="dark"] .identifier-badge.serial {
+        background: #2a1a3e;
+        color: #b87fff;
+    }
+    
+    [data-bs-theme="dark"] .identifier-badge.barcode {
+        background: #1a2a1a;
+        color: #7fb87f;
+    }
+    
+    [data-bs-theme="dark"] .identifier-badge.none {
+        background: #2d2d44;
+        color: #888;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-9 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0 text-dark">
+                        <i class="fas fa-undo-alt me-2"></i>Reverse Sale
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This action will reverse the entire sale and restore all items to inventory.
+                        This cannot be undone easily.
+                    </div>
+                    
+                    <!-- Sale Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Invoice:</strong> <code>{{ sale.invoice_no }}</code></p>
+                            <p><strong>Customer:</strong> {{ sale.customer_name|default:"Walk-in" }}</p>
+                            <p><strong>Phone:</strong> {{ sale.customer_phone|default:"N/A" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Total Amount:</strong> <span class="text-danger fw-bold">KES {{ sale.total|floatformat:2 }}</span></p>
+                            <p><strong>Date:</strong> {{ sale.created_at|date:"Y-m-d H:i" }}</p>
+                            <p><strong>Cashier:</strong> {{ sale.cashier.username }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Items Table with Identifiers -->
+                    <div class="mb-3">
+                        <h6 class="fw-bold mb-2">Items to be reversed:</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Item</th>
+                                        <th>Identifier (IMEI/Serial/Barcode)</th>
+                                        <th class="text-end">Qty</th>
+                                        <th class="text-end">Price</th>
+                                        <th class="text-end">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in items %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <div class="fw-bold">{{ item.product.name }}</div>
+                                            <div class="small text-muted">{{ item.product.sku_code }}</div>
+                                        </td>
+                                        <td>
+                                            <!-- IMEI/Serial/Barcode Display -->
+                                            {% if item.product_unit %}
+                                                {% if item.product_unit.imei_number %}
+                                                    <span class="identifier-badge imei">
+                                                        <i class="fas fa-microchip me-1"></i>{{ item.product_unit.imei_number }}
+                                                    </span>
+                                                    <div class="item-identifier-row text-muted">
+                                                        <small>IMEI Number</small>
+                                                    </div>
+                                                {% elif item.product_unit.serial_number %}
+                                                    <span class="identifier-badge serial">
+                                                        <i class="fas fa-hashtag me-1"></i>{{ item.product_unit.serial_number }}
+                                                    </span>
+                                                    <div class="item-identifier-row text-muted">
+                                                        <small>Serial Number</small>
+                                                    </div>
+                                                {% else %}
+                                                    <span class="identifier-badge none">
+                                                        <i class="fas fa-minus-circle me-1"></i>No Identifier
+                                                    </span>
+                                                {% endif %}
+                                            {% else %}
+                                                {% if item.product.barcode %}
+                                                    <span class="identifier-badge barcode">
+                                                        <i class="fas fa-barcode me-1"></i>{{ item.product.barcode }}
+                                                    </span>
+                                                    <div class="item-identifier-row text-muted">
+                                                        <small>Barcode</small>
+                                                    </div>
+                                                {% else %}
+                                                    <span class="identifier-badge none">
+                                                        <i class="fas fa-box me-1"></i>Bulk Item
+                                                    </span>
+                                                {% endif %}
+                                            {% endif %}
+                                            
+                                            <!-- Show both barcode and identifier if available -->
+                                            {% if item.product_unit and item.product_unit.imei_number and item.product.barcode %}
+                                            <br>
+                                            <span class="identifier-badge barcode" style="font-size: 0.6rem;">
+                                                <i class="fas fa-barcode me-1"></i>{{ item.product.barcode }}
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">{{ item.quantity }}</td>
+                                        <td class="text-end">KES {{ item.price|floatformat:2 }}</td>
+                                        <td class="text-end">KES {{ item.subtotal|floatformat:2 }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-active">
+                                        <th colspan="5" class="text-end">Subtotal:</th>
+                                        <th class="text-end">KES {{ sale.subtotal|floatformat:2 }}</th>
+                                    </tr>
+                                    <tr class="table-active">
+                                        <th colspan="5" class="text-end">Tax (16% VAT):</th>
+                                        <th class="text-end">KES {{ sale.tax|floatformat:2|default:"0.00" }}</th>
+                                    </tr>
+                                    <tr class="table-danger">
+                                        <th colspan="5" class="text-end">Total:</th>
+                                        <th class="text-end fw-bold">KES {{ sale.total|floatformat:2 }}</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Summary of identifiers to be reversed -->
+                    <div class="mb-3 p-2 bg-light rounded">
+                        <small class="text-muted">Summary of identifiers being reversed:</small>
+                        <div class="mt-1">
+                            {% for item in items %}
+                                {% if item.product_unit %}
+                                    {% if item.product_unit.imei_number %}
+                                        <span class="identifier-badge imei">
+                                            <i class="fas fa-microchip me-1"></i>{{ item.product_unit.imei_number }}
+                                        </span>
+                                    {% elif item.product_unit.serial_number %}
+                                        <span class="identifier-badge serial">
+                                            <i class="fas fa-hashtag me-1"></i>{{ item.product_unit.serial_number }}
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
+                            {% empty %}
+                                <span class="text-muted">No unique identifiers in this sale</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Reversal Form -->
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Reason for Reversal</label>
+                            <textarea name="reason" class="form-control" rows="3" required 
+                                      placeholder="Please explain why this sale is being reversed"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                Type <strong class="text-danger">"YES"</strong> to confirm reversal
+                            </label>
+                            <input type="text" name="confirm" class="form-control" 
+                                   placeholder="Type YES to confirm" required>
+                            <small class="text-muted">This confirmation is required to prevent accidental reversals.</small>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-undo-alt me-2"></i>Reverse Sale
+                            </button>
+                            <a href="{% url 'tronic_master:sale_detail' sale.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

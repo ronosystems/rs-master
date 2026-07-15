@@ -77,7 +77,7 @@ class User(AbstractUser):
 
     # ✅ Add branch field
     branch = models.ForeignKey(
-        'tech_master.Branch',
+        'tronic_master.Branch',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

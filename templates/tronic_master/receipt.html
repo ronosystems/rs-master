@@ -1,0 +1,620 @@
+<!-- templates/tronic_master/sales/receipt.html -->
+{% extends "shared/base_shared.html" %}
+{% load static %}
+
+{% block title %}Receipt | {{ sale.invoice_no }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-container {
+        background: #f5f5f5;
+        padding: 20px 0;
+    }
+    
+    .receipt-card {
+        background: #ffffff;
+        color: #000000;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border: 1px solid #000000;
+        overflow: hidden;
+        max-width: 420px;
+        margin: 0 auto;
+    }
+    
+    .receipt-body {
+        padding: 20px 22px;
+        color: #000000;
+    }
+    
+    .receipt-body .text-center {
+        text-align: center;
+        color: #000000;
+    }
+    
+    .receipt-body .text-muted {
+        color: #666666 !important;
+    }
+    
+    .receipt-body .text-dark {
+        color: #000000 !important;
+    }
+    
+    .receipt-body .text-success {
+        color: #000000 !important;
+    }
+    
+    .receipt-body .border-bottom {
+        border-bottom: 1px solid #000000 !important;
+    }
+    
+    .receipt-body .border-top {
+        border-top: 1px solid #000000 !important;
+    }
+    
+    .receipt-body hr {
+        border-color: #000000;
+        opacity: 0.3;
+        margin: 10px 0;
+    }
+    
+    .receipt-body .fw-bold {
+        font-weight: 700;
+        color: #000000;
+    }
+    
+    .receipt-body .small {
+        font-size: 0.7rem;
+        color: #000000;
+    }
+    
+    .receipt-body .receipt-table {
+        background: #ffffff;
+        color: #000000;
+        width: 100%;
+        font-size: 0.7rem;
+        border-collapse: collapse;
+        border: 1px solid #000000;
+    }
+    
+    .receipt-body .receipt-table th,
+    .receipt-body .receipt-table td {
+        padding: 4px 6px;
+        color: #000000;
+        border: 1px solid #000000;
+        background: #ffffff;
+    }
+    
+    .receipt-body .receipt-table th {
+        background: #f0f0f0;
+        color: #000000;
+        font-weight: 700;
+        font-size: 0.65rem;
+        border-bottom: 2px solid #000000;
+    }
+    
+    .receipt-body .receipt-table .table-light {
+        background: #f9f9f9;
+    }
+    
+    .receipt-body .receipt-table .table-light td {
+        background: #f9f9f9;
+    }
+    
+    .receipt-body .receipt-table .subtotal-row td {
+        border-bottom: 1px dashed #000000;
+        padding-top: 6px;
+        background: #f9f9f9;
+    }
+    
+    .receipt-body .receipt-table .vat-row {
+        background: #f0f0f0 !important;
+        border-top: 2px solid #000000 !important;
+    }
+    
+    .receipt-body .receipt-table .vat-row td {
+        background: #f0f0f0 !important;
+        color: #000000 !important;
+        padding: 4px 6px;
+        border-top: 2px solid #000000;
+        border-bottom: 1px solid #000000;
+    }
+    
+    .receipt-body .receipt-table .vat-label {
+        color: #000000;
+        font-weight: 700;
+        font-size: 0.7rem;
+    }
+    
+    .receipt-body .receipt-table .vat-amount {
+        color: #000000;
+        font-weight: 700;
+        font-size: 0.7rem;
+    }
+    
+    .receipt-body .receipt-table .grand-total-row {
+        border-top: 3px solid #000000;
+        font-size: 0.8rem;
+        background: #ffffff;
+    }
+    
+    .receipt-body .receipt-table .grand-total-row td {
+        font-weight: 700;
+        color: #000000 !important;
+        padding: 6px 6px;
+        background: #ffffff;
+        border-top: 3px solid #000000;
+    }
+    
+    .receipt-body .logo-container {
+        margin-bottom: 12px;
+        text-align: center;
+    }
+    
+    .receipt-body .logo-container img {
+        max-height: 50px;
+        max-width: 160px;
+        border-radius: 4px;
+        filter: grayscale(100%);
+    }
+    
+    .receipt-body .no-logo {
+        font-size: 1.5rem;
+        color: #000000;
+    }
+    
+    .receipt-body .tax-type-badge {
+        font-size: 0.55rem;
+        padding: 1px 6px;
+        border-radius: 2px;
+        display: inline-block;
+        margin-left: 4px;
+        border: 1px solid #000000;
+        font-weight: 700;
+    }
+    
+    .receipt-body .tax-type-badge.inclusive {
+        background: #ffffff;
+        color: #000000;
+    }
+    
+    .receipt-body .tax-type-badge.exclusive {
+        background: #f0f0f0;
+        color: #000000;
+    }
+    
+    .receipt-body .receipt-header h4 {
+        color: #000000;
+        font-weight: 700;
+        margin-bottom: 2px;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .receipt-body .receipt-header p {
+        color: #000000;
+        margin-bottom: 1px;
+        font-size: 0.7rem;
+    }
+    
+    .receipt-body .customer-section h6,
+    .receipt-body .product-section h6 {
+        color: #000000;
+        font-weight: 700;
+        margin-bottom: 5px;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #000000;
+        padding-bottom: 3px;
+    }
+    
+    .receipt-body .customer-section .row,
+    .receipt-body .customer-section .col-4,
+    .receipt-body .customer-section .col-8 {
+        color: #000000;
+        font-size: 0.7rem;
+    }
+    
+    .receipt-body .customer-section .col-4 {
+        padding-right: 0;
+        font-weight: 600;
+    }
+    
+    .receipt-body .row.mb-2 {
+        margin-bottom: 6px !important;
+    }
+    
+    .receipt-body .row.mb-2 .fw-bold {
+        font-size: 0.8rem;
+    }
+    
+    .receipt-body .row.mb-2 .text-muted {
+        font-size: 0.6rem;
+        color: #666666 !important;
+    }
+    
+    .receipt-body .footer-text {
+        font-size: 0.7rem;
+        color: #000000;
+    }
+    
+    .receipt-body .footer-vat-info {
+        font-size: 0.55rem;
+        color: #666666 !important;
+    }
+    
+    .receipt-body .divider-line {
+        border: none;
+        border-top: 2px solid #000000;
+        margin: 8px 0;
+    }
+    
+    .receipt-body .divider-dashed {
+        border: none;
+        border-top: 1px dashed #000000;
+        margin: 8px 0;
+    }
+    
+    /* Print Styles */
+    @media print {
+        .navbar, 
+        .card-footer, 
+        .btn, 
+        .container-fluid > .row > .col-md-8 > .row, 
+        .d-flex.gap-2,
+        .no-print {
+            display: none !important;
+        }
+        
+        .receipt-card {
+            box-shadow: none !important;
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            max-width: 100% !important;
+        }
+        
+        .receipt-body {
+            padding: 12px 15px !important;
+        }
+        
+        body {
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+        }
+        
+        .container-fluid {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        .receipt-body .receipt-table {
+            border-color: #000 !important;
+        }
+        
+        .receipt-body .receipt-table th,
+        .receipt-body .receipt-table td {
+            border-color: #000 !important;
+        }
+        
+        .receipt-body .receipt-table th {
+            background: #f0f0f0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        
+        .receipt-body .receipt-table .vat-row td {
+            background: #f0f0f0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        
+        .receipt-body .receipt-table .subtotal-row td {
+            background: #f9f9f9 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        
+        .receipt-body .logo-container img {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        
+        .receipt-body .tax-type-badge {
+            border: 1px solid #000 !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid receipt-container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6 col-xl-5">
+            <!-- Receipt Card -->
+            <div class="receipt-card">
+                <div class="receipt-body">
+                    
+                    <!-- ============================================ -->
+                    <!-- LOGO SECTION -->
+                    <!-- ============================================ -->
+                    <div class="logo-container">
+                        {% if receipt_settings and receipt_settings.show_logo_on_receipts and receipt_settings.has_valid_logo %}
+                            <img src="{{ receipt_settings.logo.url }}" 
+                                 alt="{{ receipt_settings.business_name|default:company_settings.company_name|default:tenant.company_name }}">
+                        {% elif company_settings and company_settings.show_logo_on_receipts and company_settings.has_valid_logo %}
+                            <img src="{{ company_settings.logo.url }}" 
+                                 alt="{{ receipt_settings.business_name|default:company_settings.company_name|default:tenant.company_name }}">
+                        {% else %}
+                            <div class="no-logo">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <div><small class="text-muted">No logo uploaded</small></div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Company Header - Centered -->
+                    <div class="text-center border-bottom pb-2 mb-2 receipt-header">
+                        {% if receipt_settings and receipt_settings.show_business_name and receipt_settings.business_name %}
+                            <h4 class="mb-1">{{ receipt_settings.business_name }}</h4>
+                        {% elif receipt_settings and receipt_settings.business_name %}
+                            <h4 class="mb-1">{{ receipt_settings.company_name }}</h4>
+                        {% elif company_settings and company_settings.company_name %}
+                            <h4 class="mb-1">{{ company_settings.company_name }}</h4>
+                        {% else %}
+                            <h4 class="mb-1">{{ tenant.company_name }}</h4>
+                        {% endif %}
+                        
+                        {% if receipt_settings and receipt_settings.show_address and receipt_settings.business_address %}
+                            <p class="mb-0 small">{{ receipt_settings.business_address }}</p>
+                        {% elif company_settings and company_settings.show_address and company_settings.company_address %}
+                            <p class="mb-0 small">{{ company_settings.company_address }}</p>
+                        {% elif tenant.company_address %}
+                            <p class="mb-0 small">{{ tenant.company_address }}</p>
+                        {% endif %}
+                        
+                        {% if receipt_settings and receipt_settings.show_phone and receipt_settings.business_phone %}
+                            <p class="mb-0 small">Tel: {{ receipt_settings.business_phone }}</p>
+                        {% elif company_settings and company_settings.show_phone and company_settings.company_phone %}
+                            <p class="mb-0 small">Tel: {{ company_settings.company_phone }}</p>
+                        {% elif tenant.company_phone %}
+                            <p class="mb-0 small">Tel: {{ tenant.company_phone }}</p>
+                        {% endif %}
+                        
+                        {% if receipt_settings and receipt_settings.show_email and receipt_settings.business_email %}
+                            <p class="mb-0 small">Email: {{ receipt_settings.business_email }}</p>
+                        {% elif company_settings and company_settings.show_email and company_settings.company_email %}
+                            <p class="mb-0 small">Email: {{ company_settings.company_email }}</p>
+                        {% elif tenant.company_email %}
+                            <p class="mb-0 small">Email: {{ tenant.company_email }}</p>
+                        {% endif %}
+                        
+                        {% if receipt_settings and receipt_settings.show_tax_pin and receipt_settings.business_tax_pin %}
+                            <p class="mb-0 small">PIN: {{ receipt_settings.business_tax_pin }}</p>
+                        {% elif company_settings and company_settings.show_tax_pin and company_settings.company_tax_pin %}
+                            <p class="mb-0 small">PIN: {{ company_settings.company_tax_pin }}</p>
+                        {% elif tenant.company_pin %}
+                            <p class="mb-0 small">PIN: {{ tenant.company_pin }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Receipt Info Row -->
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">ETR No.</small>
+                            <div class="fw-bold">{{ sale.invoice_no }}</div>
+                        </div>
+                        <div class="col-6 text-end">
+                            <small class="text-muted">
+                                {% if sale.cashier.role == 'sales_agent' %}
+                                    Agent
+                                {% else %}
+                                    Cashier
+                                {% endif %}
+                            </small>
+                            <div class="fw-bold">{% if sale.cashier %}{% if sale.cashier %}{{ sale.cashier.get_full_name|default:sale.cashier.username }}{% else %}System{% endif %}{% else %}System{% endif %}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">Date</small>
+                            <div class="fw-bold">{{ sale.created_at|date:"Y-m-d" }}</div>
+                        </div>
+                        <div class="col-6 text-end">
+                            <small class="text-muted">Time</small>
+                            <div class="fw-bold">{{ sale.created_at|date:"H:i:s" }}</div>
+                        </div>
+                    </div>
+                    <hr class="divider-line">
+                    
+                    <!-- Customer Details -->
+                    {% if sale.customer_name or sale.customer_phone or sale.customer.id_number %}
+                    <div class="mb-2 customer-section">
+                        <h6>Customer Details</h6>
+                        {% if sale.customer_name %}
+                        <div class="row small">
+                            <div class="col-4 text-muted">Full Names:</div>
+                            <div class="col-8">{{ sale.customer_name }}</div>
+                        </div>
+                        {% endif %}
+                        {% if sale.customer_phone %}
+                        <div class="row small">
+                            <div class="col-4 text-muted">Phone:</div>
+                            <div class="col-8">{{ sale.customer_phone }}</div>
+                        </div>
+                        {% endif %}
+                        {% if sale.customer and sale.customer.id_number %}
+                        <div class="row small">
+                            <div class="col-4 text-muted">ID No.:</div>
+                            <div class="col-8">{{ sale.customer.id_number }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Next of Kin Details -->
+                    {% if sale.customer and sale.customer.next_of_kin_name %}
+                    <div class="mb-2 customer-section">
+                        <h6>Next of Kin</h6>
+                        {% if sale.customer.next_of_kin_name %}
+                        <div class="row small">
+                            <div class="col-4 text-muted">Full Names:</div>
+                            <div class="col-8">{{ sale.customer.next_of_kin_name }}</div>
+                        </div>
+                        {% endif %}
+                        {% if sale.customer.next_of_kin_phone %}
+                        <div class="row small">
+                            <div class="col-4 text-muted">Phone:</div>
+                            <div class="col-8">{{ sale.customer.next_of_kin_phone }}</div>
+                        </div>
+                        {% endif %}
+                        {% if sale.customer.next_of_kin_relationship %}
+                        <div class="row small">
+                            <div class="col-4 text-muted">Relationship:</div>
+                            <div class="col-8">{{ sale.customer.next_of_kin_relationship }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <hr class="divider-line">
+                    
+                    <!-- Product Details Table -->
+                    <div class="mb-2 product-section">
+                        <h6>Product Details</h6>
+                        <table class="receipt-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 10%">Qty</th>
+                                    <th>Description</th>
+                                    <th class="text-end" style="width: 22%">Price</th>
+                                    <th class="text-end" style="width: 22%">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in sale_items %}
+                                <tr>
+                                    <td class="text-center">{{ item.quantity }}</td>
+                                    <td>
+                                        <strong>{{ item.product.name }}</strong>
+                                        {% if item.product.model %}
+                                            <br><small class="text-muted">{{ item.product.model }}</small>
+                                        {% endif %}
+                                        
+                                        {% if item.product.specifications %}
+                                            {% if item.product.specifications.ram or item.product.specifications.storage or item.product.specifications.color %}
+                                            <br><small class="text-muted">
+                                                {% if item.product.specifications.ram %}{{ item.product.specifications.ram }}{% endif %}
+                                                {% if item.product.specifications.storage %} / {{ item.product.specifications.storage }}{% endif %}
+                                                {% if item.product.specifications.color %} / {{ item.product.specifications.color }}{% endif %}
+                                            </small>
+                                            {% endif %}
+                                            {% if item.product.specifications.description %}
+                                            <br><small class="text-muted">{{ item.product.specifications.description|truncatechars:20 }}</small>
+                                            {% endif %}
+                                        {% endif %}
+                                        
+                                        {% if item.product_unit %}
+                                            <br><small class="text-muted">
+                                                <strong>IMEI:</strong> {{ item.product_unit.imei_number|default:item.product_unit.serial_number }}
+                                            </small>
+                                        {% elif item.product.barcode %}
+                                            <br><small class="text-muted">
+                                                <strong>Barcode:</strong> {{ item.product.barcode }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">KES {{ item.price|floatformat:2 }}</td>
+                                    <td class="text-end">KES {{ item.subtotal|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <!-- ============================================ -->
+                                <!-- VAT/TAX DISPLAY - BLACK AND WHITE -->
+                                <!-- ============================================ -->
+                                {% if receipt_settings and receipt_settings.show_vat_on_receipt %}
+                                    {% with vat_rate=receipt_settings.vat_rate|default:16.0 vat_label=receipt_settings.vat_label|default:"VAT" %}
+                                    {% with subtotal=sale.subtotal|default:sale.total %}
+                                    {% with vat_amount=subtotal|floatformat:2|add:"*"|add:vat_rate|floatformat:2 %}
+                                    <tr class="subtotal-row">
+                                        <td colspan="3" class="text-end fw-bold">Subtotal:</td>
+                                        <td class="text-end">KES {{ subtotal|floatformat:2 }}</td>
+                                    </tr>
+                                    <tr class="vat-row">
+                                        <td colspan="3" class="text-end fw-bold vat-label">
+                                            {{ vat_label }} ({{ vat_rate|floatformat:0 }}%)
+                                            <span class="tax-type-badge {% if receipt_settings.tax_type == 'inclusive' %}inclusive{% else %}exclusive{% endif %}">
+                                                {% if receipt_settings.tax_type == 'inclusive' %}Inc{% else %}Exc{% endif %}
+                                            </span>
+                                        </td>
+                                        <td class="text-end vat-amount">
+                                            KES {{ vat_amount|floatformat:2 }}
+                                        </td>
+                                    </tr>
+                                    <tr class="grand-total-row">
+                                        <td colspan="3" class="text-end fw-bold">GRAND TOTAL:</td>
+                                        <td class="text-end fw-bold">KES {{ sale.total|floatformat:2 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="4" class="text-center small text-muted footer-vat-info" style="padding-top: 4px; border-top: 1px solid #cccccc;">
+                                            {% if receipt_settings.tax_type == 'inclusive' %}
+                                                ✓ {{ vat_label }} included in price
+                                            {% else %}
+                                                ✓ {{ vat_label }} added to price
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% endwith %}
+                                {% else %}
+                                    <tr class="grand-total-row">
+                                        <td colspan="3" class="text-end fw-bold">GRAND TOTAL:</td>
+                                        <td class="text-end fw-bold">KES {{ sale.total|floatformat:2 }}</td>
+                                    </tr>
+                                {% endif %}
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <hr class="divider-line">
+                    
+                    <!-- Footer -->
+                    <div class="text-center small footer-text">
+                        {% if receipt_settings and receipt_settings.footer_text %}
+                            <p class="mb-0">{{ receipt_settings.footer_text }}</p>
+                        {% else %}
+                            <p class="mb-0">Thank you for your business!</p>
+                        {% endif %}
+                        {% if receipt_settings and receipt_settings.show_vat_on_receipt %}
+                            <p class="mb-0 small text-muted footer-vat-info">
+                                {% if receipt_settings.tax_type == 'inclusive' %}
+                                    All prices include {{ receipt_settings.vat_label|default:"VAT" }} at {{ receipt_settings.vat_rate|default:16|floatformat:0 }}%
+                                {% else %}
+                                    {{ receipt_settings.vat_label|default:"VAT" }} at {{ receipt_settings.vat_rate|default:16|floatformat:0 }}% added where applicable
+                                {% endif %}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="card-footer border-0 pb-4 text-center no-print mt-3" style="background: transparent;">
+                <div class="d-flex gap-2 justify-content-center">
+                    <button onclick="window.print()" class="btn btn-dark btn-sm">
+                        <i class="fas fa-print me-2"></i>Print Receipt
+                    </button>
+                    <a href="{% url 'tronic_master:dashboard' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-list me-2"></i>Back Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1888 @@
+<!-- templates/tronic_master/pos.html -->
+{% extends 'tronic_master/base_tech.html' %}
+{% load static %}
+
+{% block title %}Point of Sale - Tech Master{% endblock %}
+
+{% block content %}
+<style>
+    /* ============================================
+       POS LAYOUT - 3 COLUMN DESIGN
+       REDUCED HEIGHT FOR FOOTER VISIBILITY
+    ============================================ */
+    .pos-container {
+        height: calc(100vh - 170px);
+        overflow: hidden;
+        display: flex;
+        gap: 12px;
+        padding: 8px 0;
+    }
+    
+    /* ============================================
+       LEFT COLUMN - 30% (Products)
+    ============================================ */
+    .pos-left {
+        width: 30%;
+        min-width: 30%;
+        display: flex;
+        flex-direction: column;
+        background: var(--card-bg, #ffffff);
+        border-radius: 12px;
+        padding: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border: 1px solid var(--sidebar-border, #e9ecef);
+        height: 100%;
+    }
+    
+    .pos-left .search-section {
+        flex-shrink: 0;
+        margin-bottom: 8px;
+    }
+    
+    .pos-left .search-section .input-group {
+        height: 34px;
+    }
+    
+    .pos-left .search-section .input-group .form-control {
+        font-size: 0.8rem;
+        padding: 4px 10px;
+        height: 34px;
+    }
+    
+    .pos-left .search-section .input-group .btn {
+        font-size: 0.75rem;
+        padding: 4px 12px;
+        height: 34px;
+    }
+    
+    .pos-left .search-section .input-group .input-group-text {
+        font-size: 0.75rem;
+        padding: 0 10px;
+        height: 34px;
+    }
+    
+    .pos-left .products-grid-container {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    
+    .pos-left .products-grid-container::-webkit-scrollbar {
+        width: 4px;
+    }
+    .pos-left .products-grid-container::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+    }
+    
+    .product-card {
+        background: var(--card-bg, #ffffff);
+        border: 1px solid var(--sidebar-border, #e9ecef);
+        border-radius: 8px;
+        padding: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+        position: relative;
+    }
+    .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: #0d6efd;
+        background: #f0f7ff;
+    }
+    .product-card .product-name {
+        font-weight: 600;
+        font-size: 0.75rem;
+        margin-bottom: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--sidebar-text, #333);
+    }
+    .product-card .product-identifier {
+        font-size: 0.55rem;
+        color: #6c757d;
+        background: #f1f3f5;
+        padding: 1px 5px;
+        border-radius: 4px;
+        display: inline-block;
+        font-family: monospace;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .product-card .product-price {
+        font-size: 0.85rem;
+        font-weight: bold;
+        color: #28a745;
+        margin-top: 3px;
+    }
+    .product-card .stock-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        font-size: 0.45rem;
+        padding: 1px 5px;
+        border-radius: 8px;
+    }
+    .product-card .single-badge {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        font-size: 0.45rem;
+        padding: 1px 5px;
+        border-radius: 8px;
+        background: #6f42c1;
+        color: white;
+    }
+    .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+        gap: 6px;
+    }
+    .badge-imei { font-size: 0.45rem; background: #0d6efd; color: white; padding: 1px 4px; border-radius: 8px; }
+    .badge-barcode { font-size: 0.45rem; background: #28a745; color: white; padding: 1px 4px; border-radius: 8px; }
+    
+    /* ============================================
+       MIDDLE COLUMN - 50% (Cart)
+    ============================================ */
+    .pos-middle {
+        width: 50%;
+        min-width: 50%;
+        display: flex;
+        flex-direction: column;
+        background: var(--card-bg, #ffffff);
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border: 1px solid var(--sidebar-border, #e9ecef);
+        overflow: hidden;
+        height: 100%;
+    }
+    
+    .pos-middle .cart-header {
+        flex-shrink: 0;
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--sidebar-border, #e9ecef);
+        background: var(--sidebar-active, #f8f9fa);
+    }
+    
+    .pos-middle .cart-header h6 {
+        font-size: 0.85rem;
+        color: var(--sidebar-text, #333);
+        margin: 0;
+    }
+    
+    .pos-middle .cart-header .badge {
+        font-size: 0.6rem;
+        padding: 2px 8px;
+    }
+    
+    .pos-middle .cart-header .btn {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+    }
+    
+    .pos-middle .cart-items-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px 12px;
+    }
+    
+    .pos-middle .cart-items-container::-webkit-scrollbar {
+        width: 4px;
+    }
+    .pos-middle .cart-items-container::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+    }
+    
+    /* ============================================
+       CART TABLE STYLES
+    ============================================ */
+    .cart-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.7rem;
+    }
+    .cart-table th {
+        background: var(--sidebar-active, #f1f3f5);
+        padding: 4px 5px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        color: var(--sidebar-text, #333);
+        border-bottom: 2px solid var(--sidebar-border, #dee2e6);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        white-space: nowrap;
+    }
+    .cart-table td {
+        padding: 4px 5px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--sidebar-border, #e9ecef);
+    }
+    .cart-table tr:hover td {
+        background: var(--sidebar-hover, #f8f9fa);
+    }
+    .cart-table .col-id { width: 6%; text-align: center; }
+    .cart-table .col-qty { width: 10%; text-align: center; }
+    .cart-table .col-description { width: 28%; }
+    .cart-table .col-custom-price { width: 16%; }
+    .cart-table .col-price { width: 15%; }
+    .cart-table .col-total { width: 15%; font-weight: bold; }
+    .cart-table .col-actions { width: 5%; text-align: center; }
+    
+    .cart-table .qty-control {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+    }
+    .cart-table .qty-control .qty-btn {
+        width: 18px;
+        height: 18px;
+        border: none;
+        background: var(--sidebar-border, #e9ecef);
+        border-radius: 3px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 10px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--sidebar-text, #333);
+    }
+    .cart-table .qty-control .qty-btn:hover {
+        background: #0d6efd;
+        color: white;
+    }
+    .cart-table .qty-control .qty-number {
+        font-weight: 600;
+        min-width: 16px;
+        text-align: center;
+        font-size: 0.7rem;
+        color: var(--sidebar-text, #333);
+    }
+    .cart-table .custom-price-input {
+        width: 65px;
+        padding: 1px 3px;
+        border: 1px solid var(--sidebar-border, #dee2e6);
+        border-radius: 3px;
+        font-size: 0.65rem;
+        text-align: right;
+        background: var(--card-bg, #ffffff);
+        color: var(--sidebar-text, #333);
+    }
+    .cart-table .custom-price-input:focus {
+        border-color: #0d6efd;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+    }
+    .cart-table .remove-btn {
+        background: transparent;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        font-size: 0.7rem;
+        padding: 2px 4px;
+        transition: all 0.2s;
+    }
+    .cart-table .remove-btn:hover {
+        background: #dee2e6;
+        color: #a71d2a;
+        transform: scale(1.2);
+    }
+    
+    /* ============================================
+       CART FOOTER - Totals
+    ============================================ */
+    .cart-footer {
+        flex-shrink: 0;
+        padding: 8px 14px;
+        border-top: 2px solid var(--sidebar-border, #dee2e6);
+        background: var(--card-bg, #ffffff);
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 0;
+        font-size: 0.8rem;
+        color: var(--sidebar-text, #333);
+    }
+    .summary-row.total {
+        border-top: 2px solid var(--sidebar-border, #dee2e6);
+        margin-top: 3px;
+        padding-top: 5px;
+        font-weight: bold;
+        font-size: 1rem;
+    }
+    .price-inclusive {
+        font-size: 0.5rem;
+        color: #28a745;
+        background: #d4edda;
+        padding: 1px 6px;
+        border-radius: 8px;
+        display: inline-block;
+    }
+    
+    /* ============================================
+       RIGHT COLUMN - 20% (Payment + Customer)
+       WITH PAYMENT CARDS
+    ============================================ */
+    .pos-right {
+        width: 20%;
+        min-width: 20%;
+        display: flex;
+        flex-direction: column;
+        background: var(--card-bg, #ffffff);
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.979);
+        border: 1px solid var(--sidebar-border, #e9ecef);
+        padding: 30px;
+        overflow: hidden;
+        height: 100%;
+    }
+    
+    .pos-right .customer-section {
+        flex-shrink: 0;
+        margin-bottom: 8px;
+    }
+    .pos-right .customer-section label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--sidebar-text, #495057);
+        margin-bottom: 2px;
+        display: block;
+    }
+    
+    .pos-right .customer-section .input-group {
+        height: 30px;
+    }
+    
+    .pos-right .customer-section .input-group .form-control {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        height: 30px;
+    }
+    
+    .pos-right .customer-section .input-group .btn {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+        height: 30px;
+    }
+    
+    .pos-right .customer-section #customerInfo .alert {
+        font-size: 0.6rem;
+        padding: 2px 8px;
+        margin-top: 2px;
+    }
+    
+    /* ============================================
+       PAYMENT METHOD CARDS
+    ============================================ */
+    .payment-methods {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+    
+    .payment-card {
+        background: var(--sidebar-active, #f8f9fa);
+        border: 2px solid var(--sidebar-border, #e9ecef);
+        border-radius: 8px;
+        padding: 6px 4px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.6rem;
+        font-weight: 500;
+        color: var(--sidebar-text, #495057);
+    }
+    
+    .payment-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .payment-card .payment-icon {
+        font-size: 1.2rem;
+        display: block;
+        margin-bottom: 2px;
+    }
+    
+    .payment-card.active {
+        border-color: #28a745;
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .payment-card.active .payment-icon {
+        color: #28a745;
+    }
+    
+    [data-bs-theme="dark"] .payment-card {
+        background: #2d2d44;
+        border-color: #3d3d54;
+        color: #e0e0e0;
+    }
+    [data-bs-theme="dark"] .payment-card.active {
+        background: #1a3a2a;
+        border-color: #28a745;
+        color: #a8e6cf;
+    }
+    
+    .pos-right .payment-section label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--sidebar-text, #495057);
+        margin-bottom: 2px;
+        display: block;
+    }
+    
+    .pos-right .payment-section .form-control {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        height: 30px;
+        background: var(--card-bg, #ffffff);
+        color: var(--sidebar-text, #333);
+        border-color: var(--sidebar-border, #dee2e6);
+    }
+    
+    .pos-right .payment-section #changeDue .alert {
+        font-size: 0.6rem;
+        padding: 2px 8px;
+        margin-top: 3px;
+    }
+    
+    /* ============================================
+       EXTRA BUTTONS - STYLES
+    ============================================ */
+    .pos-right .extra-buttons {
+        display: flex;
+        gap: 4px;
+        margin-top: 6px;
+        margin-bottom: 6px;
+    }
+    
+    .pos-right .extra-buttons .btn {
+        font-size: 0.55rem;
+        padding: 4px 6px;
+        border-radius: 4px;
+        flex: 1;
+        white-space: nowrap;
+    }
+    
+    .pos-right .extra-buttons .btn i {
+        margin-right: 2px;
+    }
+    
+    .pos-right .submit-section {
+        flex-shrink: 0;
+        margin-top: auto;
+        padding-top: 8px;
+    }
+    
+    .pos-right .submit-section .btn {
+        font-size: 0.75rem;
+        padding: 6px 8px;
+        font-weight: 600;
+        border-radius: 6px;
+    }
+    
+    /* ============================================
+       MODAL STYLES
+    ============================================ */
+    .modal-content {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+        border-radius: 12px 12px 0 0;
+        padding: 12px 20px;
+    }
+    .modal-footer {
+        border-radius: 0 0 12px 12px;
+        padding: 10px 20px;
+    }
+    .modal-body {
+        padding: 20px;
+    }
+    .stk-amount-display {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #28a745;
+        text-align: center;
+        padding: 10px 0;
+    }
+    
+    /* ============================================
+       SINGLE ITEM SELECTION MODAL
+    ============================================ */
+    .imei-list-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .imei-item {
+        padding: 10px 15px;
+        border-bottom: 1px solid #e9ecef;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .imei-item:hover {
+        background-color: #e3f2fd;
+    }
+    .imei-item.selected {
+        background-color: #cfe2ff;
+        border-left: 3px solid #0d6efd;
+    }
+    .imei-item .imei-number {
+        font-family: monospace;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .imei-item .imei-status {
+        font-size: 0.7rem;
+    }
+    
+    /* ============================================
+       DARK MODE OVERRIDES
+    ============================================ */
+    [data-bs-theme="dark"] .pos-left,
+    [data-bs-theme="dark"] .pos-middle,
+    [data-bs-theme="dark"] .pos-right {
+        background: #1a1a2e;
+        border-color: #2d2d44;
+    }
+    [data-bs-theme="dark"] .product-card {
+        background: #1a1a2e;
+        border-color: #2d2d44;
+    }
+    [data-bs-theme="dark"] .product-card:hover {
+        background: #2d2d44;
+        border-color: #0d6efd;
+    }
+    [data-bs-theme="dark"] .product-card .product-name {
+        color: #e0e0e0;
+    }
+    [data-bs-theme="dark"] .cart-table th {
+        background: #2d2d44;
+        color: #e0e0e0;
+        border-color: #3d3d54;
+    }
+    [data-bs-theme="dark"] .cart-table td {
+        border-color: #2d2d44;
+        color: #e0e0e0;
+    }
+    [data-bs-theme="dark"] .cart-table tr:hover td {
+        background: #2d2d44;
+    }
+    [data-bs-theme="dark"] .cart-table .qty-control .qty-btn {
+        background: #2d2d44;
+        color: #e0e0e0;
+    }
+    [data-bs-theme="dark"] .cart-table .custom-price-input {
+        background: #1a1a2e;
+        color: #e0e0e0;
+        border-color: #3d3d54;
+    }
+    [data-bs-theme="dark"] .cart-footer {
+        background: #1a1a2e;
+        border-color: #2d2d44;
+    }
+    [data-bs-theme="dark"] .summary-row {
+        color: #e0e0e0;
+    }
+    [data-bs-theme="dark"] .pos-middle .cart-header {
+        background: #2d2d44;
+    }
+    [data-bs-theme="dark"] .pos-right .customer-section label,
+    [data-bs-theme="dark"] .pos-right .payment-section label {
+        color: #e0e0e0;
+    }
+    [data-bs-theme="dark"] .pos-right .payment-section .form-control {
+        background: #1a1a2e;
+        color: #e0e0e0;
+        border-color: #3d3d54;
+    }
+    [data-bs-theme="dark"] .imei-item {
+        border-color: #2d2d44;
+        color: #e0e0e0;
+    }
+    [data-bs-theme="dark"] .imei-item:hover {
+        background-color: #2d2d44;
+    }
+    [data-bs-theme="dark"] .imei-item.selected {
+        background-color: #1a2a4e;
+    }
+    
+    /* ============================================
+       RESPONSIVE
+    ============================================ */
+    @media (max-width: 992px) {
+        .pos-container {
+            flex-direction: column;
+            height: auto;
+            overflow: visible;
+        }
+        .pos-left, .pos-middle, .pos-right {
+            width: 100% !important;
+            min-width: 100% !important;
+            max-height: 200px;
+        }
+        .pos-right {
+            max-height: 200px;
+        }
+        .cart-table {
+            font-size: 0.65rem;
+        }
+        .cart-table .custom-price-input {
+            width: 50px;
+        }
+        .payment-methods {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .pos-container {
+            height: auto;
+        }
+        .pos-left, .pos-middle, .pos-right {
+            max-height: 100px;
+        }
+        .products-grid {
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        }
+        .payment-methods {
+            grid-template-columns: 1fr 1fr;
+        }
+        .payment-card {
+            font-size: 0.5rem;
+            padding: 4px 2px;
+        }
+        .payment-card .payment-icon {
+            font-size: 1rem;
+        }
+    }
+    
+    /* ============================================
+       SCROLLBAR STYLING
+    ============================================ */
+    ::-webkit-scrollbar {
+        width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+        background: var(--sidebar-border, #f1f1f1);
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="pos-container">
+        
+        <!-- ============================================ -->
+        <!-- LEFT COLUMN - 30% (Products) -->
+        <!-- ============================================ -->
+        <div class="pos-left">
+            <div class="search-section">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-primary text-white"><i class="fas fa-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search products..." autofocus>
+                    <button class="btn btn-primary btn-sm" onclick="searchProducts()">Go</button>
+                </div>
+            </div>
+            <div class="products-grid-container" id="productsContainer">
+                <div id="productsGrid" class="products-grid">
+                    <div class="text-center py-5" style="grid-column: 1 / -1;">
+                        <div class="spinner-border text-primary spinner-border-sm"></div>
+                        <p class="mt-2 text-muted small">Loading products...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============================================ -->
+        <!-- MIDDLE COLUMN - 50% (Cart with Table) -->
+        <!-- ============================================ -->
+        <div class="pos-middle">
+            <div class="cart-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-shopping-cart me-2"></i>Cart
+                    <span class="badge bg-success ms-2">
+                        <i class="fas fa-lock me-1"></i>PIN Verified
+                    </span>
+                </h6>
+                <div>
+                    <a href="{% url 'tronic_master:clear_pin' %}" class="btn btn-sm btn-outline-secondary me-2" title="Lock POS">
+                        <i class="fas fa-lock"></i>
+                    </a>
+                    <span class="badge bg-primary me-2" id="itemCount">0 items</span>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearCart()"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>
+            
+            <div class="cart-items-container" id="cartContainer">
+                <div id="cartItems">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-shopping-cart fa-2x mb-2 opacity-50"></i>
+                        <p class="small">Cart is empty</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cart Footer - Totals -->
+            <div class="cart-footer">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <strong id="subtotal">KES 0.00</strong>
+                </div>
+                <div class="summary-row total">
+                    <span>Total:</span>
+                    <strong id="total">KES 0.00</strong>
+                </div>
+                <div class="text-end mt-1">
+                    <span class="price-inclusive"><i class="fas fa-check-circle me-1"></i> All prices include 16% VAT</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ============================================ -->
+        <!-- RIGHT COLUMN - 20% (Payment + Customer) -->
+        <!-- ============================================ -->
+        <div class="pos-right">
+            
+            <!-- Customer Section -->
+            <div class="customer-section">
+                <label><i class="fas fa-user me-1"></i> Customer</label>
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" id="customerPhone" class="form-control" placeholder="Phone">
+                    <button class="btn btn-outline-success btn-sm" onclick="searchCustomer()"><i class="fas fa-search"></i></button>
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="customerInfo" style="display: none;">
+                    <div class="alert alert-info py-1 mb-0 small">
+                        <strong id="customerName"></strong><br>
+                        <span id="customerPhoneDisplay"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Section -->
+            <div class="payment-section">
+                <label><i class="fas fa-credit-card me-1"></i> Payment Method</label>
+                
+                <!-- Payment Method Cards -->
+                <div class="payment-methods" id="paymentMethods">
+                    <div class="payment-card active" data-method="cash" onclick="selectPaymentMethod('cash')">
+                        <i class="fas fa-money-bill-wave payment-icon"></i>
+                        Cash
+                    </div>
+                    <div class="payment-card" data-method="mpesa" onclick="selectPaymentMethod('mpesa')">
+                        <i class="fas fa-mobile-alt payment-icon"></i>
+                        M-Pesa
+                    </div>
+                    <div class="payment-card" data-method="card" onclick="selectPaymentMethod('card')">
+                        <i class="fas fa-credit-card payment-icon"></i>
+                        Card
+                    </div>
+                    <div class="payment-card" data-method="bank" onclick="selectPaymentMethod('bank')">
+                        <i class="fas fa-university payment-icon"></i>
+                        Bank
+                    </div>
+                </div>
+                
+                <label><i class="fas fa-money-bill-wave me-1"></i> Amount Paid</label>
+                <input type="number" id="amountPaid" class="form-control form-control-sm" placeholder="0.00" step="0.01" oninput="calculateChange()">
+                
+                <div id="changeDue" style="display: none;" class="mt-2">
+                    <div class="alert alert-success py-1 mb-0 small">
+                        <strong>Change:</strong> KES <span id="changeAmount">0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Extra Buttons -->
+            <div class="extra-buttons">
+                <button class="btn btn-outline-primary" onclick="openStkModal()" title="Push M-Pesa STK">
+                    <i class="fas fa-mobile-alt"></i> Push STK
+                </button>
+                <button class="btn btn-outline-secondary" onclick="searchPayments()" title="Search Payments">
+                    <i class="fas fa-search-dollar"></i> Payments
+                </button>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="submit-section">
+                <button class="btn btn-success w-100" onclick="processPayment()" id="checkoutBtn" disabled>
+                    <i class="fas fa-check-circle me-2"></i> Complete Sale
+                </button>
+            </div>
+            
+        </div>
+        
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- STK PUSH MODAL -->
+<!-- ============================================ -->
+<div class="modal fade" id="stkModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title">
+                    <i class="fas fa-mobile-alt me-2"></i>Push M-Pesa STK
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-phone-volume fa-3x text-primary mb-2"></i>
+                    <p class="text-muted small">Enter customer phone number and amount</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phone Number</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">+254</span>
+                        <input type="text" id="stkPhone" class="form-control" placeholder="712345678" maxlength="15">
+                    </div>
+                    <small class="text-muted">Enter phone number without country code</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">KES</span>
+                        <input type="number" id="stkAmount" class="form-control" placeholder="0.00" step="0.01" min="1">
+                    </div>
+                    <small class="text-muted">Amount to charge the customer</small>
+                </div>
+                
+                <div class="alert alert-info py-1 small">
+                    <i class="fas fa-info-circle me-1"></i>
+                    An STK push will be sent to the customer's phone.
+                    Customer must enter PIN to complete payment.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-success btn-sm" onclick="sendStkPush()">
+                    <i class="fas fa-paper-plane me-1"></i> Send STK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Payments Modal -->
+<div class="modal fade" id="searchPaymentsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h6 class="modal-title"><i class="fas fa-search-dollar me-2"></i>Search Payments</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label small">Transaction ID</label>
+                        <input type="text" id="searchTxnId" class="form-control form-control-sm" placeholder="TXN-XXXX">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Phone Number</label>
+                        <input type="text" id="searchPhone" class="form-control form-control-sm" placeholder="07XXXXXXXX">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Date</label>
+                        <input type="date" id="searchDate" class="form-control form-control-sm">
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="performPaymentSearch()"><i class="fas fa-search me-1"></i>Search</button>
+                <hr>
+                <div id="paymentSearchResults">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                        <p>Enter search criteria and click Search</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- SINGLE ITEM SELECTION MODAL -->
+<!-- ============================================ -->
+<div class="modal fade" id="imeiSelectionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title">
+                    <i class="fas fa-microchip me-2"></i>
+                    Select IMEI/Serial Number
+                    <span id="imeiProductName" class="ms-2 text-white-50"></span>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                        <input type="text" id="imeiSearchInput" class="form-control" placeholder="Search IMEI/Serial..." onkeyup="filterImeiList()">
+                    </div>
+                </div>
+                <div class="imei-list-container" id="imeiListContainer">
+                    <div class="text-center py-3" id="imeiLoading">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                        <p class="mt-2 text-muted small">Loading available units...</p>
+                    </div>
+                    <div id="imeiList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span class="text-muted small me-auto" id="imeiCount">0 units available</span>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h6 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Customer</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="newCustomerName" class="form-control form-control-sm mb-2" placeholder="Full Name">
+                <input type="text" id="newCustomerPhone" class="form-control form-control-sm mb-2" placeholder="Phone Number">
+                <input type="email" id="newCustomerEmail" class="form-control form-control-sm" placeholder="Email">
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success btn-sm" onclick="saveCustomer()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // ============================================
+    // GLOBAL VARIABLES
+    // ============================================
+    let cart = [];
+    let currentCustomer = null;
+    let selectedProductForImei = null;
+    let selectedPaymentMethod = 'cash';
+    
+    // ============================================
+    // PAYMENT METHOD SELECTION
+    // ============================================
+    function selectPaymentMethod(method) {
+        selectedPaymentMethod = method;
+        document.querySelectorAll('.payment-card').forEach(card => {
+            card.classList.remove('active');
+        });
+        document.querySelector(`.payment-card[data-method="${method}"]`).classList.add('active');
+    }
+    
+    // ============================================
+    // STK PUSH FUNCTIONS
+    // ============================================
+    function openStkModal() {
+        const totalText = document.getElementById('total').innerText;
+        const total = parseFloat(totalText.replace(/[^0-9.-]/g, '')) || 0;
+        
+        // Auto-fill amount from cart total
+        document.getElementById('stkAmount').value = total > 0 ? total : '';
+        
+        // Auto-fill phone from customer
+        const customerPhone = document.getElementById('customerPhone')?.value?.trim() || '';
+        if (customerPhone) {
+            // Remove leading 0 if present
+            const cleanPhone = customerPhone.replace(/^0/, '');
+            document.getElementById('stkPhone').value = cleanPhone;
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('stkModal'));
+        modal.show();
+    }
+    
+    function sendStkPush() {
+        const phone = document.getElementById('stkPhone').value.trim();
+        const amount = parseFloat(document.getElementById('stkAmount').value);
+        
+        // Validate phone
+        if (!phone || phone.length < 9) {
+            showToast('Please enter a valid phone number', 'warning');
+            document.getElementById('stkPhone').focus();
+            return;
+        }
+        
+        // Validate amount
+        if (!amount || amount < 1) {
+            showToast('Please enter a valid amount (minimum 1 KES)', 'warning');
+            document.getElementById('stkAmount').focus();
+            return;
+        }
+        
+        // Format phone number (add 254 if needed)
+        let formattedPhone = phone;
+        if (phone.startsWith('0')) {
+            formattedPhone = '254' + phone.substring(1);
+        } else if (!phone.startsWith('254')) {
+            formattedPhone = '254' + phone;
+        }
+        
+        // Close modal
+        bootstrap.Modal.getInstance(document.getElementById('stkModal')).hide();
+        
+        // Show processing
+        Swal.fire({
+            title: 'Sending STK Push...',
+            html: `
+                <div class="text-center">
+                    <div class="spinner-border text-primary mb-3"></div>
+                    <p><strong>Phone:</strong> ${formattedPhone}</p>
+                    <p><strong>Amount:</strong> KES ${amount.toLocaleString()}</p>
+                    <p class="text-muted small">Waiting for customer to enter PIN...</p>
+                </div>
+            `,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                // Simulate STK push success after 3 seconds
+                setTimeout(() => {
+                    Swal.fire({
+                        title: '✅ STK Push Sent!',
+                        html: `
+                            <p>STK push sent to <strong>${formattedPhone}</strong></p>
+                            <p>Amount: <strong>KES ${amount.toLocaleString()}</strong></p>
+                            <hr>
+                            <p class="text-success">
+                                <i class="fas fa-check-circle"></i> Payment successful!
+                            </p>
+                            <p class="text-muted small">Transaction: STK-${Date.now().toString().slice(-8)}</p>
+                        `,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        // Auto-fill amount paid
+                        document.getElementById('amountPaid').value = amount;
+                        calculateChange();
+                        // Update payment method to M-Pesa
+                        selectPaymentMethod('mpesa');
+                    });
+                }, 3000);
+            }
+        });
+    }
+    
+    // ============================================
+    // SEARCH PAYMENTS FUNCTIONS
+    // ============================================
+    function searchPayments() {
+        const modal = new bootstrap.Modal(document.getElementById('searchPaymentsModal'));
+        modal.show();
+        document.getElementById('paymentSearchResults').innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                <p>Enter search criteria and click Search</p>
+            </div>
+        `;
+    }
+    
+    function performPaymentSearch() {
+        const txnId = document.getElementById('searchTxnId').value.trim();
+        const phone = document.getElementById('searchPhone').value.trim();
+        const date = document.getElementById('searchDate').value;
+        
+        document.getElementById('paymentSearchResults').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary spinner-border-sm"></div>
+                <p class="mt-2 text-muted small">Searching...</p>
+            </div>
+        `;
+        
+        let params = new URLSearchParams();
+        if (txnId) params.append('txn_id', txnId);
+        if (phone) params.append('phone', phone);
+        if (date) params.append('date', date);
+        
+        fetch(`/tronic/api/search-payments/?${params.toString()}`)
+            .then(r => r.json())
+            .then(data => {
+                const container = document.getElementById('paymentSearchResults');
+                if (data.success && data.payments && data.payments.length > 0) {
+                    let html = `
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Transaction ID</th>
+                                        <th>Amount</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    data.payments.forEach(p => {
+                        const statusColor = p.status === 'completed' ? 'success' : 
+                                           p.status === 'pending' ? 'warning' : 'danger';
+                        html += `
+                            <tr>
+                                <td><small>${p.txn_id}</small></td>
+                                <td><strong>KES ${p.amount.toLocaleString()}</strong></td>
+                                <td>${p.phone || '-'}</td>
+                                <td><span class="badge bg-${statusColor}">${p.status}</span></td>
+                                <td><small>${p.date}</small></td>
+                            </tr>
+                        `;
+                    });
+                    html += `
+                                </tbody>
+                            </table>
+                            <small class="text-muted">Found ${data.payments.length} payment(s)</small>
+                        </div>
+                    `;
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                            <p>No payments found</p>
+                            <small>Try different search criteria</small>
+                        </div>
+                    `;
+                }
+            })
+            .catch(() => {
+                document.getElementById('paymentSearchResults').innerHTML = `
+                    <div class="text-center text-danger py-4">
+                        <i class="fas fa-exclamation-circle fa-2x d-block mb-2"></i>
+                        <p>Error searching payments</p>
+                    </div>
+                `;
+            });
+    }
+    
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', () => {
+        loadProducts();
+        loadCart();
+        document.getElementById('searchInput').addEventListener('keypress', e => e.key === 'Enter' && searchProducts());
+        document.getElementById('amountPaid').addEventListener('input', calculateChange);
+        document.getElementById('customerPhone').addEventListener('keypress', e => e.key === 'Enter' && searchCustomer());
+        
+        document.getElementById('imeiSearchInput').addEventListener('keyup', filterImeiList);
+        
+        document.getElementById('searchTxnId').addEventListener('keypress', e => e.key === 'Enter' && performPaymentSearch());
+        document.getElementById('searchPhone').addEventListener('keypress', e => e.key === 'Enter' && performPaymentSearch());
+        document.getElementById('searchDate').addEventListener('keypress', e => e.key === 'Enter' && performPaymentSearch());
+        
+        // STK modal - Enter key triggers send
+        document.getElementById('stkPhone').addEventListener('keypress', e => e.key === 'Enter' && sendStkPush());
+        document.getElementById('stkAmount').addEventListener('keypress', e => e.key === 'Enter' && sendStkPush());
+    });
+    
+    // ============================================
+    // PRODUCT FUNCTIONS
+    // ============================================
+    function loadProducts() {
+        fetch('/tronic/api/search-product/?q=')
+            .then(r => r.json())
+            .then(data => displayProducts(data.results || []))
+            .catch(() => {
+                document.getElementById('productsGrid').innerHTML = '<div class="text-center py-5" style="grid-column: 1 / -1;"><p class="text-muted small">Error loading products</p></div>';
+            });
+    }
+    
+    function searchProducts() {
+        const q = document.getElementById('searchInput').value.trim();
+        if (!q) return loadProducts();
+        fetch(`/tronic/api/search-product/?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => displayProducts(data.results || []));
+    }
+    
+    function displayProducts(products) {
+        const grid = document.getElementById('productsGrid');
+        if (!products || !products.length) {
+            grid.innerHTML = '<div class="text-center py-5" style="grid-column: 1 / -1;"><p class="text-muted small">No products found</p></div>';
+            return;
+        }
+        grid.innerHTML = products.map(p => {
+            const identifier = p.identifier || p.sku || '';
+            const badge = p.type === 'unit' ? '<span class="badge-imei">IMEI</span>' : '<span class="badge-barcode">BARCODE</span>';
+            const isSingle = p.is_single || p.type === 'unit';
+            const singleBadge = isSingle ? '<span class="single-badge">🔢 Single</span>' : '';
+            const stockLabel = p.stock !== undefined ? `<span class="badge ${p.stock > 0 ? 'bg-success' : 'bg-danger'} stock-badge">${p.stock}</span>` : '';
+            
+            let onclick = `addToCart(${p.id}, '${p.type || 'product'}')`;
+            if (isSingle && p.type !== 'unit') {
+                onclick = `openImeiSelection(${p.id}, '${escapeHtml(p.name)}')`;
+            }
+            
+            return `<div class="product-card" onclick="${onclick}">
+                ${stockLabel}
+                ${singleBadge}
+                <div class="product-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>
+                <div class="product-identifier">${escapeHtml(identifier.substring(0, 12))} ${badge}</div>
+                <div class="product-price">KES ${(p.price || 0).toLocaleString()}</div>
+            </div>`;
+        }).join('');
+    }
+    
+    // ============================================
+    // SINGLE ITEM SELECTION
+    // ============================================
+    function openImeiSelection(productId, productName) {
+        selectedProductForImei = productId;
+        document.getElementById('imeiProductName').textContent = `- ${productName}`;
+        
+        const imeiList = document.getElementById('imeiList');
+        const loading = document.getElementById('imeiLoading');
+        const count = document.getElementById('imeiCount');
+        
+        loading.style.display = 'block';
+        imeiList.innerHTML = '';
+        
+        fetch(`/tronic/api/get-product-units/?product_id=${productId}`)
+            .then(r => r.json())
+            .then(data => {
+                loading.style.display = 'none';
+                if (data.units && data.units.length > 0) {
+                    displayImeiList(data.units);
+                    count.textContent = `${data.units.length} units available`;
+                } else {
+                    imeiList.innerHTML = `
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-microchip fa-2x mb-2 opacity-50"></i>
+                            <p>No available units for this product</p>
+                        </div>
+                    `;
+                    count.textContent = '0 units available';
+                }
+            })
+            .catch(() => {
+                loading.style.display = 'none';
+                imeiList.innerHTML = `
+                    <div class="text-center py-5 text-danger">
+                        <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+                        <p>Error loading units</p>
+                    </div>
+                `;
+            });
+        
+        const modal = new bootstrap.Modal(document.getElementById('imeiSelectionModal'));
+        modal.show();
+    }
+    
+    function displayImeiList(units) {
+        const container = document.getElementById('imeiList');
+        container.innerHTML = units.map(unit => `
+            <div class="imei-item" onclick="selectImeiUnit(${unit.id}, '${escapeHtml(unit.identifier)}', ${unit.price})">
+                <div>
+                    <div class="imei-number">${escapeHtml(unit.identifier)}</div>
+                    <small class="text-muted">Condition: ${unit.condition || 'New'}</small>
+                </div>
+                <div class="text-end">
+                    <div class="fw-bold text-success">KES ${unit.price.toFixed(2)}</div>
+                    <span class="imei-status badge bg-success">Available</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function filterImeiList() {
+        const search = document.getElementById('imeiSearchInput').value.toLowerCase();
+        const items = document.querySelectorAll('.imei-item');
+        let visibleCount = 0;
+        
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(search)) {
+                item.style.display = '';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('imeiCount').textContent = `${visibleCount} units available`;
+    }
+    
+    function selectImeiUnit(unitId, identifier, price) {
+        fetch('/tronic/api/add-to-cart/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({item_id: unitId, type: 'unit', quantity: 1})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                loadCart();
+                bootstrap.Modal.getInstance(document.getElementById('imeiSelectionModal')).hide();
+                showToast(`Added ${identifier} to cart`, 'success');
+            } else {
+                showToast(data.error || 'Error adding unit', 'error');
+            }
+        });
+    }
+    
+    // ============================================
+    // CART FUNCTIONS
+    // ============================================
+    function addToCart(id, type) {
+        const productCard = event?.target?.closest?.('.product-card');
+        const isSingle = productCard?.querySelector('.single-badge') !== null;
+        
+        if (isSingle) {
+            openImeiSelection(id, '');
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Enter Quantity',
+            input: 'number',
+            inputLabel: 'Quantity',
+            inputValue: 1,
+            inputAttributes: { min: 1, step: 1 },
+            showCancelButton: true,
+            confirmButtonText: 'Add to Cart',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed && result.value > 0) {
+                fetch('/tronic/api/add-to-cart/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+                    body: JSON.stringify({item_id: id, type: type, quantity: parseInt(result.value)})
+                }).then(r => r.json()).then(data => {
+                    if (data.success) {
+                        loadCart();
+                    } else {
+                        showToast(data.error || 'Error adding item', 'error');
+                    }
+                });
+            }
+        });
+    }
+    
+    function loadCart() {
+        fetch('/tronic/api/get-cart/')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    cart = data.cart;
+                    displayCart(data.cart);
+                    updateTotals(data.subtotal, data.total);
+                    document.getElementById('checkoutBtn').disabled = cart.length === 0;
+                    document.getElementById('itemCount').innerHTML = `${cart.length} items`;
+                }
+            });
+    }
+    
+    function displayCart(items) {
+        const container = document.getElementById('cartItems');
+        if (!items || !items.length) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-shopping-cart fa-2x mb-2 opacity-50"></i>
+                    <p class="small">Cart is empty</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <table class="cart-table">
+                <thead>
+                    <tr>
+                        <th class="col-id">#</th>
+                        <th class="col-qty">Qty</th>
+                        <th class="col-description">Description</th>
+                        <th class="col-custom-price">Custom Price</th>
+                        <th class="col-price">Price</th>
+                        <th class="col-total">Total</th>
+                        <th class="col-actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        items.forEach((item, index) => {
+            const identifier = item.identifier || item.sku || '';
+            const rowNum = index + 1;
+            const itemTotal = item.price * item.quantity;
+            const isSingle = item.is_single || item.type === 'unit';
+            const maxStock = item.stock || 999;
+            const isAtMax = item.quantity >= maxStock;
+            
+            html += `
+                <tr data-id="${item.id}" data-type="${item.type}">
+                    <td class="col-id">${rowNum}</td>
+                    <td class="col-qty">
+                        <div class="qty-control">
+                            ${!isSingle ? `
+                            <button class="qty-btn" onclick="updateQty(${item.id}, '${item.type}', -1)">−</button>
+                            <span class="qty-number">${item.quantity}</span>
+                            <button class="qty-btn" onclick="updateQty(${item.id}, '${item.type}', 1)" 
+                                    ${isAtMax ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''}>+</button>
+                            ` : `
+                            <span class="qty-number">1</span>
+                            <span class="badge bg-purple text-white ms-1" style="font-size: 0.6rem;">Single</span>
+                            `}
+                        </div>
+                        ${isAtMax && !isSingle ? `<small class="text-danger d-block text-center" style="font-size: 0.55rem;">Max stock</small>` : ''}
+                    </td>
+                    <td class="col-description">
+                        <div class="fw-bold small">${escapeHtml(item.name)}</div>
+                        <div class="small text-muted" style="font-size: 0.55rem;">${escapeHtml(identifier)}</div>
+                        ${isSingle ? `<span class="badge bg-purple text-white" style="font-size: 0.5rem;">🔢 IMEI/Serial</span>` : ''}
+                    </td>
+                    <td class="col-custom-price">
+                        <input type="number" class="custom-price-input" 
+                               value="${item.price}" 
+                               step="0.01"
+                               onchange="updateCustomPrice(${item.id}, '${item.type}', this.value)">
+                    </td>
+                    <td class="col-price">KES ${Number(item.price).toLocaleString()}</td>
+                    <td class="col-total">KES ${Number(itemTotal).toLocaleString()}</td>
+                    <td class="col-actions">
+                        <button class="remove-btn" onclick="removeFromCart(${item.id}, '${item.type}')" title="Remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    }
+    
+    function updateQty(id, type, delta) {
+        const item = cart.find(i => i.id === id && i.type === type);
+        if (!item) return;
+        const newQty = item.quantity + delta;
+        const maxStock = item.stock || 999;
+        
+        if (delta > 0 && newQty > maxStock) {
+            showToast(`Only ${maxStock} units available in stock!`, 'warning');
+            return;
+        }
+        if (newQty < 1) { removeFromCart(id, type); return; }
+        
+        fetch('/tronic/api/update-cart/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({item_id: id, type: type, quantity: newQty})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                cart = data.cart;
+                displayCart(data.cart);
+                updateTotals(data.subtotal, data.total);
+                document.getElementById('checkoutBtn').disabled = cart.length === 0;
+                document.getElementById('itemCount').innerHTML = `${cart.length} items`;
+            }
+        });
+    }
+    
+    function updateCustomPrice(id, type, value) {
+        const price = parseFloat(value);
+        if (isNaN(price) || price < 0) {
+            showToast('Invalid price', 'error');
+            loadCart();
+            return;
+        }
+        
+        fetch('/tronic/api/update-cart-price/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({item_id: id, type: type, price: price})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                cart = data.cart;
+                displayCart(data.cart);
+                updateTotals(data.subtotal, data.total);
+            } else {
+                showToast(data.error || 'Error updating price', 'error');
+                loadCart();
+            }
+        }).catch(() => loadCart());
+    }
+    
+    function removeFromCart(id, type) {
+        fetch('/tronic/api/remove-from-cart/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({item_id: id, type: type})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                cart = data.cart;
+                displayCart(data.cart);
+                updateTotals(data.subtotal, data.total);
+                document.getElementById('checkoutBtn').disabled = cart.length === 0;
+                document.getElementById('itemCount').innerHTML = `${cart.length} items`;
+            }
+        });
+    }
+    
+    function clearCart() {
+        if (!cart.length) return;
+        Swal.fire({
+            title: 'Clear Cart?',
+            text: 'This will remove all items from your cart.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, clear'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/tronic/api/clear-cart/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}})
+                    .then(() => loadCart());
+            }
+        });
+    }
+    
+    // ============================================
+    // TOTALS
+    // ============================================
+    function updateTotals(subtotal, total) {
+        document.getElementById('subtotal').innerHTML = `KES ${Number(subtotal || 0).toLocaleString()}`;
+        document.getElementById('total').innerHTML = `KES ${Number(total || 0).toLocaleString()}`;
+    }
+    
+    // ============================================
+    // PAYMENT FUNCTIONS
+    // ============================================
+    function calculateChange() {
+        const totalText = document.getElementById('total').innerText;
+        const total = parseFloat(totalText.replace(/[^0-9.-]/g, '')) || 0;
+        const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+        
+        if (paid >= total && total > 0) {
+            document.getElementById('changeAmount').innerHTML = (paid - total).toLocaleString();
+            document.getElementById('changeDue').style.display = 'block';
+        } else {
+            document.getElementById('changeDue').style.display = 'none';
+        }
+    }
+    
+    function processPayment() {
+        const totalText = document.getElementById('total').innerText;
+        const total = parseFloat(totalText.replace(/[^0-9.-]/g, '')) || 0;
+        const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+        
+        if (cart.length === 0) {
+            showToast('Cart is empty', 'error');
+            return;
+        }
+        if (paid < total) {
+            showToast('Insufficient payment amount', 'error');
+            return;
+        }
+        
+        document.getElementById('checkoutBtn').disabled = true;
+        document.getElementById('checkoutBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+        
+        fetch('/tronic/api/process-payment/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({
+                payment_method: selectedPaymentMethod,
+                amount_paid: paid,
+                customer_id: currentCustomer?.id
+            })
+        }).then(r => r.json()).then(data => {
+            document.getElementById('checkoutBtn').disabled = false;
+            document.getElementById('checkoutBtn').innerHTML = '<i class="fas fa-check-circle me-2"></i> Complete Sale';
+            
+            if (data.success) {
+                Swal.fire({
+                    title: '✅ Sale Complete!',
+                    html: `<strong>${data.receipt_number}</strong><br>Total: KES ${data.total.toLocaleString()}<br>Paid: KES ${data.amount_paid.toLocaleString()}<br>Change: KES ${data.change.toLocaleString()}<br><hr><small class="text-muted">Payment: ${selectedPaymentMethod.toUpperCase()}</small>`,
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+                loadCart();
+                document.getElementById('amountPaid').value = '';
+                document.getElementById('changeDue').style.display = 'none';
+                document.getElementById('customerPhone').value = '';
+                document.getElementById('customerInfo').style.display = 'none';
+                currentCustomer = null;
+                selectPaymentMethod('cash');
+            } else {
+                showToast(data.error || 'Payment failed', 'error');
+            }
+        }).catch(err => {
+            document.getElementById('checkoutBtn').disabled = false;
+            document.getElementById('checkoutBtn').innerHTML = '<i class="fas fa-check-circle me-2"></i> Complete Sale';
+            showToast('Payment processing error', 'error');
+            console.error(err);
+        });
+    }
+    
+    // ============================================
+    // CUSTOMER FUNCTIONS
+    // ============================================
+    
+    function searchCustomer() {
+        const phone = document.getElementById('customerPhone')?.value?.trim();
+        if (!phone || phone.length < 10) {
+            showToast('Enter valid phone number (10+ digits)', 'warning');
+            return;
+        }
+        
+        let customerInfo = document.getElementById('customerInfo');
+        if (!customerInfo) {
+            const customerSection = document.querySelector('.customer-section');
+            if (customerSection) {
+                customerInfo = document.createElement('div');
+                customerInfo.id = 'customerInfo';
+                customerInfo.style.display = 'block';
+                customerInfo.innerHTML = `
+                    <div class="alert alert-info py-1 mb-0 small">
+                        <strong id="customerName">Searching...</strong><br>
+                        <span id="customerPhoneDisplay">${escapeHtml(phone)}</span>
+                    </div>
+                `;
+                customerSection.appendChild(customerInfo);
+            } else {
+                showToast('Error: Customer section not found', 'error');
+                return;
+            }
+        }
+        
+        const customerName = document.getElementById('customerName');
+        const customerPhoneDisplay = document.getElementById('customerPhoneDisplay');
+        
+        if (!customerName || !customerPhoneDisplay) {
+            customerInfo.innerHTML = `
+                <div class="alert alert-info py-1 mb-0 small">
+                    <strong id="customerName">Searching...</strong><br>
+                    <span id="customerPhoneDisplay">${escapeHtml(phone)}</span>
+                </div>
+            `;
+            const newCustomerName = document.getElementById('customerName');
+            const newCustomerPhoneDisplay = document.getElementById('customerPhoneDisplay');
+            if (!newCustomerName || !newCustomerPhoneDisplay) {
+                showToast('Error loading customer info', 'error');
+                return;
+            }
+        }
+        
+        const freshCustomerName = document.getElementById('customerName');
+        const freshCustomerPhoneDisplay = document.getElementById('customerPhoneDisplay');
+        
+        customerInfo.style.display = 'block';
+        if (freshCustomerName) freshCustomerName.innerHTML = 'Searching...';
+        if (freshCustomerPhoneDisplay) freshCustomerPhoneDisplay.innerHTML = phone;
+        
+        let alertEl = customerInfo.querySelector('.alert');
+        if (alertEl) {
+            alertEl.className = 'alert alert-info py-1 mb-0 small';
+            alertEl.innerHTML = `
+                <i class="fas fa-spinner fa-spin me-1"></i>
+                Searching for customer...
+            `;
+        }
+        
+        fetch(`/tronic/api/search-customer/?phone=${encodeURIComponent(phone)}`)
+            .then(r => r.json())
+            .then(data => {
+                console.log('Customer search response:', data);
+                
+                const customerInfo = document.getElementById('customerInfo');
+                if (!customerInfo) return;
+                
+                let alertEl = customerInfo.querySelector('.alert');
+                if (!alertEl) {
+                    alertEl = document.createElement('div');
+                    alertEl.className = 'alert py-1 mb-0 small';
+                    customerInfo.appendChild(alertEl);
+                }
+                
+                if (data && data.success) {
+                    if (data.found && data.customer) {
+                        const customer = data.customer;
+                        currentCustomer = customer;
+                        customerInfo.style.display = 'block';
+                        alertEl.className = 'alert alert-success py-1 mb-0 small';
+                        alertEl.innerHTML = `
+                            <i class="fas fa-check-circle me-1"></i>
+                            <strong>${escapeHtml(customer.name || customer.full_name || 'N/A')}</strong><br>
+                            <span>${escapeHtml(customer.phone || customer.phone_number || 'N/A')}</span>
+                            ${customer.email ? `<br><small>${escapeHtml(customer.email)}</small>` : ''}
+                        `;
+                        showToast(`Customer found: ${customer.name || customer.full_name}`, 'success');
+                    } else {
+                        currentCustomer = null;
+                        customerInfo.style.display = 'block';
+                        alertEl.className = 'alert alert-warning py-1 mb-0 small';
+                        alertEl.innerHTML = `
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Customer not found</strong><br>
+                            <span class="small">Phone: ${escapeHtml(phone)}</span>
+                            <button class="btn btn-sm btn-success ms-2" onclick="openAddCustomer('${escapeHtml(phone)}')">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        `;
+                        showToast('Customer not found. Click "Add" to create new customer.', 'warning');
+                    }
+                } else {
+                    currentCustomer = null;
+                    customerInfo.style.display = 'block';
+                    alertEl.className = 'alert alert-danger py-1 mb-0 small';
+                    alertEl.innerHTML = `
+                        <i class="fas fa-times-circle me-1"></i>
+                        Error: ${data?.error || 'Failed to search customer'}
+                    `;
+                    showToast(data?.error || 'Error searching customer', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error searching customer:', error);
+                const customerInfo = document.getElementById('customerInfo');
+                let alertEl = customerInfo?.querySelector('.alert');
+                if (customerInfo && alertEl) {
+                    customerInfo.style.display = 'block';
+                    alertEl.className = 'alert alert-danger py-1 mb-0 small';
+                    alertEl.innerHTML = `
+                        <i class="fas fa-times-circle me-1"></i>
+                        Network error. Please try again.
+                    `;
+                }
+                showToast('Error searching customer', 'error');
+            });
+    }
+    
+    function openAddCustomer(phone) {
+        const phoneInput = document.getElementById('newCustomerPhone');
+        if (phoneInput) {
+            phoneInput.value = phone || '';
+        }
+        const modal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
+        if (modal) modal.show();
+    }
+    
+    function saveCustomer() {
+        const name = document.getElementById('newCustomerName')?.value?.trim();
+        const phone = document.getElementById('newCustomerPhone')?.value?.trim();
+        const email = document.getElementById('newCustomerEmail')?.value?.trim();
+        
+        if (!name || !phone) {
+            showToast('Name and phone are required', 'error');
+            return;
+        }
+        
+        if (phone.length < 10) {
+            showToast('Phone number must be at least 10 digits', 'error');
+            return;
+        }
+        
+        const data = {
+            name: name,
+            phone: phone,
+            email: email || ''
+        };
+        
+        console.log('Sending customer data:', data);
+        
+        fetch('/tronic/api/add-customer/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json().then(data => {
+                if (!response.ok) {
+                    throw data;
+                }
+                return data;
+            });
+        })
+        .then(data => {
+            console.log('Add customer response:', data);
+            if (data.success) {
+                showToast('Customer added successfully!', 'success');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
+                if (modal) modal.hide();
+                document.getElementById('customerPhone').value = phone;
+                setTimeout(searchCustomer, 500);
+                document.getElementById('newCustomerName').value = '';
+                document.getElementById('newCustomerPhone').value = '';
+                document.getElementById('newCustomerEmail').value = '';
+            } else {
+                showToast(data.error || data.message || 'Failed to add customer', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error adding customer:', error);
+            const errorMsg = error.error || error.message || 'Error adding customer';
+            showToast(errorMsg, 'error');
+        });
+    }
+    
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+               document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1];
+    }
+    
+    function showToast(msg, type) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            icon: type,
+            title: msg
+        });
+    }
+    
+    function escapeHtml(t) {
+        if (!t) return '';
+        const d = document.createElement('div');
+        d.textContent = t;
+        return d.innerHTML;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,283 @@
+<!-- templates/tronic_master/inventory/low_stock_alert.html -->
+{% extends 'tronic_master/base_tech.html' %}
+
+{% block title %}Low Stock Alert - Tech Master{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+            Low Stock Alert
+        </h2>
+        <div>
+            <a href="{% url 'tronic_master:product_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Products
+            </a>
+            <a href="{% url 'tronic_master:stock_report' %}" class="btn btn-info text-white">
+                <i class="fas fa-chart-bar me-2"></i>Stock Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-times-circle me-2"></i>Out of Stock
+                    </h5>
+                    <h2 class="mb-0">{{ out_of_stock_count }}</h2>
+                    <small>Products with zero stock</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-exclamation-circle me-2"></i>Low Stock
+                    </h5>
+                    <h2 class="mb-0">{{ low_stock_count }}</h2>
+                    <small>Products below reorder level</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-check-circle me-2"></i>Healthy Stock
+                    </h5>
+                    <h2 class="mb-0">{{ total_products|default:0|add:"-"|add:low_stock_count|add:"-"|add:out_of_stock_count }}</h2>
+                    <small>Products with adequate stock</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-boxes me-2"></i>Total Products
+                    </h5>
+                    <h2 class="mb-0">{{ total_products|default:0 }}</h2>
+                    <small>Active products in inventory</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Out of Stock Products -->
+    {% if out_of_stock_products %}
+    <div class="card border-danger mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-times-circle me-2"></i>
+                Out of Stock Products ({{ out_of_stock_count }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Brand</th>
+                            <th>Stock</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in out_of_stock_products %}
+                        <tr class="table-danger">
+                            <td><code>{{ product.sku_code }}</code></td>
+                            <td>
+                                <strong>{{ product.name }}</strong>
+                                {% if product.model %}
+                                <br><small class="text-muted">{{ product.model }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ product.category.name|default:"-" }}</td>
+                            <td>{{ product.brand|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-danger">0</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'tronic_master:product_detail' product.id %}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'tronic_master:restock_product' product.id %}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-plus"></i> Restock
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Low Stock Products -->
+    {% if low_stock_products %}
+    <div class="card border-warning">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Low Stock Products ({{ low_stock_count }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Brand</th>
+                            <th>Current Stock</th>
+                            <th>Reorder Level</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in low_stock_products %}
+                        <tr class="table-warning">
+                            <td><code>{{ product.sku_code }}</code></td>
+                            <td>
+                                <strong>{{ product.name }}</strong>
+                                {% if product.model %}
+                                <br><small class="text-muted">{{ product.model }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ product.category.name|default:"-" }}</td>
+                            <td>{{ product.brand|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-warning text-dark">
+                                    {{ product.available_quantity }}
+                                </span>
+                            </td>
+                            <td>{{ product.reorder_level }}</td>
+                            <td>
+                                {% if product.available_quantity == 0 %}
+                                <span class="badge bg-danger">Out of Stock</span>
+                                {% elif product.available_quantity <= 5 %}
+                                <span class="badge bg-danger">Critical</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Low</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'tronic_master:product_detail' product.id %}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'tronic_master:restock_product' product.id %}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-plus"></i> Restock
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- No Alerts -->
+    {% if not low_stock_products and not out_of_stock_products %}
+    <div class="card border-success">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+            <h3 class="mt-3">All Stock Levels Are Healthy!</h3>
+            <p class="text-muted">No products are currently low on stock or out of stock.</p>
+            <a href="{% url 'tronic_master:product_list' %}" class="btn btn-primary mt-3">
+                <i class="fas fa-boxes me-2"></i>View All Products
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Low Stock by Category (if available) -->
+    {% if low_stock_by_category %}
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-pie me-2"></i>
+                Low Stock by Category
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for category in low_stock_by_category %}
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ category.category__name|default:"Uncategorized" }}</h6>
+                            <h3 class="text-warning">{{ category.count }}</h3>
+                            <small class="text-muted">Products low in stock</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'tronic_master:add_product_selection' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add Product
+                        </a>
+                        <a href="{% url 'tronic_master:import_products' %}" class="btn btn-success">
+                            <i class="fas fa-file-import me-2"></i>Import Products
+                        </a>
+                        <a href="{% url 'tronic_master:stock_report' %}" class="btn btn-info text-white">
+                            <i class="fas fa-file-alt me-2"></i>Stock Report
+                        </a>
+                        <a href="{% url 'tronic_master:product_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-boxes me-2"></i>View All Products
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh every 60 seconds
+    setTimeout(function() {
+        location.reload();
+    }, 60000);
+
+    // Highlight rows with critical stock
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.table-warning .badge.bg-danger').forEach(function(badge) {
+            const row = badge.closest('tr');
+            if (row) {
+                row.classList.add('table-danger');
+            }
+        });
+    });
+</script>
+{% endblock %}

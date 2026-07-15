@@ -1,0 +1,224 @@
+<!-- templates/tronic_master/sales/sale_detail.html -->
+{% extends 'tronic_master/base_tech.html' %}
+
+{% block title %}Sale Detail - {{ sale.invoice_no }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-receipt text-primary me-2"></i>
+                    {{ sale.invoice_no }}
+                </h2>
+                <div>
+                    <a href="#" class="btn btn-warning">
+                        <i class="fas fa-box me-2"></i>{{ items|length }} Items
+                    </a>
+                    <a href="#" class="btn btn-success">
+                        <i class="fas fa-shopping-cart me-2"></i>{{ total_quantity|default:0 }} Total Quantity
+                    </a>
+                    <a href="#" class="btn btn-secondary">
+                        <i class="fas fa-average me-2"></i>KES {{ average_price|floatformat:2|default:"0.00" }}
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Sale Info -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Sale Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 40%;">Invoice Number</th>
+                                    <td><code>{{ sale.invoice_no }}</code></td>
+                                </tr>
+                                <tr>
+                                    <th>Date Sold</th>
+                                    <td>{{ sale.created_at|date:"Y-m-d H:i:s" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status</th>
+                                    <td>
+                                        {% if sale.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% elif sale.status == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                        {% elif sale.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                        {% elif sale.status == 'refunded' %}
+                                        <span class="badge bg-info">Refunded</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ sale.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th colspan="2" class="bg-light"></th>
+                                </tr>
+                                <tr>
+                                    <th>Sale Type</th>
+                                    <td>{{ sale.get_payment_method_display }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Sold By</th>
+                                    <td>{{ sale.cashier.get_full_name|default:sale.cashier.username }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Branch</th>
+                                    <td>{{ sale.branch.name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Info -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Customer Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 40%;">Customer Name</th>
+                                    <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Phone</th>
+                                    <td>{{ sale.customer_phone|default:"-" }}</td>
+                                </tr>
+                                {% if sale.customer %}
+                                <tr>
+                                    <th>ID Number</th>
+                                    <td>{{ sale.customer.id_number|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th colspan="2" class="bg-light"></th>
+                                </tr>
+                                <tr>
+                                    <th>Next of Kin Name</th>
+                                    <td>{{ next_of_kin_name|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Next of Kin Phone</th>
+                                    <td>{{ next_of_kin_phone|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Next of Kin Relationship</th>
+                                    <td>{{ next_of_kin_relationship|default:"-" }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-list me-2"></i>Sale Items</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th>Identifier</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ item.product.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">SKU: {{ item.product.sku_code }}</small>
+                                    </td>
+                                    <td>
+                                        {% if item.product_unit.imei_number %}
+                                        <code>{{ item.product_unit.imei_number }}</code>
+                                        {% elif item.product_unit.serial_number %}
+                                        <code>{{ item.product_unit.serial_number }}</code>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>KES {{ item.price|floatformat:2 }}</td>
+                                    <td><strong>KES {{ item.subtotal|floatformat:2 }}</strong></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-3">No items found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-dark">
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold">Subtotal:</td>
+                                    <td class="fw-bold">KES {{ sale.subtotal|floatformat:2 }}</td>
+                                </tr>
+                                {% if sale.discount > 0 %}
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold">Discount:</td>
+                                    <td class="fw-bold text-danger">-KES {{ sale.discount|floatformat:2 }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if sale.tax > 0 %}
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold">Tax (16%):</td>
+                                    <td class="fw-bold">KES {{ sale.tax|floatformat:2 }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr class="table-success">
+                                    <td colspan="5" class="text-end fw-bold fs-5">Total:</td>
+                                    <td class="fw-bold fs-5">KES {{ sale.total|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'tronic_master:receipt' sale.id %}" class="btn btn-info" target="_blank">
+                            <i class="fas fa-eye"></i>View ETR
+                        </a>
+                        {% if sale.status == 'completed' %}
+                        <a href="{% url 'tronic_master:create_return' sale.id %}" class="btn btn-warning">
+                            <i class="fas fa-undo-alt me-2"></i>Return
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'tronic_master:sales_history' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Sales
+                        </a>
+                    </div>
+                </div>
+                <div class="card-header bg-light">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'tronic_master/base_tech.html' %}
+
+{% block title %}Print Labels{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-4">
+            <h5 class="mb-0"><i class="fas fa-print text-primary me-2"></i>Print Barcode Labels</h5>
+            <p class="text-muted small mb-0">Select products and print barcode labels</p>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Instructions:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Select products to print labels for</li>
+                    <li>Click "Generate PDF" to create labels</li>
+                    <li>Print the PDF on sticker paper or A4 and cut</li>
+                </ul>
+            </div>
+            
+            <form method="post" action="{% url 'bulk_print_labels' %}" id="printForm">
+                {% csrf_token %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" id="selectAll">
+                                </th>
+                                <th>Product Name</th>
+                                <th>SKU</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="selected_products" value="{{ product.id }}" class="product-checkbox">
+                                </td>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.sku }}</td>
+                                <td>KES {{ product.selling_price|floatformat:2 }}</td>
+                                <td>{{ product.stock_quantity }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <i class="fas fa-inbox fa-2x text-muted mb-2 d-block"></i>
+                                    No products found
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-print me-2"></i>Generate PDF
+                    </button>
+                    <a href="{% url 'tronic_master:product_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.product-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+    });
+</script>
+{% endblock %}

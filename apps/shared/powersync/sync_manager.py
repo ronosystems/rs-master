@@ -4,7 +4,7 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 from apps.shared.tenants.models import SyncQueue
-from apps.tech_master.models import Product, ProductUnit, BranchTransfer, StockEntry
+from apps.tronic_master.models import Product, ProductUnit, BranchTransfer, StockEntry
 
 logger = logging.getLogger(__name__)
 

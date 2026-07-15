@@ -12,17 +12,17 @@ urlpatterns = [
     # ADMIN
     # ============================================
     path('admin/', admin.site.urls),
-    
+
     # ============================================
     # PORTAL (Main entry point)
     # ============================================
     path('', include('apps.shared.portal.urls', namespace='portal')),
-    
+
     # ============================================
     # TENANTS (Separate app for tenant management)
     # ============================================
     path('tenants/', include('apps.shared.tenants.urls', namespace='tenants')),
-    
+
     # ============================================
     # USERS (Separate app for user management)
     # ============================================
@@ -33,22 +33,22 @@ urlpatterns = [
     # CHAT
     # ============================================
     path('chats/', include('apps.shared.chats.urls', namespace='chats')),
-    
+
     # ============================================
     # SETTINGS
     # ============================================
     path('settings/', include('apps.shared.settings.urls', namespace='settings')),
-    
+
     # ============================================
     # PROJECTS
     # ============================================
-    path('tech/', include('apps.tech_master.urls', namespace='tech_master')),
+    path('tronic/', include('apps.tronic_master.urls', namespace='tronic_master')),
     path('hotel/', include('apps.hotel_master.urls', namespace='hotel_master')),
     path('food/', include('apps.food_master.urls', namespace='food_master')),
     path('retail/', include('apps.retail_master.urls', namespace='retail_master')),
     path('health/', include('apps.health_master.urls', namespace='health_master')),
     path('fashion/', include('apps.fashion_master.urls', namespace='fashion_master')),
-    path('rental/', include('apps.rental_master.urls', namespace='rental_master')), 
+    path('rental/', include('apps.rental_master.urls', namespace='rental_master')),
 
     # ============================================
     # FAVICON
@@ -59,8 +59,8 @@ urlpatterns = [
 
 
     # Handle Chrome DevTools well-known endpoint
-    path('.well-known/appspecific/com.chrome.devtools.json', 
-         lambda request: JsonResponse({}), 
+    path('.well-known/appspecific/com.chrome.devtools.json',
+         lambda request: JsonResponse({}),
          name='chrome_devtools'),
 ]
 

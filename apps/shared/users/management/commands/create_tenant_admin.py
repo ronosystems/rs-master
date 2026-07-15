@@ -17,7 +17,7 @@ class Command(BaseCommand):
         parser.add_argument('--email', help='Email for tenant admin')
         parser.add_argument('--password', help='Password for tenant admin')
         parser.add_argument('--tenant', help='Tenant ID or company name to assign')
-        parser.add_argument('--project', help='Project type code (e.g., TECH_MASTER, HOTEL_MASTER)')
+        parser.add_argument('--project', help='Project type code (e.g., TRONIC_MASTER, HOTEL_MASTER)')
 
     def handle(self, *args, **options):
         self.stdout.write('🔄 Creating Tenant Admin...')
@@ -26,7 +26,7 @@ class Command(BaseCommand):
         email = options.get('email') or input('Email: ')
         password = options.get('password') or getpass.getpass('Password: ')
         tenant_input = options.get('tenant') or input('Tenant ID or Company Name: ')
-        project_code = options.get('project') or input('Project Type (e.g., TECH_MASTER): ')
+        project_code = options.get('project') or input('Project Type (e.g., TRONIC_MASTER): ')
         
         # Find tenant
         tenant = None

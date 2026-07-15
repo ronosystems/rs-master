@@ -1,4 +1,4 @@
-# apps/tech_master/reports/views.py
+# apps/tronic_master/reports/views.py
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -6,8 +6,8 @@ from django.db.models import Sum, Count, F
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
-from apps.tech_master.inventory.models import Product, Category, Supplier
-from apps.tech_master.sales.models import Sale, SaleItem
+from apps.tronic_master.inventory.models import Product, Category, Supplier
+from apps.tronic_master.sales.models import Sale, SaleItem
 from apps.shared.expenses.models import Expense
 from apps.shared.users.models import User
 from apps.shared.customers.models import Customer
@@ -19,7 +19,7 @@ def report_dashboard(request):
     tenant = request.user.tenant
     
     if not tenant:
-        return render(request, 'tech_master/reports/dashboard.html', {
+        return render(request, 'tronic_master/reports/dashboard.html', {
             'error': 'No tenant assigned to your account'
         })
     
@@ -310,7 +310,7 @@ def report_dashboard(request):
         'active_tab': 'reports',
     }
     
-    return render(request, 'tech_master/reports/dashboard.html', context)
+    return render(request, 'tronic_master/reports/dashboard.html', context)
 
 
 # ============================================
@@ -323,7 +323,7 @@ def inventory_report(request):
     tenant = request.user.tenant
     
     if not tenant:
-        return render(request, 'tech_master/reports/inventory_report.html', {
+        return render(request, 'tronic_master/reports/inventory_report.html', {
             'error': 'No tenant assigned'
         })
     
@@ -355,7 +355,7 @@ def inventory_report(request):
         'products_by_category': products_by_category,
         'active_tab': 'reports',
     }
-    return render(request, 'tech_master/reports/inventory_report.html', context)
+    return render(request, 'tronic_master/reports/inventory_report.html', context)
 
 
 # ============================================
@@ -368,7 +368,7 @@ def sales_report(request):
     tenant = request.user.tenant
     
     if not tenant:
-        return render(request, 'tech_master/reports/sales_report.html', {
+        return render(request, 'tronic_master/reports/sales_report.html', {
             'error': 'No tenant assigned'
         })
     
@@ -411,4 +411,4 @@ def sales_report(request):
         'sales_by_payment': sales_by_payment,
         'active_tab': 'reports',
     }
-    return render(request, 'tech_master/reports/sales_report.html', context)
+    return render(request, 'tronic_master/reports/sales_report.html', context)
