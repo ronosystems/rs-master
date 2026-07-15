@@ -1,7 +1,10 @@
+{% load static %}
+{% load settings_tags %}
+
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
 <head>
-    <title>{% block title %}RS Master Platform - Super Admin{% endblock %}</title>
+    <title>{% block title %}{% get_platform_name as platform_name %}{{ platform_name|default:'RS Master Platform' }} - Super Admin{% endblock %}</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token }}">
@@ -16,8 +19,29 @@
         .mobile-menu-btn { display: none; background: rgba(255,255,255,0.1); border: none; color: white; width: 45px; height: 45px; border-radius: 8px; cursor: pointer; transition: all 0.3s; align-items: center; justify-content: center; font-size: 1.3rem; }
         .mobile-menu-btn:hover { background: rgba(255,255,255,0.2); }
         .navbar-left { display: flex; align-items: center; gap: 20px; }
-        .company-logo { width: 50px; height: 50px; background: linear-gradient(135deg, #0f67b3, #0284c7); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .company-name { font-weight: 700; font-size: 1.2rem; letter-spacing: 0.5px; }
+        .company-logo { 
+            width: 50px; 
+            height: 50px; 
+            background: linear-gradient(135deg, #0f67b3, #0284c7); 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 1.5rem; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .company-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        .company-logo i {
+            color: white;
+        }
+        .company-name { font-weight: 700; font-size: 1.2rem; letter-spacing: 0.5px; white-space: nowrap; }
         .navbar-right { display: flex; align-items: center; gap: 20px; }
         .sidebar-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 998; display: none; transition: all 0.3s; }
         .sidebar-overlay.active { display: block; }
@@ -347,9 +371,32 @@
             <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">
                 <i class="fas fa-bars"></i>
             </button>
-            <div class="company-logo"><i class="fas fa-globe"></i></div>
-            <div class="company-name">RS MASTER PLATFORM</div>
+
+            <!-- ============================================ -->
+            <!-- DYNAMIC LOGO - Same pattern as Tech Master -->
+            <!-- ============================================ -->
+            <div class="company-logo" id="companyLogo">
+                {% get_platform_logo as platform_logo %}
+                {% get_platform_name as platform_name %}
+                
+                {% if platform_logo %}
+                    <img src="{{ MEDIA_URL }}{{ platform_logo }}"
+                         alt="{{ platform_name|default:'RS Master Platform' }}"
+                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;"
+                         onerror="this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex'">
+                    <div class="logo-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">
+                        <i class="fas fa-globe" style="font-size: 1.5rem; color: white;"></i>
+                    </div>
+                {% else %}
+                    <i class="fas fa-globe" style="font-size: 1.5rem; color: white;"></i>
+                {% endif %}
+            </div>
+
+            <div class="company-name">
+                {{ platform_name|default:'RS MASTER PLATFORM' }}
+            </div>
         </div>
+
         <div class="navbar-right">
             <!-- ============================================ -->
             <!-- NOTIFICATION BUTTON WITH DROPDOWN -->
@@ -359,7 +406,7 @@
                     <i class="fas fa-bell"></i>
                     <span class="notification-badge" id="notificationBadge">0</span>
                 </button>
-                
+
                 <!-- Notification Dropdown -->
                 <div class="notification-dropdown" id="notificationDropdown">
                     <div class="notification-dropdown-header">
@@ -380,7 +427,7 @@
             </button>
             <div class="user-info">
                 <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
-                <div class="user-role">Super Admin</div>
+                <div class="user-role">SUPER ADMIN</div>
             </div>
             <div class="dropdown">
                 <div class="user-avatar" data-bs-toggle="dropdown">
@@ -468,13 +515,17 @@
 
     <!-- Fixed Footer -->
     <div class="fixed-footer" id="footer">
-        <div><i class="fas fa-copyright me-1"></i> <span id="currentYear"></span> RS MASTER PLATFORM</div>
+        <div>
+            <i class="fas fa-copyright me-1"></i> <span id="currentYear"></span> 
+            {% get_platform_name as platform_name %}
+            {{ platform_name|default:'RS MASTER PLATFORM' }}
+        </div>
         <div><i class="fas fa-code-branch me-1"></i> Version 2.0 | All Rights Reserved</div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         // ============================================
         // NOTIFICATIONS
@@ -506,14 +557,14 @@
                 .catch(error => {
                     // Silent fail
                 });
-            
+
             // Load notifications from server
             fetch('/chats/api/conversations/')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         const list = document.getElementById('notificationList');
-                        
+
                         if (data.conversations.length === 0) {
                             list.innerHTML = `
                                 <div class="notification-empty">
@@ -523,7 +574,7 @@
                             `;
                             return;
                         }
-                        
+
                         // Convert conversations to notifications
                         list.innerHTML = data.conversations.map(conv => `
                             <div class="notification-item ${conv.unread > 0 ? 'unread' : ''}" onclick="window.location.href='/chats/'">
@@ -556,7 +607,7 @@
                     badge.classList.add('zero');
                 }
             }
-            
+
             // Update chat badge in sidebar
             const chatBadge = document.getElementById('chatBadge');
             if (chatBadge) {
@@ -573,13 +624,13 @@
             // Mark all as read - can implement API call if needed
             unreadCount = 0;
             updateNotificationBadge();
-            
+
             // Close dropdown
             const dropdown = document.getElementById('notificationDropdown');
             if (dropdown) {
                 dropdown.classList.remove('active');
             }
-            
+
             // Show toast notification
             showToast('All notifications marked as read', 'success');
         }
@@ -594,7 +645,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             document.body.appendChild(toast);
-            
+
             setTimeout(() => {
                 toast.remove();
             }, 3000);
@@ -603,14 +654,14 @@
         // ============================================
         // LIVE CHAT NOTIFICATION POLLING
         // ============================================
-        
+
         let chatPollingInterval = null;
 
         function startChatPolling() {
             if (chatPollingInterval) {
                 clearInterval(chatPollingInterval);
             }
-            
+
             // Check every 10 seconds
             chatPollingInterval = setInterval(function() {
                 checkUnreadMessages();
@@ -623,22 +674,22 @@
             if (roleElement && roleElement.textContent.trim() !== 'Super Admin') {
                 return;
             }
-            
+
             fetch('/chats/api/unread/')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         const count = data.unread_count || 0;
-                        
+
                         // Update unread count
                         unreadCount = count;
                         updateNotificationBadge();
-                        
+
                         // Show browser notification if new messages
                         if (count > 0 && !document.hasFocus()) {
                             showBrowserNotification(count);
                         }
-                        
+
                         // Update notification dropdown if it's open
                         const dropdown = document.getElementById('notificationDropdown');
                         if (dropdown && dropdown.classList.contains('active')) {
@@ -653,7 +704,7 @@
 
         function showBrowserNotification(count) {
             if (!('Notification' in window)) return;
-            
+
             if (Notification.permission === 'granted') {
                 const notification = new Notification('💬 New Chat Messages', {
                     body: `You have ${count} new message${count > 1 ? 's' : ''} from visitors.`,
@@ -661,7 +712,7 @@
                     tag: 'chat-notification',
                     requireInteraction: true,
                 });
-                
+
                 notification.onclick = function() {
                     window.focus();
                     window.location.href = '/chats/';
@@ -754,12 +805,12 @@
         // ============================================
         function setActiveMenuItem() {
             const currentPath = window.location.pathname;
-            
+
             // Remove all active classes first
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.classList.remove('active');
             });
-            
+
             // Try to find exact match first
             let foundExact = false;
             document.querySelectorAll('.menu-item').forEach(item => {
@@ -769,28 +820,28 @@
                     foundExact = true;
                 }
             });
-            
+
             // If no exact match, try to match with data-url or last part
             if (!foundExact) {
                 const urlParts = currentPath.split('/').filter(p => p);
                 const lastPart = urlParts[urlParts.length - 1] || '';
-                
+
                 document.querySelectorAll('.menu-item').forEach(item => {
                     const href = item.getAttribute('href');
-                    
+
                     // Check if href ends with the last part of the URL
                     if (href && href.endsWith(lastPart) && lastPart) {
                         // Make sure it's not a partial match
                         const hrefParts = href.split('/').filter(p => p);
                         const hrefLastPart = hrefParts[hrefParts.length - 1] || '';
-                        
+
                         if (hrefLastPart === lastPart) {
                             item.classList.add('active');
                         }
                     }
                 });
             }
-            
+
             // If still no match, check if any href is a prefix (for nested pages)
             if (!document.querySelector('.menu-item.active')) {
                 document.querySelectorAll('.menu-item').forEach(item => {
@@ -812,7 +863,7 @@
                     }
                 });
             }
-            
+
             // If still no match, check for contained path (for non-prefix matching)
             if (!document.querySelector('.menu-item.active')) {
                 document.querySelectorAll('.menu-item').forEach(item => {
@@ -833,6 +884,20 @@
                     }
                 });
             }
+        }
+
+        // ============================================
+        // LOGO ERROR HANDLING
+        // ============================================
+        function handleLogoError(img) {
+            console.warn('Logo image failed to load:', img.src);
+            const parent = img.parentElement;
+            img.style.display = 'none';
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-globe';
+            icon.style.fontSize = '1.5rem';
+            icon.style.color = 'white';
+            parent.appendChild(icon);
         }
 
         // ============================================
@@ -890,13 +955,13 @@
             loadTheme();
             loadSidebarState();
             setActiveMenuItem();
-            
+
             // Load notifications
             loadNotifications();
-            
+
             // Start chat polling
             startChatPolling();
-            
+
             // Request notification permission
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();

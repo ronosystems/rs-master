@@ -139,22 +139,22 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'django.contrib.humanize', 
-    
+    'django.contrib.humanize',
+
     # Third party apps
     'corsheaders',
     'rest_framework',
     'whitenoise.runserver_nostatic',
-    
+
     # Shared apps
     'apps.shared',
     'apps.shared.roles',
     'apps.shared.tenants',
     'apps.shared.users',
     'apps.shared.customers',
-    'apps.shared.notifications', 
+    'apps.shared.notifications',
     'apps.shared.payments',
-    'apps.shared.audit_log', 
+    'apps.shared.audit_log',
     'apps.shared.portal',
     'apps.shared.permissions',
     'apps.shared.settings',
@@ -165,13 +165,13 @@ INSTALLED_APPS = [
 
     # Tech_master apps
     'apps.tech_master',
-    
+
     # Hotel_master apps
     'apps.hotel_master',
 
     # Rental master apps
     'apps.rental_master',
-    
+
     'apps.food_master',
     'apps.retail_master',
     'apps.health_master',
@@ -191,11 +191,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
+
     # Your custom middleware - order matters!
-    'apps.shared.middleware.TenantMiddleware',        
-    'apps.shared.middleware.OfflineSyncMiddleware',    
-    'apps.shared.portal.middleware.ProjectTypeMiddleware', 
+    'apps.shared.middleware.TenantMiddleware',
+    'apps.shared.middleware.OfflineSyncMiddleware',
+    'apps.shared.portal.middleware.ProjectTypeMiddleware',
     'apps.shared.portal.middleware.MaintenanceModeMiddleware',
 ]
 
@@ -213,14 +213,15 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.template.context_processors.media',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                
+
                 # Your custom context processors
                 'apps.shared.context_processors.tenant_logo_context',
-                'apps.shared.context_processors.offline_mode',      
-                'apps.shared.context_processors.tenant_settings',     
-                
+                'apps.shared.context_processors.offline_mode',
+                'apps.shared.context_processors.tenant_settings',
+
                 # Other existing ones from your config
                 'apps.shared.portal.context_processors.user_role',
                 'apps.shared.portal.context_processors.tenant_context',
@@ -252,24 +253,24 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
     Returns database configuration based on environment variables.
     Automatically switches to SQLite when offline.
     """
-    
+
     # --- PRIORITY 1: PYTHONANYWHERE MySQL (Auto-detected) ---
     if IS_PYTHONANYWHERE:
         print("🏠 Running on PythonAnywhere - Configuring MySQL")
-        
+
         # Get MySQL credentials from environment
         db_name = os.getenv('MYSQL_DATABASE')
         db_user = os.getenv('MYSQL_USER')
         db_password = os.getenv('MYSQL_PASSWORD')
         db_host = os.getenv('MYSQL_HOST', 'mysql.pythonanywhere-services.com')
-        
+
         # Validate credentials exist
         if not all([db_name, db_user, db_password]):
             raise ValueError(
                 "❌ MySQL credentials not set! Please set MYSQL_DATABASE, MYSQL_USER, "
                 "and MYSQL_PASSWORD in your .env.production file."
             )
-        
+
         return {
             'default': {
                 'ENGINE': 'django.db.backends.mysql',
@@ -286,7 +287,7 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
                 'CONN_HEALTH_CHECKS': True,
             }
         }
-    
+
     # --- PRIORITY 2: OFFLINE MODE (SQLite) ---
     if offline_mode:
         print("📴 OFFLINE: Using SQLite cache database")
@@ -299,7 +300,7 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
                 },
             }
         }
-    
+
     # --- PRIORITY 3: DATABASE_URL (For Heroku/Other cloud) ---
     database_url = os.getenv('DATABASE_URL')
     if database_url:
@@ -310,10 +311,10 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
             ssl_require=True
         )
         return {'default': dict(config)}
-    
+
     # --- PRIORITY 4: Individual PostgreSQL Settings ---
     engine = os.getenv('DATABASE_ENGINE', 'django.db.backends.sqlite3')
-    
+
     if engine == 'django.db.backends.postgresql':
         return {
             'default': {
@@ -332,14 +333,14 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
                 'ATOMIC_REQUESTS': True,
             }
         }
-    
+
     # --- PRIORITY 5: Default SQLite (Local development) ---
     else:
         db_name = os.getenv('DATABASE_NAME', 'db.sqlite3')
-        
+
         if ENV == 'test':
             db_name = ':memory:'
-        
+
         if db_name == ':memory:':
             return {
                 'default': {
@@ -471,17 +472,17 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    
+
     # Optional HSTS (PythonAnywhere may already handle this)
     # SECURE_HSTS_SECONDS = 31536000
     # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     # SECURE_HSTS_PRELOAD = True
-    
+
     SESSION_COOKIE_HTTPONLY = True
     CSRF_COOKIE_HTTPONLY = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    
+
     # CSRF Trusted Origins for PythonAnywhere
     if IS_PYTHONANYWHERE:
         PA_DOMAIN = os.getenv('PYTHONANYWHERE_DOMAIN', 'RONOSYSTEMS.pythonanywhere.com')
@@ -490,12 +491,12 @@ if not DEBUG:
             f'http://{PA_DOMAIN}',
             'https://*.pythonanywhere.com',
         ]
-    
+
     # Add any custom origins from environment
     csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
     if csrf_origins:
         CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in csrf_origins.split(',') if origin.strip()])
-    
+
     # Clean up empty entries
     CSRF_TRUSTED_ORIGINS = [origin for origin in CSRF_TRUSTED_ORIGINS if origin]
 
@@ -561,14 +562,14 @@ LOGGING = {
             'level': 'WARNING',  # Only show warnings and above
             'propagate': False,
         },
-        
+
         # Suppress context processors debug messages
         'apps.shared.portal.context_processors': {
             'handlers': ['console', 'file'],
             'level': 'ERROR',  # Suppress "Company name loaded" messages
             'propagate': False,
         },
-        
+
         # App loggers - INFO and above
         'apps.shared.sync': {
             'handlers': ['console', 'file'],
@@ -605,7 +606,7 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
-        
+
         # Suppress template loader debug messages
         'django.template.loaders': {
             'handlers': ['console', 'file'],

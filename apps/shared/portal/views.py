@@ -922,6 +922,7 @@ def add_user(request):
 # PLATFORM SETTINGS
 # ============================================
 
+
 @login_required
 def platform_settings(request):
     """Platform Settings for Super Admin"""
@@ -934,6 +935,9 @@ def platform_settings(request):
     from apps.tech_master.models import Product, Branch
     from apps.shared.settings.models import SystemSetting
     from django.core.cache import cache
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    import os
 
     # Handle POST - Save settings
     if request.method == 'POST':
@@ -946,10 +950,47 @@ def platform_settings(request):
         SystemSetting.set('debug_mode', str(request.POST.get('debug_mode') == 'on'))
         SystemSetting.set('email_notifications', str(request.POST.get('email_notifications') == 'on'))
 
+        # Handle logo upload
+        if request.FILES.get('platform_logo'):
+            logo_file = request.FILES['platform_logo']
+
+            # Validate file type
+            allowed_types = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp']
+            if logo_file.content_type not in allowed_types:
+                messages.error(request, 'Invalid file type. Please upload PNG, JPG, SVG, or WebP.')
+                return redirect('portal:platform_settings')
+
+            # Validate file size (max 5MB)
+            if logo_file.size > 5 * 1024 * 1024:
+                messages.error(request, 'File size too large. Maximum 5MB allowed.')
+                return redirect('portal:platform_settings')
+
+            # Save the logo
+            file_extension = os.path.splitext(logo_file.name)[1]
+            filename = f'platform_logo{file_extension}'
+            filepath = os.path.join('settings', filename)
+
+            # Delete old logo if exists
+            if default_storage.exists(filepath):
+                default_storage.delete(filepath)
+
+            # Save new logo
+            saved_path = default_storage.save(filepath, ContentFile(logo_file.read()))
+            SystemSetting.set('platform_logo', saved_path)
+
+        # Handle logo removal
+        if request.POST.get('remove_logo') == 'true':
+            logo_path = SystemSetting.get('platform_logo', None)
+            if logo_path and default_storage.exists(logo_path):
+                default_storage.delete(logo_path)
+            SystemSetting.set('platform_logo', '')
+
         messages.success(request, 'Settings saved successfully!')
         return redirect('portal:platform_settings')
 
     # GET - Load settings
+    platform_logo = SystemSetting.get('platform_logo', '')
+
     context = {
         'is_super_admin': True,
         'total_tenants': Tenant.objects.count(),
@@ -966,8 +1007,13 @@ def platform_settings(request):
         'debug_mode': SystemSetting.get('debug_mode', 'False') == 'True',
         'email_notifications': SystemSetting.get('email_notifications', 'True') == 'True',
         'maintenance_mode': cache.get('maintenance_mode', False),
+        'platform_logo': platform_logo,  # Add logo to context
     }
     return render(request, 'shared/platform_settings.html', context)
+
+
+
+
 
 
 @login_required
