@@ -1,30 +1,30 @@
-# apps/tronic_master/models.py - Fix the imports
-
+# ============================================
+# CORRECTED IMPORTS
+# ============================================
 from django.conf import settings
 from django.db import models
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
+from django.db.models import Sum, Count, Avg
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
-from django.utils import timezone  # ✅ Use Django's timezone
+from django.utils import timezone
+from django.contrib.auth.hashers import check_password, make_password  # ✅ Add this!
 from decimal import Decimal
 import logging
-from datetime import timedelta  # ✅ Only import timedelta, not timezone
-from apps.shared.tenants.models import Tenant
-from apps.shared.users.models import User
-from apps.shared.customers.models import Customer
-from django.db.models import Sum, Count, Avg
-from apps.shared.tenants.models import SyncQueue
-from django.contrib.auth.hashers import check_password, make_password
-from datetime import date  # ✅ For date.today()
+from datetime import timedelta, date
+
+# Import models from other apps
+from apps.shared.tenants.models import Tenant, SyncQueue  # ✅ Use Tenant directly
 from apps.shared.tenants.models import Tenant as CompanyTenant
+from apps.shared.customers.models import Customer
+from django.contrib.auth import get_user_model
 
 
-User = settings.AUTH_USER_MODEL
 
+
+
+User = get_user_model()  # ✅ This gets the actual User model class
 logger = logging.getLogger(__name__)
-
-
 
 
 # ====================================
@@ -421,17 +421,15 @@ class Category(models.Model):
         return self.identifier_type in ['imei', 'serial']
 
 
-
-
 # ====================================
 # PRODUCT SKU MODEL (VARIANT LEVEL) 📦
 # ====================================
 class Product(models.Model):
     """
-    Product SKU - Represents a PRODUCT VARIANT (not individual items)
-    SKU is unique per tenant, not globally
+    Product SKU - Represents a PRODUCT (e.g., Samsung A07)
+    SKU is unique per tenant
     """
-
+    
     # ============================================
     # MULTI-TENANCY
     # ============================================
@@ -441,7 +439,7 @@ class Product(models.Model):
         related_name='products',
         verbose_name="Tenant"
     )
-
+    
     # ===========================================
     # BRANCH SHOPS
     # ===========================================
@@ -458,24 +456,14 @@ class Product(models.Model):
     # SKU IDENTIFICATION (Tenant-specific)
     # ============================================
     sku_code = models.CharField(
-        max_length=50,
+        max_length=50, 
         db_index=True,
         verbose_name="SKU Code",
-        help_text="Unique product code per tenant (e.g., 001, 002 or custom)"
-    )
-
-    # Add barcode field for bulk products
-    barcode = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        db_index=True,
-        verbose_name="Barcode",
-        help_text="Product barcode (for bulk products)"
+        help_text="Unique product code per tenant (e.g., 000001, 000002 or custom)"
     )
 
     # ============================================
-    # PRODUCT VARIANT INFORMATION
+    # PRODUCT INFORMATION
     # ============================================
     name = models.CharField(
         max_length=255,
@@ -483,86 +471,77 @@ class Product(models.Model):
         verbose_name="Product Name",
         help_text="Display name (auto-generated if blank)"
     )
-
+    
     brand = models.CharField(
         max_length=100,
         db_index=True,
         verbose_name="Brand"
     )
-
+    
     model = models.CharField(
         max_length=200,
         db_index=True,
         verbose_name="Model"
     )
-
+    
+    # ============================================
+    # CATEGORY & SUPPLIER
+    # ============================================
     category = models.ForeignKey(
-        Category,
-        on_delete=models.PROTECT,
+        Category, 
+        on_delete=models.PROTECT, 
         related_name='products',
         verbose_name="Category"
     )
-
-    specifications = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name="Specifications",
-        help_text="RAM, storage, color, etc. Example: {'ram': '4GB', 'storage': '128GB', 'color': 'Black'}"
-    )
-
-    # ============================================
-    # PRICING
-    # ============================================
-    buying_price = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=Decimal('0'),
-        verbose_name="Buying Price (KES)"
-    )
-
-    selling_price = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=Decimal('0'),
-        verbose_name="Selling Price (KES)"
-    )
-
-    best_price = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="Best/Retail Price (KES)"
-    )
-
-    # ============================================
-    # STOCK MANAGEMENT
-    # ============================================
-    total_quantity = models.PositiveIntegerField(default=0)
-    available_quantity = models.PositiveIntegerField(default=0)
-    reserved_quantity = models.PositiveIntegerField(default=0)
-    damaged_quantity = models.PositiveIntegerField(default=0)
-
-    # For bulk items
-    bulk_quantity = models.PositiveIntegerField(default=0)
-    bulk_serial_number = models.CharField(max_length=100, blank=True, null=True)
-
-    # ============================================
-    # SUPPLIER AND STOCK MANAGEMENT
-    # ============================================
+    
     supplier = models.ForeignKey(
-        Supplier,
-        on_delete=models.SET_NULL,
-        null=True,
+        Supplier, 
+        on_delete=models.SET_NULL, 
+        null=True, 
         blank=True,
         related_name='products',
         verbose_name="Supplier"
     )
-
+    
+    # ============================================
+    # DEFAULT PRICING (Can be overridden in variants)
+    # ============================================
+    default_buying_price = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2,
+        default=Decimal('0'),
+        verbose_name="Default Buying Price (KES)"
+    )
+    
+    default_selling_price = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2,
+        default=Decimal('0'),
+        verbose_name="Default Selling Price (KES)"
+    )
+    
+    default_best_price = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Default Best/Retail Price (KES)"
+    )
+    
+    # ============================================
+    # STOCK MANAGEMENT (Total across all variants)
+    # ============================================
+    total_quantity = models.PositiveIntegerField(default=0, verbose_name="Total Quantity (All Variants)")
+    available_quantity = models.PositiveIntegerField(default=0, verbose_name="Available Quantity (All Variants)")
+    reserved_quantity = models.PositiveIntegerField(default=0, verbose_name="Reserved Quantity (All Variants)")
+    damaged_quantity = models.PositiveIntegerField(default=0, verbose_name="Damaged Quantity (All Variants)")
+    
+    # ============================================
+    # REORDER MANAGEMENT
+    # ============================================
     reorder_level = models.PositiveIntegerField(default=5)
-    last_restocked = models.DateTimeField(null=True, blank=True)
     warranty_months = models.PositiveIntegerField(default=12)
-
+    
     # ============================================
     # IMAGES
     # ============================================
@@ -572,16 +551,20 @@ class Product(models.Model):
         null=True,
         verbose_name="Product Image"
     )
-
-
+    
     # ============================================
     # STATUS
     # ============================================
     is_active = models.BooleanField(default=True)
     is_discontinued = models.BooleanField(default=False)
-
+    
     # ============================================
-    # AUDIT FIELDS (Using AUTH_USER_MODEL)
+    # DESCRIPTION
+    # ============================================
+    description = models.TextField(blank=True, null=True)
+    
+    # ============================================
+    # AUDIT FIELDS
     # ============================================
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -600,13 +583,11 @@ class Product(models.Model):
         related_name='modified_products'
     )
 
-    description = models.TextField(blank=True, null=True)
-
     class Meta:
-        ordering = ['tenant', 'sku_code']
+        ordering = ['tenant', 'brand', 'model']
         unique_together = [
             ['tenant', 'sku_code'],
-            ['tenant', 'brand', 'model', 'specifications'],
+            ['tenant', 'brand', 'model'],  # ✅ No JSON field here
         ]
         indexes = [
             models.Index(fields=['tenant', 'sku_code']),
@@ -614,72 +595,14 @@ class Product(models.Model):
             models.Index(fields=['tenant', 'category', 'is_active']),
             models.Index(fields=['tenant', 'available_quantity']),
         ]
-        verbose_name = 'Product SKU'
-        verbose_name_plural = 'Product SKUs'
-        permissions = [
-            # Product permissions
-            ("can_view_product", "Can view products"),
-            ("can_add_product", "Can add products"),
-            ("can_edit_product", "Can edit products"),
-            ("can_delete_product", "Can delete products"),
-            ("can_manage_product", "Can manage products"),
-
-            # Category permissions
-            ("can_view_category", "Can view categories"),
-            ("can_add_category", "Can add categories"),
-            ("can_edit_category", "Can edit categories"),
-            ("can_delete_category", "Can delete categories"),
-
-            # Branch permissions
-            ("can_view_branch", "Can view branches"),
-            ("can_add_branch", "Can add branches"),
-            ("can_edit_branch", "Can edit branches"),
-            ("can_delete_branch", "Can delete branches"),
-            ("can_manage_branch", "Can manage branches"),
-
-            # Supplier permissions
-            ("can_view_supplier", "Can view suppliers"),
-            ("can_add_supplier", "Can add suppliers"),
-            ("can_edit_supplier", "Can edit suppliers"),
-            ("can_delete_supplier", "Can delete suppliers"),
-
-            # Stock permissions
-            ("can_view_stock", "Can view stock"),
-            ("can_manage_stock", "Can manage stock"),
-            ("can_adjust_stock", "Can adjust stock"),
-            ("can_view_low_stock", "Can view low stock alerts"),
-
-            # Sales permissions
-            ("can_view_sale", "Can view sales"),
-            ("can_create_sale", "Can create sales"),
-            ("can_edit_sale", "Can edit sales"),
-            ("can_delete_sale", "Can delete sales"),
-            ("can_process_payment", "Can process payments"),
-            ("can_view_receipt", "Can view receipts"),
-
-            # Staff permissions
-            ("can_view_staff", "Can view staff"),
-            ("can_add_staff", "Can add staff"),
-            ("can_edit_staff", "Can edit staff"),
-            ("can_delete_staff", "Can delete staff"),
-            ("can_manage_staff", "Can manage staff"),
-
-            # Report permissions
-            ("can_view_report", "Can view reports"),
-            ("can_export_report", "Can export reports"),
-
-            # Settings permissions
-            ("can_view_settings", "Can view settings"),
-            ("can_manage_settings", "Can manage settings"),
-        ]
-
-
+        verbose_name = 'Product'
+        verbose_name_plural = 'Products'
 
     def save(self, *args, **kwargs):
         """Enhanced save with full sync support"""
         is_new = self.pk is None
         tenant_id = self.tenant_id
-
+        
         # Track previous state for conflict resolution
         if not is_new:
             try:
@@ -689,8 +612,8 @@ class Product(models.Model):
                     'name': old_instance.name,
                     'brand': old_instance.brand,
                     'model': old_instance.model,
-                    'buying_price': str(old_instance.buying_price),
-                    'selling_price': str(old_instance.selling_price),
+                    'default_buying_price': str(old_instance.default_buying_price),
+                    'default_selling_price': str(old_instance.default_selling_price),
                     'total_quantity': old_instance.total_quantity,
                     'available_quantity': old_instance.available_quantity,
                     'reorder_level': old_instance.reorder_level,
@@ -698,32 +621,29 @@ class Product(models.Model):
                 }
             except Product.DoesNotExist:
                 self._previous_data = None
-
-        # Existing save logic
+        
+        # Generate SKU if not provided
+        if not self.sku_code:
+            self.sku_code = self._generate_sku_code()
+        
+        # Generate name if not provided
+        if not self.name:
+            self.name = self._generate_name()
+        
+        # Set modified/created by
         if 'modified_by' in kwargs:
             self.last_modified_by = kwargs.pop('modified_by')
         if 'created_by' in kwargs and not self.pk:
             self.created_by = kwargs.pop('created_by')
-
-        if not self.sku_code:
-            self.sku_code = self._generate_sku_code()
-
-        if not self.name:
-            self.name = self._generate_name()
-
+        
         self.clean()
         super().save(*args, **kwargs)
-
-        # ✅ Enhanced sync queuing with priority
+        
+        # ✅ Queue sync if offline
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
-                # Determine priority based on stock levels
-                priority = 5
-                if self.available_quantity <= self.reorder_level:
-                    priority = 8  # High priority for low stock
-                if self.is_discontinued:
-                    priority = 3  # Low priority
-
+                priority = 8 if self.available_quantity <= self.reorder_level else 5
+                
                 SyncQueue.objects.create(
                     tenant_id=tenant_id,
                     model_name='Product',
@@ -732,30 +652,24 @@ class Product(models.Model):
                     data={
                         'id': self.id,
                         'sku_code': self.sku_code,
-                        'barcode': self.barcode,
                         'name': self.name,
                         'brand': self.brand,
                         'model': self.model,
                         'category_id': self.category_id,
-                        'category_name': self.category.name,
-                        'specifications': self.specifications,
-                        'buying_price': str(self.buying_price),
-                        'selling_price': str(self.selling_price),
-                        'best_price': str(self.best_price) if self.best_price else None,
+                        'category_name': self.category.name if self.category else None,
+                        'default_buying_price': str(self.default_buying_price),
+                        'default_selling_price': str(self.default_selling_price),
+                        'default_best_price': str(self.default_best_price) if self.default_best_price else None,
                         'total_quantity': self.total_quantity,
                         'available_quantity': self.available_quantity,
                         'reserved_quantity': self.reserved_quantity,
                         'damaged_quantity': self.damaged_quantity,
-                        'bulk_quantity': self.bulk_quantity,
-                        'supplier_id': self.supplier_id if self.supplier_id else None,
-                        'supplier_name': self.supplier.name if self.supplier else None,
                         'reorder_level': self.reorder_level,
                         'warranty_months': self.warranty_months,
                         'is_active': self.is_active,
                         'is_discontinued': self.is_discontinued,
                         'tenant_id': tenant_id,
                         'branch_id': self.branch_id if self.branch_id else None,
-                        'branch_name': self.branch.name if self.branch else None,
                         'description': self.description,
                         'last_updated': self.updated_at.isoformat(),
                         'previous_data': self._previous_data if hasattr(self, '_previous_data') else None,
@@ -765,11 +679,9 @@ class Product(models.Model):
                 logger.debug(f"✅ Queued Product sync: {self.sku_code} (Priority: {priority})")
             except Exception as e:
                 logger.error(f"Failed to queue Product sync: {e}")
-
+    
     def delete(self, *args, **kwargs):
         """Queue deletion for sync, then delete the object"""
-
-        # ✅ Queue the deletion for sync BEFORE deleting
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
                 SyncQueue.objects.create(
@@ -784,180 +696,699 @@ class Product(models.Model):
                         'tenant_id': self.tenant_id,
                     }
                 )
-                logger.debug(f"✅ Queued Product deletion for sync: {self.sku_code}")
+                logger.debug(f"✅ Queued Product deletion sync: {self.sku_code}")
             except Exception as e:
                 logger.error(f"Failed to queue Product deletion sync: {e}")
-
-        # ✅ Call parent delete method and return its result
+        
         return super().delete(*args, **kwargs)
-
+    
     def _generate_sku_code(self):
-        """
-        Generate tenant-specific sequential SKU code
-        Examples: 000001, 000002, 000003, ... 999999, 1000000, 1000001, etc.
-        """
+        """Generate tenant-specific sequential SKU code"""
         from django.db import transaction
         from django.db import connection
-
+        
         with transaction.atomic():
-            # ✅ MySQL-compatible CAST - detect database type
             if connection.vendor == 'mysql':
-                # MySQL: Use SIGNED (MySQL doesn't have INTEGER)
                 last_product = Product.objects.filter(
                     tenant=self.tenant
                 ).extra(
                     select={'sku_int': 'CAST(sku_code AS SIGNED)'}
                 ).order_by('-sku_int').first()
             else:
-                # SQLite/PostgreSQL: Use INTEGER
                 last_product = Product.objects.filter(
                     tenant=self.tenant
                 ).extra(
                     select={'sku_int': 'CAST(sku_code AS INTEGER)'}
                 ).order_by('-sku_int').first()
-
+        
             if last_product and last_product.sku_code:
                 try:
-                    # Try to convert existing SKU to integer
                     last_number = int(last_product.sku_code)
                     new_number = last_number + 1
-
-                    # Format with leading zeros (6 digits for numbers under 1 million)
                     if new_number < 1000000:
-                        return f"{new_number:06d}"  # 000001 to 999999
+                        return f"{new_number:06d}"
                     else:
-                        return str(new_number)  # 1000000, 1000001, etc.
+                        return str(new_number)
                 except (ValueError, TypeError):
-                    # If conversion fails, find max numeric value
-                    products = Product.objects.filter(tenant=self.tenant)
-                    max_number = 0
-                    for p in products:
-                        try:
-                            num = int(p.sku_code)
-                            if num > max_number:
-                                max_number = num
-                        except:
-                            pass
-                    new_number = max_number + 1
-
+                    count = Product.objects.filter(tenant=self.tenant).count()
+                    new_number = count + 1
                     if new_number < 1000000:
                         return f"{new_number:06d}"
                     else:
                         return str(new_number)
             else:
-                # First product for this tenant
                 return "000001"
-
+    
     def _generate_name(self):
-        name_parts = [self.brand, self.model]
-
-        if self.specifications:
-            storage = self.specifications.get('storage', '')
-            ram = self.specifications.get('ram', '')
-            color = self.specifications.get('color', '')
-
-            specs = []
-            if ram:
-                specs.append(ram)
-            if storage:
-                specs.append(storage)
-            if color:
-                specs.append(color)
-
-            if specs:
-                name_parts.append(f"({' '.join(specs)})")
-
-        return ' '.join(name_parts)
-
+        """Generate product name from brand and model"""
+        return f"{self.brand} {self.model}".strip()
+    
     def clean(self):
         if not self.category:
             raise ValidationError("Category is required")
-
-        if self.buying_price and self.selling_price:
-            if self.buying_price > self.selling_price:
+        
+        if self.default_buying_price and self.default_selling_price:
+            if self.default_buying_price > self.default_selling_price:
                 raise ValidationError("Buying price cannot exceed selling price")
-
-        if self.best_price and self.selling_price:
-            if self.best_price > self.selling_price:
-                raise ValidationError("Best price cannot exceed selling price")
-
+    
     def update_quantities(self):
-        if self.category.is_single_item:
-            self.total_quantity = self.units.count()
-            self.available_quantity = self.units.filter(status='available').count()
-            self.reserved_quantity = self.units.filter(status='reserved').count()
-            self.damaged_quantity = self.units.filter(status='damaged').count()
-            self.bulk_quantity = 0
-        else:
-            total_in = StockEntry.objects.filter(
-                product_sku=self,
-                quantity__gt=0
-            ).aggregate(total=Sum('quantity'))['total'] or 0
-
-            total_out = StockEntry.objects.filter(
-                product_sku=self,
-                quantity__lt=0
-            ).aggregate(total=Sum('quantity'))['total'] or 0
-
-            self.bulk_quantity = total_in + abs(total_out)
-            self.total_quantity = self.bulk_quantity
-            self.available_quantity = self.bulk_quantity
-
+        """Update total quantities from all variants"""
+        variants = self.variants.all()
+        self.total_quantity = variants.aggregate(total=Sum('quantity'))['total'] or 0
+        self.available_quantity = variants.aggregate(total=Sum('available_quantity'))['total'] or 0
+        self.reserved_quantity = variants.aggregate(total=Sum('reserved_quantity'))['total'] or 0
+        self.damaged_quantity = variants.aggregate(total=Sum('damaged_quantity'))['total'] or 0
+        
         self.save(update_fields=[
-            'total_quantity', 'available_quantity',
+            'total_quantity', 'available_quantity', 
             'reserved_quantity', 'damaged_quantity',
-            'bulk_quantity', 'updated_at'
+            'updated_at'
         ])
-
+    
     @property
     def display_name(self):
         return f"{self.name} ({self.sku_code})"
-
+    
     @property
     def current_stock(self):
-        if self.category.is_single_item:
-            return self.available_quantity
-        else:
-            return self.bulk_quantity
-
-    @property
-    def needs_reorder(self):
-        if not self.is_active or self.is_discontinued:
-            return False
-        current = self.current_stock
-        return current <= self.reorder_level and current > 0
-
+        return self.available_quantity
+    
     @property
     def is_out_of_stock(self):
         return self.current_stock == 0
-
+    
     @property
     def is_low_stock(self):
         return 0 < self.current_stock <= self.reorder_level
-
-    @property
-    def profit_margin(self):
-        if self.buying_price and self.selling_price:
-            return self.selling_price - self.buying_price
-        return Decimal('0.00')
-
-    @property
-    def profit_percentage(self):
-        if self.buying_price and self.buying_price > 0:
-            return (self.profit_margin / self.buying_price) * 100
-        return Decimal('0.0')
-
-    @property
-    def stock_value(self):
-        return self.current_stock * self.buying_price
-
-    @property
-    def retail_value(self):
-        return self.current_stock * self.selling_price
-
+    
     def __str__(self):
         return self.display_name
 
+
+# ====================================
+# PRODUCT VARIANT MODEL 📦
+# ====================================
+class ProductVariant(models.Model):
+    """
+    Product Variant - Individual variant of a product (Samsung A07 4/64GB Black)
+    Each variant has specific specifications, price, and stock
+    """
+    
+    # ============================================
+    # MULTI-TENANCY & RELATIONSHIPS
+    # ============================================
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='product_variants'
+    )
+    
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='variants',
+        verbose_name="Parent Product"
+    )
+    
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='product_variants',
+        verbose_name="Default Branch"
+    )
+    
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='product_variants'
+    )
+    
+    # ============================================
+    # VARIANT IDENTIFICATION
+    # ============================================
+    variant_sku = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        verbose_name="Variant SKU",
+        help_text="Auto-generated: SKU-RAM-STORAGE-COLOR"
+    )
+    
+    barcode = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        db_index=True,
+        verbose_name="Barcode"
+    )
+    
+    # ============================================
+    # SPECIFICATIONS (JSON for flexibility)
+    # ============================================
+    specifications = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Specifications",
+        help_text="RAM, storage, color, etc. Example: {'ram': '4GB', 'storage': '64GB', 'color': 'Black'}"
+    )
+    
+    # ============================================
+    # PRICING (Override parent product)
+    # ============================================
+    buying_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Buying Price (KES)",
+        help_text="Leave blank to use product default"
+    )
+    
+    selling_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Selling Price (KES)",
+        help_text="Leave blank to use product default"
+    )
+    
+    best_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Best/Retail Price (KES)"
+    )
+    
+    # ============================================
+    # STOCK MANAGEMENT (Variant-specific)
+    # ============================================
+    quantity = models.PositiveIntegerField(default=0, verbose_name="Total Quantity")
+    available_quantity = models.PositiveIntegerField(default=0, verbose_name="Available Quantity")
+    reserved_quantity = models.PositiveIntegerField(default=0, verbose_name="Reserved Quantity")
+    damaged_quantity = models.PositiveIntegerField(default=0, verbose_name="Damaged Quantity")
+    
+    # ============================================
+    # INDIVIDUAL UNIT IDENTIFIERS (for IMEI/Serial tracking)
+    # ============================================
+    imei_number = models.CharField(
+        max_length=15,
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="IMEI Number"
+    )
+    
+    serial_number = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Serial Number"
+    )
+    
+    # ============================================
+    # STATUS & CONDITION
+    # ============================================
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('available', 'Available'),
+            ('sold', 'Sold'),
+            ('reserved', 'Reserved'),
+            ('damaged', 'Damaged'),
+            ('stolen', 'Stolen'),
+            ('lost', 'Lost'),
+            ('returned', 'Returned'),
+            ('writeoff', 'Written Off'),
+        ],
+        default='available',
+        db_index=True,
+        verbose_name="Status"
+    )
+    
+    condition = models.CharField(
+        max_length=20,
+        choices=[
+            ('new', 'Brand New'),
+            ('refurbished', 'Refurbished'),
+            ('used_excellent', 'Used - Excellent'),
+            ('used_good', 'Used - Good'),
+            ('used_fair', 'Used - Fair'),
+            ('damaged', 'Damaged'),
+        ],
+        default='new',
+        verbose_name="Condition"
+    )
+    
+    # ============================================
+    # REORDER & WARRANTY
+    # ============================================
+    reorder_level = models.PositiveIntegerField(default=5)
+    warranty_months = models.PositiveIntegerField(default=12)
+    
+    # ============================================
+    # SALE INFORMATION
+    # ============================================
+    sold_at_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Sold At Price"
+    )
+    
+    sold_date = models.DateTimeField(null=True, blank=True)
+    sold_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sold_variants'
+    )
+    
+    # ============================================
+    # OWNERSHIP TRACKING (For Sales Agents)
+    # ============================================
+    current_owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='owned_variants',
+        verbose_name="Current Owner",
+        help_text="Sales agent currently assigned to this variant"
+    )
+    
+    assigned_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Assigned Date"
+    )
+    
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_variants',
+        verbose_name="Assigned By"
+    )
+    
+    # ============================================
+    # PURCHASE INFORMATION
+    # ============================================
+    purchase_date = models.DateTimeField(default=timezone.now)
+    purchase_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    
+    # ============================================
+    # WARRANTY
+    # ============================================
+    warranty_start = models.DateTimeField(default=timezone.now)
+    warranty_end = models.DateTimeField(null=True, blank=True)
+    
+    # ============================================
+    # LOCATION TRACKING
+    # ============================================
+    warehouse_location = models.CharField(max_length=50, blank=True, null=True)
+    shelf_location = models.CharField(max_length=50, blank=True, null=True)
+    
+    # ============================================
+    # THEFT / LOSS TRACKING
+    # ============================================
+    loss_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('stolen', 'Stolen'),
+            ('lost', 'Lost'),
+            ('damaged_total', 'Totally Damaged'),
+        ],
+        null=True,
+        blank=True
+    )
+    loss_reported_date = models.DateTimeField(null=True, blank=True)
+    loss_reported_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reported_variant_losses'
+    )
+    loss_notes = models.TextField(blank=True, null=True)
+    police_report_number = models.CharField(max_length=100, blank=True, null=True)
+    
+    # ============================================
+    # INSURANCE TRACKING
+    # ============================================
+    insurance_claim_filed = models.BooleanField(default=False)
+    insurance_claim_number = models.CharField(max_length=100, blank=True, null=True)
+    insurance_claim_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    insurance_payout_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    insurance_payout_date = models.DateTimeField(null=True, blank=True)
+    
+    # ============================================
+    # RECOVERY TRACKING
+    # ============================================
+    recovered_date = models.DateTimeField(null=True, blank=True)
+    recovered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='recovered_variants'
+    )
+    recovery_notes = models.TextField(blank=True, null=True)
+    
+    # ============================================
+    # NOTES & AUDIT
+    # ============================================
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_variants'
+    )
+    last_modified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='modified_variants'
+    )
+
+    class Meta:
+        ordering = ['product__brand', 'product__model', 'variant_sku']
+        # ✅ Use variant_sku for uniqueness instead of JSON
+        unique_together = [
+            ['tenant', 'variant_sku'],  # ✅ MySQL-compatible!
+        ]
+        indexes = [
+            models.Index(fields=['tenant', 'variant_sku']),
+            models.Index(fields=['tenant', 'product']),
+            models.Index(fields=['tenant', 'imei_number']),
+            models.Index(fields=['tenant', 'serial_number']),
+            models.Index(fields=['status']),
+            models.Index(fields=['product', 'status']),
+            models.Index(fields=['branch', 'status']),
+            models.Index(fields=['current_owner', 'status']),
+        ]
+        verbose_name = 'Product Variant'
+        verbose_name_plural = 'Product Variants'
+
+    def save(self, *args, **kwargs):
+        """Enhanced save with full sync support"""
+        is_new = self.pk is None
+        tenant_id = self.tenant_id
+        
+        # Track status changes for priority
+        old_status = None
+        if not is_new:
+            try:
+                old_instance = ProductVariant.objects.get(pk=self.pk)
+                old_status = old_instance.status
+                self._previous_data = {
+                    'status': old_instance.status,
+                    'branch_id': old_instance.branch_id,
+                    'condition': old_instance.condition,
+                    'current_owner_id': old_instance.current_owner_id,
+                    'quantity': old_instance.quantity,
+                    'available_quantity': old_instance.available_quantity,
+                }
+            except ProductVariant.DoesNotExist:
+                self._previous_data = None
+        
+        # ✅ Generate variant SKU automatically
+        if not self.variant_sku:
+            self.variant_sku = self._generate_variant_sku()
+        
+        # Set modified/created by
+        if 'modified_by' in kwargs:
+            self.last_modified_by = kwargs.pop('modified_by')
+        if 'created_by' in kwargs and not self.pk:
+            self.created_by = kwargs.pop('created_by')
+        
+        # Validate IMEI/Serial
+        if self.imei_number:
+            if len(self.imei_number) != 15:
+                raise ValidationError("IMEI number must be exactly 15 digits")
+            if not self.imei_number.isdigit():
+                raise ValidationError("IMEI number must contain only digits")
+        
+        # Set warranty end
+        if not self.warranty_end and self.warranty_months:
+            self.warranty_end = self.warranty_start + timedelta(days=self.warranty_months * 30)
+        
+        super().save(*args, **kwargs)
+        
+        # ✅ Update parent product quantities
+        self.product.update_quantities()
+        
+        # ✅ Queue sync if offline
+        if getattr(settings, 'OFFLINE_MODE', False):
+            try:
+                # Determine priority
+                priority = 5
+                if self.status == 'sold':
+                    priority = 9  # High priority - revenue tracking
+                elif self.status == 'damaged' or self.status == 'stolen':
+                    priority = 8  # High priority - loss tracking
+                elif old_status and old_status != self.status:
+                    priority = 7  # Status change is important
+                
+                SyncQueue.objects.create(
+                    tenant_id=tenant_id,
+                    model_name='ProductVariant',
+                    object_id=str(self.id),
+                    operation='CREATE' if is_new else 'UPDATE',
+                    data={
+                        'id': self.id,
+                        'product_id': self.product_id,
+                        'product_sku': self.product.sku_code,
+                        'product_name': self.product.name,
+                        'variant_sku': self.variant_sku,
+                        'barcode': self.barcode,
+                        'specifications': self.specifications,
+                        'imei_number': self.imei_number,
+                        'serial_number': self.serial_number,
+                        'branch_id': self.branch_id if self.branch_id else None,
+                        'branch_name': self.branch.name if self.branch else None,
+                        'status': self.status,
+                        'condition': self.condition,
+                        'buying_price': str(self.buying_price) if self.buying_price else None,
+                        'selling_price': str(self.selling_price) if self.selling_price else None,
+                        'best_price': str(self.best_price) if self.best_price else None,
+                        'quantity': self.quantity,
+                        'available_quantity': self.available_quantity,
+                        'reserved_quantity': self.reserved_quantity,
+                        'damaged_quantity': self.damaged_quantity,
+                        'current_owner_id': self.current_owner_id,
+                        'current_owner_name': self.current_owner.get_full_name() if self.current_owner else None,
+                        'sold_at_price': str(self.sold_at_price) if self.sold_at_price else None,
+                        'sold_date': self.sold_date.isoformat() if self.sold_date else None,
+                        'sold_by_id': self.sold_by_id,
+                        'warranty_end': self.warranty_end.isoformat() if self.warranty_end else None,
+                        'is_in_warranty': self.is_in_warranty,
+                        'tenant_id': tenant_id,
+                        'previous_data': self._previous_data if hasattr(self, '_previous_data') else None,
+                        'last_updated': self.updated_at.isoformat(),
+                    },
+                    priority=priority
+                )
+                logger.debug(f"✅ Queued ProductVariant sync: {self.variant_sku} (Priority: {priority})")
+            except Exception as e:
+                logger.error(f"Failed to queue ProductVariant sync: {e}")
+    
+    def delete(self, *args, **kwargs):
+        """Queue deletion for sync, then delete the object"""
+        if getattr(settings, 'OFFLINE_MODE', False):
+            try:
+                SyncQueue.objects.create(
+                    tenant_id=self.tenant_id,
+                    model_name='ProductVariant',
+                    object_id=str(self.id),
+                    operation='DELETE',
+                    data={
+                        'id': self.id,
+                        'variant_sku': self.variant_sku,
+                        'product_sku': self.product.sku_code,
+                        'imei_number': self.imei_number,
+                        'serial_number': self.serial_number,
+                        'tenant_id': self.tenant_id,
+                    }
+                )
+                logger.debug(f"✅ Queued ProductVariant deletion sync: {self.variant_sku}")
+            except Exception as e:
+                logger.error(f"Failed to queue ProductVariant deletion sync: {e}")
+        
+        # Update parent product quantities after deletion
+        self.product.update_quantities()
+        return super().delete(*args, **kwargs)
+    
+    def _generate_variant_sku(self):
+        """Generate variant SKU: SKU-RAM-STORAGE-COLOR"""
+        ram = self.specifications.get('ram', '').replace(' ', '').replace('GB', '')
+        storage = self.specifications.get('storage', '').replace(' ', '').replace('GB', '')
+        color = self.specifications.get('color', '').replace(' ', '')
+        
+        parts = [self.product.sku_code]
+        if ram:
+            parts.append(f"{ram}GB")
+        if storage:
+            parts.append(f"{storage}GB")
+        if color:
+            parts.append(color)
+        
+        return "-".join(parts)
+    
+    @property
+    def effective_buying_price(self):
+        """Get effective buying price (variant or product default)"""
+        return self.buying_price or self.product.default_buying_price
+    
+    @property
+    def effective_selling_price(self):
+        """Get effective selling price (variant or product default)"""
+        return self.selling_price or self.product.default_selling_price
+    
+    @property
+    def effective_best_price(self):
+        """Get effective best price (variant or product default)"""
+        return self.best_price or self.product.default_best_price
+    
+    @property
+    def unique_identifier(self):
+        """Get unique identifier (IMEI, Serial, or SKU)"""
+        if self.imei_number:
+            return f"IMEI: {self.imei_number}"
+        elif self.serial_number:
+            return f"S/N: {self.serial_number}"
+        return self.variant_sku
+    
+    @property
+    def is_in_warranty(self):
+        """Check if product is still under warranty"""
+        if not self.warranty_end:
+            return False
+        try:
+            return timezone.now() < self.warranty_end
+        except Exception:
+            return False
+    
+    @property
+    def warranty_remaining_days(self):
+        """Get remaining warranty days"""
+        if not self.warranty_end:
+            return 0
+        if not self.is_in_warranty:
+            return 0
+        try:
+            remaining = self.warranty_end - timezone.now()
+            return max(0, remaining.days)
+        except Exception:
+            return 0
+    
+    @property
+    def display_name(self):
+        """Display name with specifications"""
+        spec_str = ""
+        if self.specifications:
+            ram = self.specifications.get('ram', '')
+            storage = self.specifications.get('storage', '')
+            color = self.specifications.get('color', '')
+            spec_parts = [p for p in [ram, storage, color] if p]
+            if spec_parts:
+                spec_str = f" ({' | '.join(spec_parts)})"
+        return f"{self.product.name}{spec_str}"
+    
+    def __str__(self):
+        return self.display_name
+    
+    # ============================================
+    # STATUS MANAGEMENT METHODS
+    # ============================================
+    def mark_as_sold(self, price=None, sold_by=None):
+        """Mark variant as sold"""
+        self.status = 'sold'
+        self.sold_at_price = price or self.effective_selling_price
+        self.sold_date = timezone.now()
+        self.sold_by = sold_by
+        self.available_quantity = 0
+        self.save()
+        self.product.update_quantities()
+        return True
+    
+    def mark_as_available(self, quantity=None):
+        """Mark variant as available"""
+        self.status = 'available'
+        self.sold_at_price = None
+        self.sold_date = None
+        self.sold_by = None
+        self.available_quantity = quantity or self.quantity
+        self.save()
+        self.product.update_quantities()
+        return True
+    
+    def mark_as_reserved(self):
+        """Mark variant as reserved"""
+        self.status = 'reserved'
+        self.reserved_quantity = self.quantity
+        self.available_quantity = 0
+        self.save()
+        self.product.update_quantities()
+        return True
+    
+    def mark_as_damaged(self, notes=None, reported_by=None):
+        """Mark variant as damaged"""
+        self.status = 'damaged'
+        self.damaged_quantity = self.quantity
+        self.available_quantity = 0
+        if notes:
+            self.notes = notes
+        if reported_by:
+            self.last_modified_by = reported_by
+        self.save()
+        self.product.update_quantities()
+        return True
+    
+    def mark_as_stolen(self, reported_by, police_report=None, notes=None):
+        """Mark variant as stolen"""
+        self.status = 'stolen'
+        self.loss_type = 'stolen'
+        self.loss_reported_date = timezone.now()
+        self.loss_reported_by = reported_by
+        self.loss_notes = notes
+        self.police_report_number = police_report
+        self.available_quantity = 0
+        self.save()
+        self.product.update_quantities()
+        return True
+    
+    def add_stock(self, quantity):
+        """Add stock to variant"""
+        self.quantity += quantity
+        self.available_quantity += quantity
+        self.save()
+        self.product.update_quantities()
+        return True
+    
+    def remove_stock(self, quantity):
+        """Remove stock from variant"""
+        if quantity > self.available_quantity:
+            raise ValidationError(f"Cannot remove {quantity} units. Only {self.available_quantity} available.")
+        self.quantity -= quantity
+        self.available_quantity -= quantity
+        self.save()
+        self.product.update_quantities()
+        return True
 
 
 # ====================================
@@ -2836,12 +3267,70 @@ def validate_unit_identifiers(sender, instance, **kwargs):
             raise ValidationError(f"Serial {instance.serial_number} already exists for this tenant")
 
 
+@receiver([post_save, post_delete], sender=ProductVariant)
+def update_product_variant_quantities(sender, instance, **kwargs):
+    """Update parent product quantities when variant changes"""
+    instance.product.update_quantities()
+
+
+@receiver(post_save, sender=ProductVariant)
+def create_variant_stock_alerts(sender, instance, created, **kwargs):
+    """Create stock alerts for variant"""
+    try:
+        if not instance.product.is_active:
+            return
+        
+        current_stock = instance.available_quantity
+        reorder_level = instance.reorder_level or instance.product.reorder_level
+        
+        if current_stock <= reorder_level and current_stock > 0:
+            # Low stock alert
+            StockAlert.objects.update_or_create(
+                tenant=instance.tenant,
+                product=instance.product,
+                alert_type='lowstock',
+                is_dismissed=False,
+                defaults={
+                    'severity': 'danger',
+                    'current_stock': current_stock,
+                    'threshold': reorder_level,
+                    'is_active': True,
+                }
+            )
+        elif current_stock == 0:
+            # Out of stock alert
+            StockAlert.objects.update_or_create(
+                tenant=instance.tenant,
+                product=instance.product,
+                alert_type='outofstock',
+                is_dismissed=False,
+                defaults={
+                    'severity': 'critical',
+                    'current_stock': 0,
+                    'threshold': reorder_level,
+                    'is_active': True,
+                }
+            )
+        else:
+            # Dismiss alerts if stock is healthy
+            StockAlert.objects.filter(
+                tenant=instance.tenant,
+                product=instance.product,
+                is_active=True
+            ).update(is_active=False, is_dismissed=True)
+    except Exception as e:
+        logger.error(f"Error creating variant stock alert: {str(e)}")
+
+
+
+
 __all__ = [
     'Branch',
     'BranchStock',
     'Supplier',
     'Category',
     'Product',
+    'ProductVariant',
     'ProductUnit',
     'BranchTransfer',
     'StockEntry',

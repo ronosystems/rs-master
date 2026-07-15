@@ -1,5 +1,5 @@
 # ============================================
-# CONFIG SETTINGS - PYTHONANYWHERE READY
+# CONFIG SETTINGS - PYTHONANYWHERE READY (FULLY FIXED)
 # ============================================
 from pathlib import Path
 import os
@@ -19,25 +19,48 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Detect if running on PythonAnywhere
 IS_PYTHONANYWHERE = 'pythonanywhere' in sys.executable or os.getenv('PYTHONANYWHERE_DOMAIN') is not None
 
-# Force OFFLINE_MODE from environment variable (Default False for PA)
-OFFLINE_MODE = os.getenv('OFFLINE_MODE', 'False') == 'True'
-
 # ============================================
-# ENVIRONMENT LOADING
+# ENVIRONMENT LOADING - FORCE FOR PYTHONANYWHERE
 # ============================================
-ENV = os.getenv('DJANGO_ENV', 'development')
 
-if ENV == 'production':
+# ✅ If on PythonAnywhere, ALWAYS use .env.production
+if IS_PYTHONANYWHERE:
     env_file = BASE_DIR / '.env.production'
-elif ENV == 'test':
-    env_file = BASE_DIR / '.env.test'
+    print(f"🏠 PythonAnywhere detected - loading {env_file}")
 else:
-    env_file = BASE_DIR / '.env'
+    ENV = os.getenv('DJANGO_ENV', 'development')
+    if ENV == 'production':
+        env_file = BASE_DIR / '.env.production'
+    elif ENV == 'test':
+        env_file = BASE_DIR / '.env.test'
+    else:
+        env_file = BASE_DIR / '.env'
 
 if env_file.exists():
-    load_dotenv(env_file)
+    load_dotenv(env_file, override=True)
+    print(f"✅ Loaded: {env_file}")
 else:
-    load_dotenv(BASE_DIR / '.env')
+    print(f"❌ File not found: {env_file}")
+    # Create default .env.production on PythonAnywhere
+    if IS_PYTHONANYWHERE:
+        with open(env_file, 'w') as f:
+            f.write("MYSQL_DATABASE=RONOSYSTEMS$RSMASTER\n")
+            f.write("MYSQL_USER=RONOSYSTEMS\n")
+            f.write("MYSQL_PASSWORD=Kiprono@1997\n")
+            f.write("MYSQL_HOST=RONOSYSTEMS.mysql.pythonanywhere-services.com\n")
+            f.write("DJANGO_ENV=production\n")
+            f.write("DEBUG=False\n")
+            f.write("SECRET_KEY=gh5-3pz5go7hlm0)yfmdjw8f5l)%@b+*e*a-2xw(^3^g-un&zm\n")
+            f.write("ALLOWED_HOSTS=RONOSYSTEMS.pythonanywhere.com\n")
+            f.write("OFFLINE_MODE=False\n")
+            f.write("TIME_ZONE=Africa/Nairobi\n")
+            f.write("CORS_ALLOWED_ORIGINS=https://RONOSYSTEMS.pythonanywhere.com\n")
+            f.write("CSRF_TRUSTED_ORIGINS=https://RONOSYSTEMS.pythonanywhere.com\n")
+        load_dotenv(env_file, override=True)
+        print("✅ Created default .env.production")
+
+# ✅ Now set OFFLINE_MODE AFTER loading .env
+OFFLINE_MODE = os.getenv('OFFLINE_MODE', 'False') == 'True'
 
 # ============================================
 # CORE SETTINGS
@@ -67,7 +90,7 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
 # ============================================
-# PROJECT TYPES (YOUR ORIGINAL BUSINESS LOGIC)
+# PROJECT TYPES (UPDATED: TRONIC_MASTER)
 # ============================================
 PROJECT_TYPES = {
     'TRONIC_MASTER': {
@@ -163,7 +186,7 @@ INSTALLED_APPS = [
     'apps.shared.expenses',
     'apps.shared.reports',
 
-    # Tech_master apps
+    # TRONIC Master apps (renamed from tech_master)
     'apps.tronic_master',
 
     # Hotel_master apps
@@ -264,11 +287,18 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
         db_password = os.getenv('MYSQL_PASSWORD')
         db_host = os.getenv('MYSQL_HOST', 'mysql.pythonanywhere-services.com')
 
+        # ✅ DEBUG: Print what we found
+        print(f"   🔍 MYSQL_DATABASE: {db_name}")
+        print(f"   🔍 MYSQL_USER: {db_user}")
+        print(f"   🔍 MYSQL_PASSWORD: {'✅ SET' if db_password else '❌ NOT SET'}")
+        print(f"   🔍 MYSQL_HOST: {db_host}")
+
         # Validate credentials exist
         if not all([db_name, db_user, db_password]):
             raise ValueError(
-                "❌ MySQL credentials not set! Please set MYSQL_DATABASE, MYSQL_USER, "
-                "and MYSQL_PASSWORD in your .env.production file."
+                f"❌ MySQL credentials not set! "
+                f"MYSQL_DATABASE={db_name}, MYSQL_USER={db_user}, "
+                f"MYSQL_PASSWORD={'SET' if db_password else 'NOT SET'}"
             )
 
         return {
@@ -362,12 +392,11 @@ def get_database_config(offline_mode=False) -> Dict[str, Any]:
 DATABASES = get_database_config(offline_mode=OFFLINE_MODE)
 
 # Print which database we're using (for debugging)
-if DEBUG:
-    db_engine = DATABASES['default'].get('ENGINE', 'unknown')
-    if 'sqlite3' in db_engine:
-        print(f"🗄️  Using SQLite: {DATABASES['default'].get('NAME', '')}")
-    else:
-        print(f"🗄️  Using {db_engine}")
+db_engine = DATABASES['default'].get('ENGINE', 'unknown')
+if 'sqlite3' in db_engine:
+    print(f"🗄️  Using SQLite: {DATABASES['default'].get('NAME', '')}")
+else:
+    print(f"🗄️  Using {db_engine}")
 
 # ============================================
 # AUTH PASSWORD VALIDATORS
@@ -403,8 +432,7 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Different paths for PythonAnywhere (absolute paths required)
 if IS_PYTHONANYWHERE:
-    # IMPORTANT: Replace 'yourusername' with YOUR actual PythonAnywhere username
-    PA_USERNAME = os.getenv('PYTHONANYWHERE_USERNAME', 'yourusername')
+    PA_USERNAME = os.getenv('PYTHONANYWHERE_USERNAME', 'RONOSYSTEMS')
     STATIC_ROOT = f'/home/{PA_USERNAME}/staticfiles'
     MEDIA_ROOT = f'/home/{PA_USERNAME}/media'
 else:
@@ -435,7 +463,7 @@ POWERSYNC_API_KEY = os.getenv('POWERSYNC_API_KEY', '')
 # CORS SETTINGS - PYTHONANYWHERE READY
 # ============================================
 if IS_PYTHONANYWHERE:
-    PA_DOMAIN = os.getenv('PYTHONANYWHERE_DOMAIN', 'yourusername.pythonanywhere.com')
+    PA_DOMAIN = os.getenv('PYTHONANYWHERE_DOMAIN', 'RONOSYSTEMS.pythonanywhere.com')
     CORS_ALLOWED_ORIGINS = [
         f'https://{PA_DOMAIN}',
         f'http://{PA_DOMAIN}',
@@ -445,10 +473,7 @@ else:
     CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 
 CORS_ALLOW_CREDENTIALS = True
-# Clean up empty entries
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS if origin.strip()]
-
-
 
 # ============================================
 # SECURITY SETTINGS - PYTHONANYWHERE OPTIMIZED
@@ -499,8 +524,6 @@ if not DEBUG:
 
     # Clean up empty entries
     CSRF_TRUSTED_ORIGINS = [origin for origin in CSRF_TRUSTED_ORIGINS if origin]
-
-
 
 # ============================================
 # LOGGING - CLEAN VERSION (Only INFO and above)
@@ -644,11 +667,10 @@ REST_FRAMEWORK = {
 # ============================================
 # ENVIRONMENT INFO (for debugging)
 # ============================================
-if DEBUG:
-    print(f"🔧 Environment: {ENV}")
-    print(f"🏠 PythonAnywhere: {IS_PYTHONANYWHERE}")
-    print(f"🗄️  Database Engine: {DATABASES['default'].get('ENGINE', 'unknown')}")
-    print(f"📴 Offline Mode: {OFFLINE_MODE}")
-    print(f"🌐 Allowed Hosts: {ALLOWED_HOSTS}")
-    if ENV == 'production':
-        print(f"🔐 SECURE_SSL_REDIRECT: {SECURE_SSL_REDIRECT if not DEBUG else 'Not set (DEBUG mode)'}")
+print(f"🔧 Environment: {ENV if not IS_PYTHONANYWHERE else 'production (PythonAnywhere)'}")
+print(f"🏠 PythonAnywhere: {IS_PYTHONANYWHERE}")
+print(f"🗄️  Database Engine: {DATABASES['default'].get('ENGINE', 'unknown')}")
+print(f"📴 Offline Mode: {OFFLINE_MODE}")
+print(f"🌐 Allowed Hosts: {ALLOWED_HOSTS}")
+if not DEBUG:
+    print(f"🔐 SECURE_SSL_REDIRECT: {SECURE_SSL_REDIRECT}")

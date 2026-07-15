@@ -1,30 +1,26 @@
-# apps/tronic_master/templatetags/tronic_permissions.py
-
 from django import template
 from apps.tronic_master.permissions import (
-    user_has_tech_permission,
-    user_has_any_tech_permission,
+    user_has_tronic_permission,
+    user_has_any_tronic_permission,
     user_has_all_tronic_permissions,
 )
 
 register = template.Library()
 
-
 @register.filter
 def tronic_can(user, permission_codename):
     """
-    Check if user has a specific Tech Master permission.
+    Check if user has a specific Tronic Master permission.
     Usage: {% if user|tronic_can:'can_view_product' %}
     """
     if not user or not user.is_authenticated:
         return False
-    return user_has_tech_permission(user, permission_codename)
-
+    return user_has_tronic_permission(user, permission_codename)
 
 @register.filter
 def tronic_can_any(user, permission_codenames):
     """
-    Check if user has ANY of the specified Tech Master permissions.
+    Check if user has ANY of the specified Tronic Master permissions.
     Usage: {% if user|tronic_can_any:'can_view_product,can_add_product' %}
     """
     if not user or not user.is_authenticated:
@@ -35,13 +31,12 @@ def tronic_can_any(user, permission_codenames):
     else:
         permissions = permission_codenames
     
-    return user_has_any_tech_permission(user, permissions)
-
+    return user_has_any_tronic_permission(user, permissions)
 
 @register.filter
 def tronic_can_all(user, permission_codenames):
     """
-    Check if user has ALL of the specified Tech Master permissions.
+    Check if user has ALL of the specified Tronic Master permissions.
     Usage: {% if user|tronic_can_all:'can_view_product,can_add_product' %}
     """
     if not user or not user.is_authenticated:
@@ -54,12 +49,11 @@ def tronic_can_all(user, permission_codenames):
     
     return user_has_all_tronic_permissions(user, permissions)
 
-
 @register.filter
-def tech_has_role(user, role_name):
+def tronic_has_role(user, role_name):
     """
-    Check if user has a specific Tech Master role.
-    Usage: {% if user|tech_has_role:'Cashier' %}
+    Check if user has a specific Tronic Master role.
+    Usage: {% if user|tronic_has_role:'Cashier' %}
     """
     if not user or not user.is_authenticated:
         return False
