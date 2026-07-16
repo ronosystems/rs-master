@@ -53,12 +53,7 @@
                                         
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
-                                                <label for="color" class="form-label">Color</label>
-                                                <input type="text" class="form-control" id="color" name="color" 
-                                                       placeholder="e.g., White, Black">
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label for="category_id" class="form-label">Category</label>
+                                                <label for="category_id" class="form-label">Category *</label>
                                                 <select class="form-control" id="category_id" name="category_id" required>
                                                     <option value="">Select Category</option>
                                                     {% for cat in categories %}
@@ -66,9 +61,6 @@
                                                     {% endfor %}
                                                 </select>
                                             </div>
-                                        </div>
-                                        
-                                        <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="branch_id" class="form-label">Branch *</label>
                                                 <select class="form-control" id="branch_id" name="branch_id" required>
@@ -78,6 +70,9 @@
                                                     {% endfor %}
                                                 </select>
                                             </div>
+                                        </div>
+                                        
+                                        <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="supplier_id" class="form-label">Supplier</label>
                                                 <select class="form-control" id="supplier_id" name="supplier_id">
@@ -87,26 +82,25 @@
                                                     {% endfor %}
                                                 </select>
                                             </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="sku_code" class="form-label">SKU Code</label>
+                                                <input type="text" class="form-control" id="sku_code" name="sku_code" 
+                                                       placeholder="Auto-generated on save" readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                                                <small class="text-muted">SKU will be auto-generated as 000001, 000002, 000003...</small>
+                                            </div>
                                         </div>
                                         
                                         <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label for="barcode" class="form-label">Barcode *</label>
-                                                <input type="text" class="form-control" id="barcode" name="barcode" required 
-                                                       placeholder="Enter product barcode (e.g., 9900000000000)">
-                                                <small class="text-muted">This is the product barcode for scanning</small>
-                                            </div>
                                             <div class="col-md-6 mb-3">
                                                 <label for="stock_quantity" class="form-label">Initial Stock Quantity *</label>
                                                 <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" 
                                                        required value="1" min="1">
                                             </div>
-                                        </div>
-                                        
-                                        <div class="mb-3">
-                                            <label for="specifications" class="form-label">Specifications</label>
-                                            <textarea class="form-control" id="specifications" name="specifications" rows="3" 
-                                                      placeholder="e.g., 1 meter length, Type-C connector, Fast charging support"></textarea>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="description" class="form-label">Description</label>
+                                                <textarea class="form-control" id="description" name="description" rows="3" 
+                                                          placeholder="e.g., 1 meter length, Type-C connector, Fast charging support"></textarea>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -161,7 +155,7 @@
                                         <div class="row text-center">
                                             <div class="col-md-4">
                                                 <h6>SKU:</h6>
-                                                <h5 class="text-primary">Auto-generated</h5>
+                                                <h5 class="text-primary" id="skuDisplay">Auto-generated</h5>
                                                 <small>000001, 000002...</small>
                                             </div>
                                             <div class="col-md-4">
@@ -192,22 +186,19 @@
                                     <i class="fas fa-info-circle"></i>
                                     <strong>Note:</strong> 
                                     <ul class="mb-0 mt-2">
-                                        <li><strong>SKU</strong> is auto-generated as sequential numbers (000001, 000002...)</li>
-                                        <li><strong>Barcode</strong> is what you enter and can be scanned (e.g., 9900000000000)</li>
+                                        <li><strong>SKU</strong> is auto-generated automatically when you save</li>
                                         <li>Bulk products are tracked by quantity only</li>
                                         <li>You can add more stock later using the "Restock" option</li>
                                     </ul>
                                 </div>
 
-                                <div class="card border-info">
-                                    <div class="text-center mt-4">
-                                        <button type="submit" class="btn btn-success btn-lg px-5">
-                                            <i class="fas fa-save"></i> Save Product
-                                        </button>
-                                        <a href="{% url 'tronic_master:product_list' %}" class="btn btn-secondary btn-lg px-5">
-                                            <i class="fas fa-times"></i> Cancel
-                                        </a>
-                                    </div>
+                                <div class="text-center mt-4">
+                                    <button type="submit" class="btn btn-success btn-lg px-5">
+                                        <i class="fas fa-save"></i> Save Product
+                                    </button>
+                                    <a href="{% url 'tronic_master:product_list' %}" class="btn btn-secondary btn-lg px-5">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
                                 </div>
                             </div>
                         </div>

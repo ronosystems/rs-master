@@ -55,7 +55,7 @@
                                             <div class="col-md-6 mb-3">
                                                 <label for="color" class="form-label">Color</label>
                                                 <input type="text" class="form-control" id="color" name="color" 
-                                                       value="{% if product.specifications.color %}{{ product.specifications.color }}{% endif %}">
+                                                       value="{% if product.display_specs.color %}{{ product.display_specs.color }}{% endif %}">
                                             </div>
                                             <div class="col-md-6 mb-3">
                                                 <label for="category_id" class="form-label">Category</label>
@@ -112,7 +112,7 @@
                                         <div class="mb-3">
                                             <label for="specifications" class="form-label">Specifications</label>
                                             <textarea class="form-control" id="specifications" name="specifications" rows="3" 
-                                                      placeholder="e.g., 1 meter length, Type-C connector">{% if product.specifications.description %}{{ product.specifications.description }}{% endif %}</textarea>
+                                                      placeholder="e.g., 1 meter length, Type-C connector">{% if product.display_specs.description %}{{ product.display_specs.description }}{% endif %}</textarea>
                                         </div>
 
                                         <div class="form-check mb-3">
@@ -139,17 +139,17 @@
                                             <div class="col-md-4 mb-3">
                                                 <label for="buying_price" class="form-label">Buying Price (KES)</label>
                                                 <input type="number" step="0.01" class="form-control" id="buying_price" name="buying_price" 
-                                                       value="{{ product.buying_price }}">
+                                                       value="{{ product.default_buying_price }}">
                                             </div>
                                             <div class="col-md-4 mb-3">
                                                 <label for="selling_price" class="form-label">Selling Price (KES) *</label>
                                                 <input type="number" step="0.01" class="form-control" id="selling_price" name="selling_price" 
-                                                       required value="{{ product.selling_price }}">
+                                                       required value="{{ product.default_selling_price }}">
                                             </div>
                                             <div class="col-md-4 mb-3">
                                                 <label for="best_price" class="form-label">Best/Retail Price (KES)</label>
                                                 <input type="number" step="0.01" class="form-control" id="best_price" name="best_price" 
-                                                       value="{{ product.best_price|default:'' }}">
+                                                       value="{{ product.default_best_price|default:'' }}">
                                             </div>
                                         </div>
                                         
@@ -191,10 +191,10 @@
                                         <hr>
                                         <div class="row">
                                             <div class="col-md-4">
-                                                <small><strong>Buying:</strong> KES {{ product.buying_price|floatformat:2 }}</small>
+                                                <small><strong>Buying:</strong> KES {{ product.default_buying_price|floatformat:2 }}</small>
                                             </div>
                                             <div class="col-md-4">
-                                                <small><strong>Selling:</strong> KES {{ product.selling_price|floatformat:2 }}</small>
+                                                <small><strong>Selling:</strong> KES {{ product.default_selling_price|floatformat:2 }}</small>
                                             </div>
                                             <div class="col-md-4">
                                                 <small><strong>Profit/Unit:</strong> <span class="text-success">KES {{ product.profit_margin|floatformat:2 }}</span></small>

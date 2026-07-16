@@ -182,8 +182,8 @@
                             <td>{{ product.category.name|default:"-" }}</td>
                             <td>{{ product.branch.name|default:"-" }}</td>
                             <td>
-                                <div>Buy: KES {{ product.buying_price|floatformat:0 }}</div>
-                                <div class="fw-bold">Sell: KES {{ product.selling_price|floatformat:0 }}</div>
+                                <div>Buy: KES {{ product.default_buying_price|floatformat:0 }}</div>
+                                <div class="fw-bold">Sell: KES {{ product.default_selling_price|floatformat:0 }}</div>
                             </td>
                             <td>
                                 <div class="fw-bold {% if product.available_quantity == 0 %}text-danger{% elif product.is_low_stock %}text-warning{% else %}text-success{% endif %}">

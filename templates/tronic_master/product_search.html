@@ -110,9 +110,9 @@
                             <td>{{ product.model|default:"-" }}</td>
                             <td>{{ product.category.name|default:"-" }}</td>
                             <td>
-                                <div class="fw-bold">Sell: KES {{ product.selling_price|floatformat:0 }}</div>
-                                {% if product.best_price %}
-                                <div class="text-success">Best: KES {{ product.best_price|floatformat:0 }}</div>
+                                <div class="fw-bold">Sell: KES {{ product.default_selling_price|floatformat:0 }}</div>
+                                {% if product.default_best_price %}
+                                <div class="text-success">Best: KES {{ product.default_best_price|floatformat:0 }}</div>
                                 {% endif %}
                             </td>
                             <td>

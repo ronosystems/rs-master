@@ -132,7 +132,7 @@
                                         <td>
                                             <span class="badge bg-info product-identifier">{{ product.imei|default:product.serial|default:"No ID" }}</span>
                                         </td>
-                                        <td class="fw-bold product-price">{{ product.selling_price|floatformat:0 }}</td>
+                                        <td class="fw-bold product-price">{{ product.default_selling_price|floatformat:0 }}</td>
                                         <td class="product-branch">{{ product.branch_name|default:"Main Shop" }}</td>
                                     </tr>
                                     {% empty %}

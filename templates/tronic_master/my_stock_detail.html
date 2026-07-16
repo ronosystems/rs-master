@@ -49,18 +49,18 @@
                                     <th>Category</th>
                                     <td>{{ unit.product.category.name|default:"-" }}</td>
                                 </tr>
-                                {% if unit.product.specifications %}
+                                {% if unit.product.display_specs %}
                                 <tr>
                                     <th>Specifications</th>
                                     <td>
-                                        {% if unit.product.specifications.ram %}
-                                        <span class="badge bg-secondary">RAM: {{ unit.product.specifications.ram }}</span>
+                                        {% if unit.product.display_specs.ram %}
+                                        <span class="badge bg-secondary">RAM: {{ unit.product.display_specs.ram }}</span>
                                         {% endif %}
-                                        {% if unit.product.specifications.storage %}
-                                        <span class="badge bg-secondary">Storage: {{ unit.product.specifications.storage }}</span>
+                                        {% if unit.product.display_specs.storage %}
+                                        <span class="badge bg-secondary">Storage: {{ unit.product.display_specs.storage }}</span>
                                         {% endif %}
-                                        {% if unit.product.specifications.color %}
-                                        <span class="badge bg-secondary">Color: {{ unit.product.specifications.color }}</span>
+                                        {% if unit.product.display_specs.color %}
+                                        <span class="badge bg-secondary">Color: {{ unit.product.display_specs.color }}</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -151,7 +151,7 @@
                                         {% if unit.unit_buying_price %}
                                         KES {{ unit.unit_buying_price|floatformat:2 }}
                                         {% else %}
-                                        KES {{ unit.product.buying_price|floatformat:2 }}
+                                        KES {{ unit.product.default_buying_price|floatformat:2 }}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -162,7 +162,7 @@
                                             {% if unit.unit_selling_price %}
                                             KES {{ unit.unit_selling_price|floatformat:2 }}
                                             {% else %}
-                                            KES {{ unit.product.selling_price|floatformat:2 }}
+                                            KES {{ unit.product.default_selling_price|floatformat:2 }}
                                             {% endif %}
                                         </strong>
                                     </td>
@@ -170,10 +170,10 @@
                                 <tr>
                                     <th>Best Price</th>
                                     <td>
-                                        {% if unit.best_price %}
-                                        KES {{ unit.best_price|floatformat:2 }}
+                                        {% if unit.default_best_price %}
+                                        KES {{ unit.default_best_price|floatformat:2 }}
                                         {% else %}
-                                        KES {{ unit.product.best_price|floatformat:2|default:"-" }}
+                                        KES {{ unit.product.default_best_price|floatformat:2|default:"-" }}
                                         {% endif %}
                                     </td>
                                 </tr>

@@ -194,7 +194,7 @@
                             <td>{{ unit.branch.name|default:"-" }}</td>
                             <td>{{ unit.supplier.name|default:"-" }}</td>
                             <td>
-                                KES {{ unit.unit_buying_price|default:unit.product.buying_price|floatformat:0 }}
+                                KES {{ unit.unit_buying_price|default:unit.product.default_buying_price|floatformat:0 }}
                             </td>
                             <td>
                                 {% if unit.notes %}

@@ -248,7 +248,7 @@
             model: "{{ product.model|escapejs }}",
             imei: "{{ product.imei|escapejs }}",
             serial: "{{ product.serial|escapejs }}",
-            price: {{ product.selling_price }}
+            price: {{ product.default_selling_price }}
         },
         {% endfor %}
     ];

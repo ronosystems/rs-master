@@ -43,7 +43,7 @@
                                 </td>
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.sku }}</td>
-                                <td>KES {{ product.selling_price|floatformat:2 }}</td>
+                                <td>KES {{ product.default_selling_price|floatformat:2 }}</td>
                                 <td>{{ product.stock_quantity }}</td>
                             </tr>
                             {% empty %}

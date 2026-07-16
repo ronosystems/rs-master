@@ -153,7 +153,7 @@
                                                                 <span class="badge bg-secondary">No ID</span>
                                                                 {% endif %}
                                                                 <br>
-                                                                SKU: {{ unit.product.sku_code }} | Price: KES {{ unit.unit_selling_price|default:unit.product.selling_price|floatformat:2 }}
+                                                                SKU: {{ unit.product.sku_code }} | Price: KES {{ unit.unit_selling_price|default:unit.product.default_selling_price|floatformat:2 }}
                                                             </small>
                                                         </label>
                                                     </div>

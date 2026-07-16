@@ -178,8 +178,8 @@
                                 </div>
                             </td>
                             <td>{{ product.category.name|default:"-" }}</td>
-                            <td>KES {{ product.buying_price|floatformat:0 }}</td>
-                            <td class="fw-bold">KES {{ product.selling_price|floatformat:0 }}</td>
+                            <td>KES {{ product.default_buying_price|floatformat:0 }}</td>
+                            <td class="fw-bold">KES {{ product.default_selling_price|floatformat:0 }}</td>
                             <td>
                                 <span class="fw-bold 
                                     {% if product.available_quantity == 0 %}text-danger

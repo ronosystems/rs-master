@@ -15,7 +15,7 @@ from datetime import timedelta, date
 
 # Import models from other apps
 from apps.shared.tenants.models import Tenant, SyncQueue  # ✅ Use Tenant directly
-from apps.shared.tenants.models import Tenant as CompanyTenant
+
 from apps.shared.customers.models import Customer
 from django.contrib.auth import get_user_model
 
@@ -462,6 +462,7 @@ class Product(models.Model):
         help_text="Unique product code per tenant (e.g., 000001, 000002 or custom)"
     )
 
+
     # ============================================
     # PRODUCT INFORMATION
     # ============================================
@@ -752,19 +753,21 @@ class Product(models.Model):
                 raise ValidationError("Buying price cannot exceed selling price")
     
     def update_quantities(self):
-        """Update total quantities from all variants"""
-        variants = self.variants.all()
-        self.total_quantity = variants.aggregate(total=Sum('quantity'))['total'] or 0
-        self.available_quantity = variants.aggregate(total=Sum('available_quantity'))['total'] or 0
-        self.reserved_quantity = variants.aggregate(total=Sum('reserved_quantity'))['total'] or 0
-        self.damaged_quantity = variants.aggregate(total=Sum('damaged_quantity'))['total'] or 0
+        """Update total quantities from all units (ProductUnit)"""
+        # ✅ Count from ProductUnit, not ProductVariant
+        units = self.units.all()  # or ProductUnit.objects.filter(product=self)
+        self.total_quantity = units.count()
+        self.available_quantity = units.filter(status='available').count()
+        self.reserved_quantity = units.filter(status='reserved').count()
+        self.damaged_quantity = units.filter(status__in=['damaged', 'stolen', 'lost', 'writeoff']).count()
         
         self.save(update_fields=[
             'total_quantity', 'available_quantity', 
             'reserved_quantity', 'damaged_quantity',
             'updated_at'
         ])
-    
+
+        
     @property
     def display_name(self):
         return f"{self.name} ({self.sku_code})"
@@ -780,9 +783,56 @@ class Product(models.Model):
     @property
     def is_low_stock(self):
         return 0 < self.current_stock <= self.reorder_level
-    
+
+    @property
+    def display_specs(self):
+        """Get specifications from the first available variant"""
+        first_variant = self.variants.first()
+        if first_variant:
+            return first_variant.specifications or {}
+        return {}
+
+    @property
+    def display_primary_spec(self):
+        """Get primary specification string for display"""
+        specs = self.display_specs
+        if not specs:
+            return "-"
+        
+        spec_parts = []
+        if specs.get('ram'):
+            spec_parts.append(str(specs.get('ram')))
+        if specs.get('storage'):
+            spec_parts.append(str(specs.get('storage')))
+        if specs.get('color'):
+            spec_parts.append(str(specs.get('color')))
+        
+        return " | ".join(spec_parts) if spec_parts else "-"
+
+    @property
+    def stock_value(self):
+        return self.available_quantity * self.default_buying_price
+
+    @property
+    def retail_value(self):
+        return self.available_quantity * self.default_selling_price
+
+    @property
+    def profit_margin(self):
+        return self.retail_value - self.stock_value
+
+    @property
+    def profit_percentage(self):
+        if self.stock_value > 0:
+            return (self.profit_margin / self.stock_value) * 100
+        return 0
+
     def __str__(self):
         return self.display_name
+
+
+
+
 
 
 # ====================================
@@ -1771,11 +1821,11 @@ class ProductUnit(models.Model):
 
     @property
     def effective_buying_price(self):
-        return self.unit_buying_price or self.product.buying_price
+        return self.unit_buying_price or self.product.default_buying_price
 
     @property
     def effective_selling_price(self):
-        return self.unit_selling_price or self.product.selling_price
+        return self.unit_selling_price or self.product.default_selling_price
 
     @property
     def unique_identifier(self):
@@ -2042,8 +2092,9 @@ class StockEntry(models.Model):
         # Update bulk quantities
         if self.product_sku and self.product_sku.category.is_bulk_item:
             total = StockEntry.objects.filter(product_sku=self.product_sku).aggregate(total=Sum('quantity'))['total'] or 0
-            self.product_sku.bulk_quantity = max(0, total)
-            self.product_sku.save(update_fields=['bulk_quantity', 'updated_at'])
+            self.product_sku.total_quantity = max(0, total)
+            self.product_sku.available_quantity = max(0, total) 
+            self.product_sku.save(update_fields=['total_quantity', 'available_quantity', 'updated_at'])
 
         # ✅ Queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
@@ -2912,7 +2963,7 @@ class Staff(models.Model):
     # ============================================
     # RELATIONSHIPS
     # ============================================
-    tenant = models.ForeignKey(CompanyTenant, on_delete=models.CASCADE, related_name='tech_staff')
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='tronic_staff')
     branch = models.ForeignKey(
         'Branch',
         on_delete=models.CASCADE,
@@ -3029,7 +3080,7 @@ class StaffAttendance(models.Model):
     # RELATIONSHIPS
     # ============================================
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='attendances')
-    tenant = models.ForeignKey(CompanyTenant, on_delete=models.CASCADE, related_name='tech_staff_attendances')
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='tronic_staff_attendances')
     branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='staff_attendances')
 
     # ============================================
@@ -3125,7 +3176,7 @@ class StaffLeave(models.Model):
     # RELATIONSHIPS
     # ============================================
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='leaves')
-    tenant = models.ForeignKey(CompanyTenant, on_delete=models.CASCADE, related_name='tech_staff_leaves')
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='tronic_staff_leaves')
     approved_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

@@ -318,7 +318,7 @@ function showSingleResult(data, type) {
     document.getElementById('productIdentifier').textContent = data.imei || data.serial || '-';
     document.getElementById('productCondition').textContent = data.condition || 'N/A';
     document.getElementById('productBranch').textContent = data.branch || '-';
-    document.getElementById('sellingPrice').textContent = `KES ${(data.selling_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('sellingPrice').textContent = `KES ${(data.default_selling_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
     // ✅ Status Badge
     const statusCode = data.status_code || 'available';
@@ -341,7 +341,7 @@ function showSingleResult(data, type) {
     updateStockLevel(data);
     
     // Best Price
-    currentBestPrice = data.best_price || 0;
+    currentBestPrice = data.default_best_price || 0;
     document.getElementById('bestPriceValue').value = currentBestPrice;
     document.getElementById('bestPriceDisplay').textContent = '••••••••';
     document.getElementById('bestPriceDisplay').className = 'text-primary fw-bold best-price-hidden';
@@ -414,7 +414,7 @@ function showListResult(data) {
             statusBadge = `<span class="badge bg-success">In Stock (${qty})</span>`;
         }
         
-        const bestPriceValue = item.best_price || 0;
+        const bestPriceValue = item.default_best_price || 0;
         
         row.innerHTML = `
             <td><code>${item.sku_code || '-'}</code></td>
@@ -422,7 +422,7 @@ function showListResult(data) {
             <td>${item.brand || '-'}</td>
             <td>${statusBadge}</td>
             <td><span class="badge bg-info">${qty}</span></td>
-            <td class="text-end text-success fw-bold">KES ${(item.selling_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td class="text-end text-success fw-bold">KES ${(item.default_selling_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             <td class="text-end">
                 <span class="best-price-hidden text-muted">••••••••</span>
                 <button class="btn btn-sm btn-outline-primary ms-1" 

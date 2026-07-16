@@ -7,6 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.db.models import Q, F, Sum, Count
 from django.utils import timezone
 from django.core.paginator import Paginator
+from django.db import IntegrityError 
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from decimal import Decimal
@@ -711,9 +712,9 @@ def get_inventory_item_api(request, item_id):
             'name': product.name,
             'brand': product.brand,
             'model': product.model,
-            'buying_price': safe_float(product.buying_price),
-            'selling_price': safe_float(product.selling_price),
-            'best_price': safe_float(product.best_price),
+            'buying_price': safe_float(product.default_buying_price),
+            'selling_price': safe_float(product.default_selling_price),
+            'best_price': safe_float(product.default_best_price),
             'available_quantity': product.available_quantity,
             'total_quantity': product.total_quantity,
             'category_name': product.category.name if product.category else None,
@@ -728,9 +729,9 @@ def get_inventory_item_api(request, item_id):
         unit = ProductUnit.objects.get(id=item_id, tenant=tenant)
 
         # Safely get prices
-        buying_price = unit.unit_buying_price or unit.product.buying_price
-        selling_price = unit.unit_selling_price or unit.product.selling_price
-        best_price = unit.best_price or unit.product.best_price
+        buying_price = unit.unit_buying_price or unit.product.default_buying_price
+        selling_price = unit.unit_selling_price or unit.product.default_selling_price
+        best_price = unit.best_price or unit.product.default_best_price
 
         data = {
             'id': unit.id,
@@ -781,12 +782,12 @@ def update_inventory_item(request, item_id):
             product.model = data['model']
         if 'buying_price' in data:
             try:
-                product.buying_price = Decimal(str(data['buying_price']))
+                product.default_buying_price = Decimal(str(data['buying_price']))
             except (TypeError, ValueError):
                 pass
         if 'selling_price' in data:
             try:
-                product.selling_price = Decimal(str(data['selling_price']))
+                product.default_selling_price = Decimal(str(data['selling_price']))
             except (TypeError, ValueError):
                 pass
         if 'reorder_level' in data:
@@ -813,8 +814,8 @@ def update_inventory_item(request, item_id):
                         'name': product.name,
                         'brand': product.brand,
                         'model': product.model,
-                        'buying_price': str(product.buying_price),
-                        'selling_price': str(product.selling_price),
+                        'buying_price': str(product.default_buying_price),
+                        'selling_price': str(product.default_selling_price),
                         'reorder_level': product.reorder_level,
                         'is_active': product.is_active,
                         'tenant_id': tenant.id,
@@ -831,8 +832,8 @@ def update_inventory_item(request, item_id):
                 'id': product.id,
                 'sku_code': product.sku_code,
                 'name': product.name,
-                'buying_price': float(product.buying_price),
-                'selling_price': float(product.selling_price),
+                'buying_price': float(product.default_buying_price),
+                'selling_price': float(product.default_selling_price),
             }
         })
     except Product.DoesNotExist:
@@ -1007,7 +1008,6 @@ def manage_products(request):
             Q(brand__icontains=search_query) |
             Q(model__icontains=search_query) |
             Q(sku_code__icontains=search_query) |
-            Q(barcode__icontains=search_query) |
             Q(description__icontains=search_query)
         )
 
@@ -1039,9 +1039,9 @@ def manage_products(request):
     elif sort_by == 'sku':
         products = products.order_by('sku_code')
     elif sort_by == 'price_asc':
-        products = products.order_by('selling_price')
+        products = products.order_by('default_selling_price')
     elif sort_by == 'price_desc':
-        products = products.order_by('-selling_price')
+        products = products.order_by('default_selling_price')
     elif sort_by == 'stock_asc':
         products = products.order_by('available_quantity')
     elif sort_by == 'stock_desc':
@@ -1057,7 +1057,7 @@ def manage_products(request):
     # Calculate statistics
     total_products = products.count()
     total_value = products.aggregate(
-        total=Sum(F('available_quantity') * F('buying_price'))
+        total=Sum(F('available_quantity') * F('default_buying_price')) 
     )['total'] or Decimal('0.00')
 
     # Pagination
@@ -1108,7 +1108,6 @@ def product_search(request):
             Q(brand__icontains=search_query) |
             Q(model__icontains=search_query) |
             Q(sku_code__icontains=search_query) |
-            Q(barcode__icontains=search_query) |
             Q(description__icontains=search_query)
         ).select_related('category', 'branch')[:50]
 
@@ -1140,8 +1139,8 @@ def product_search_ajax(request):
         Q(name__icontains=query) |
         Q(brand__icontains=query) |
         Q(model__icontains=query) |
-        Q(sku_code__icontains=query) |
-        Q(barcode__icontains=query)
+        Q(sku_code__icontains=query)
+        # ❌ REMOVE this line: Q(barcode__icontains=query)
     ).select_related('category')[:20]
 
     results = []
@@ -1152,9 +1151,9 @@ def product_search_ajax(request):
             'name': product.name,
             'brand': product.brand,
             'model': product.model,
-            'barcode': product.barcode,
-            'selling_price': float(product.selling_price),
-            'buying_price': float(product.buying_price),
+            # ❌ REMOVE this line: 'barcode': product.barcode,
+            'selling_price': float(product.default_selling_price),
+            'buying_price': float(product.default_buying_price),
             'available_quantity': product.available_quantity,
             'category': product.category.name if product.category else None,
             'image': product.image.url if product.image else None,
@@ -1197,17 +1196,19 @@ def product_list(request):
 
     product_list = []
     for product in products:
-        if isinstance(product.specifications, dict):
-            specs = product.specifications
+        # ✅ FIX: specifications is on ProductVariant, not Product
+        # Instead of trying to get specifications from Product,
+        # get the first available variant's specifications
+        
+        # Get the first variant to display specs
+        first_variant = product.variants.first()
+        if first_variant and first_variant.specifications:
+            specs = first_variant.specifications
         else:
-            try:
-                specs = json.loads(product.specifications) if product.specifications else {}
-            except:
-                specs = {}
+            specs = {}
 
-        product.specs_display = specs
-        product.primary_spec = ""
-
+        # For display purposes, create a primary_spec string
+        primary_spec = ""
         if specs:
             spec_parts = []
             if specs.get('ram'):
@@ -1216,10 +1217,12 @@ def product_list(request):
                 spec_parts.append(str(specs.get('storage')))
             if specs.get('color'):
                 spec_parts.append(str(specs.get('color')))
-            product.primary_spec = " | ".join(spec_parts) if spec_parts else "-"
+            primary_spec = " | ".join(spec_parts) if spec_parts else "-"
 
+        product.primary_spec = primary_spec
         product.stock_status = 'In Stock'
         product.stock_badge = 'success'
+        
         if product.is_low_stock:
             product.stock_status = 'Low Stock'
             product.stock_badge = 'warning'
@@ -1267,8 +1270,8 @@ def product_detail(request, product_id):
     ).select_related('branch', 'supplier').order_by('-created_at')
 
     for unit in units:
-        unit.display_buying_price = unit.unit_buying_price if unit.unit_buying_price else product.buying_price
-        unit.display_selling_price = unit.unit_selling_price if unit.unit_selling_price else product.selling_price
+        unit.display_buying_price = unit.unit_buying_price if unit.unit_buying_price else product.default_buying_price
+        unit.display_selling_price = unit.unit_selling_price if unit.unit_selling_price else product.default_selling_price
 
         if unit.imei_number:
             unit.display_identifier = f"IMEI: {unit.imei_number}"
@@ -1276,6 +1279,13 @@ def product_detail(request, product_id):
             unit.display_identifier = f"S/N: {unit.serial_number}"
         else:
             unit.display_identifier = "No identifier"
+
+    # ✅ ADD FINANCIAL CALCULATIONS HERE
+    # Stock value calculations
+    stock_value = product.available_quantity * product.default_buying_price
+    retail_value = product.available_quantity * product.default_selling_price
+    profit_margin = retail_value - stock_value
+    profit_percentage = (profit_margin / stock_value * 100) if stock_value > 0 else 0
 
     context = {
         'product': product,
@@ -1286,6 +1296,11 @@ def product_detail(request, product_id):
         'damaged_units_count': units.filter(status='damaged').count(),
         'reserved_units_count': units.filter(status='reserved').count(),
         'tenant': tenant,
+        # ✅ ADD THESE TO CONTEXT
+        'stock_value': stock_value,
+        'retail_value': retail_value,
+        'profit_margin': profit_margin,
+        'profit_percentage': profit_percentage,
     }
     return render(request, 'tronic_master/product_detail.html', context)
 
@@ -1296,6 +1311,7 @@ def add_product_selection(request):
     """Product type selection page"""
     tenant = request.user.tenant
     return render(request, 'tronic_master/add_product_selection.html', {'tenant': tenant})
+
 
 
 @login_required
@@ -1348,12 +1364,14 @@ def add_single_product(request):
             messages.error(request, 'Please enter at least one IMEI or Serial Number')
             return redirect('tronic_master:add_single_product')
 
+        # ✅ Prepare specifications for ProductVariant (NOT Product)
         specs_dict = {}
         if specifications:
             specs_dict['description'] = specifications
         if color:
             specs_dict['color'] = color
 
+        # ✅ Find or create Product (WITHOUT variant fields)
         product = Product.objects.filter(
             tenant=tenant,
             name=name,
@@ -1362,6 +1380,7 @@ def add_single_product(request):
         ).first()
 
         if not product:
+            # ✅ Create Product with CORRECT fields
             product = Product.objects.create(
                 tenant=tenant,
                 name=name,
@@ -1370,10 +1389,10 @@ def add_single_product(request):
                 category_id=category_id if category_id else None,
                 branch=branch,
                 supplier=supplier,
-                specifications=specs_dict,
-                buying_price=float(buying_price) if buying_price else 0,
-                selling_price=float(selling_price) if selling_price else 0,
-                best_price=float(best_price) if best_price else None,
+                # ✅ These are the correct fields for Product
+                default_buying_price=float(buying_price) if buying_price else 0,
+                default_selling_price=float(selling_price) if selling_price else 0,
+                default_best_price=float(best_price) if best_price else None,
                 reorder_level=int(reorder_level),
                 warranty_months=int(warranty_months),
                 is_active=True
@@ -1399,6 +1418,7 @@ def add_single_product(request):
                     errors.append(f'Identifier already exists: {identifier}')
                     continue
 
+                # ✅ Create ProductUnit with CORRECT fields
                 ProductUnit.objects.create(
                     tenant=tenant,
                     product=product,
@@ -1454,12 +1474,11 @@ def add_bulk_product(request):
         model = request.POST.get('model', '').strip()
         brand = request.POST.get('brand', '').strip()
         category_id = request.POST.get('category_id')
-        specifications = request.POST.get('specifications', '')
-        color = request.POST.get('color', '')
+        description = request.POST.get('description', '')
         buying_price = request.POST.get('buying_price', 0)
         selling_price = request.POST.get('selling_price', 0)
         best_price = request.POST.get('best_price')
-        barcode = request.POST.get('barcode', '').strip().upper()
+        sku_code = request.POST.get('sku_code', '').strip().upper()
         stock_quantity = int(request.POST.get('stock_quantity', 1))
         reorder_level = request.POST.get('reorder_level', 5)
         warranty_months = request.POST.get('warranty_months', 12)
@@ -1478,28 +1497,37 @@ def add_bulk_product(request):
             messages.error(request, 'Product name is required')
             return redirect('tronic_master:add_bulk_product')
 
-        if not barcode:
-            messages.error(request, 'Barcode is required')
-            return redirect('tronic_master:add_bulk_product')
-
         if stock_quantity <= 0:
             messages.error(request, 'Stock quantity must be greater than 0')
             return redirect('tronic_master:add_bulk_product')
 
-        specs_dict = {}
-        if specifications:
-            specs_dict['description'] = specifications
-        if color:
-            specs_dict['color'] = color
-
-        # Check if product exists
-        product = Product.objects.filter(tenant=tenant, barcode=barcode).first()
+        # ✅ TRY TO FIND EXISTING PRODUCT
+        product = None
+        
+        # 1. Try by SKU code (if provided)
+        if sku_code:
+            product = Product.objects.filter(tenant=tenant, sku_code=sku_code).first()
+        
+        # 2. Try by Name
+        if not product:
+            product = Product.objects.filter(tenant=tenant, name=name).first()
+        
+        # 3. Try by Brand + Model
+        if not product and brand and model:
+            product = Product.objects.filter(tenant=tenant, brand=brand, model=model).first()
 
         if product:
-            # Update existing product
-            product.bulk_quantity += stock_quantity
+            # ✅ UPDATE EXISTING PRODUCT - NO bulk_quantity!
             product.total_quantity += stock_quantity
             product.available_quantity += stock_quantity
+            
+            if buying_price:
+                product.default_buying_price = float(buying_price)
+            if selling_price:
+                product.default_selling_price = float(selling_price)
+            if best_price:
+                product.default_best_price = float(best_price)
+            
             product.save()
 
             # ✅ CREATE OR UPDATE BranchStock record
@@ -1518,8 +1546,8 @@ def add_bulk_product(request):
                 product_sku=product,
                 quantity=stock_quantity,
                 entry_type='purchase',
-                unit_price=float(buying_price) if buying_price else product.buying_price,
-                total_amount=stock_quantity * (float(buying_price) if buying_price else product.buying_price),
+                unit_price=float(buying_price) if buying_price else product.default_buying_price,
+                total_amount=stock_quantity * (float(buying_price) if buying_price else product.default_buying_price),
                 branch=branch,
                 notes=f"Bulk product restock",
                 created_by=request.user
@@ -1527,50 +1555,71 @@ def add_bulk_product(request):
 
             messages.success(request, f'Added {stock_quantity} units to existing product "{product.name}" (SKU: {product.sku_code})')
         else:
-            # Create new product
-            product = Product.objects.create(
-                tenant=tenant,
-                name=name,
-                brand=brand,
-                model=model,
-                barcode=barcode,
-                category_id=category_id if category_id else None,
-                branch=branch,
-                supplier=supplier,
-                specifications=specs_dict,
-                buying_price=float(buying_price) if buying_price else 0,
-                selling_price=float(selling_price) if selling_price else 0,
-                best_price=float(best_price) if best_price else None,
-                bulk_quantity=stock_quantity,
-                total_quantity=stock_quantity,
-                available_quantity=stock_quantity,
-                reorder_level=int(reorder_level),
-                warranty_months=int(warranty_months),
-                is_active=True
-            )
+            # ✅ CREATE NEW PRODUCT - NO bulk_quantity!
+            try:
+                product = Product.objects.create(
+                    tenant=tenant,
+                    name=name,
+                    brand=brand,
+                    model=model,
+                    sku_code=sku_code if sku_code else None,
+                    category_id=category_id if category_id else None,
+                    branch=branch,
+                    supplier=supplier,
+                    default_buying_price=float(buying_price) if buying_price else 0,
+                    default_selling_price=float(selling_price) if selling_price else 0,
+                    default_best_price=float(best_price) if best_price else None,
+                    description=description,
+                    total_quantity=stock_quantity,
+                    available_quantity=stock_quantity,
+                    reorder_level=int(reorder_level),
+                    warranty_months=int(warranty_months),
+                    is_active=True
+                )
 
-            # ✅ CREATE BranchStock record
-            BranchStock.objects.create(
-                tenant=tenant,
-                branch=branch,
-                product=product,
-                quantity=stock_quantity
-            )
+                # ✅ CREATE BranchStock record
+                BranchStock.objects.create(
+                    tenant=tenant,
+                    branch=branch,
+                    product=product,
+                    quantity=stock_quantity
+                )
 
-            # Create stock entry
-            StockEntry.objects.create(
-                tenant=tenant,
-                product_sku=product,
-                quantity=stock_quantity,
-                entry_type='purchase',
-                unit_price=float(buying_price) if buying_price else 0,
-                total_amount=stock_quantity * (float(buying_price) if buying_price else 0),
-                branch=branch,
-                notes=f"New bulk product added",
-                created_by=request.user
-            )
+                # Create stock entry
+                StockEntry.objects.create(
+                    tenant=tenant,
+                    product_sku=product,
+                    quantity=stock_quantity,
+                    entry_type='purchase',
+                    unit_price=float(buying_price) if buying_price else 0,
+                    total_amount=stock_quantity * (float(buying_price) if buying_price else 0),
+                    branch=branch,
+                    notes=f"New bulk product added",
+                    created_by=request.user
+                )
 
-            messages.success(request, f'Product "{product.name}" added successfully with SKU: {product.sku_code}')
+                messages.success(request, f'Product "{product.name}" added successfully with SKU: {product.sku_code}')
+                
+            except IntegrityError as e:
+                if 'brand' in str(e) and 'model' in str(e):
+                    existing = Product.objects.filter(
+                        tenant=tenant,
+                        brand=brand,
+                        model=model
+                    ).first()
+                    
+                    if existing:
+                        existing.total_quantity += stock_quantity
+                        existing.available_quantity += stock_quantity
+                        existing.save()
+                        
+                        messages.warning(request, f'Product with same brand and model found. Added stock to "{existing.name}"')
+                    else:
+                        messages.error(request, f'Error creating product: {str(e)}')
+                else:
+                    messages.error(request, f'Error creating product: {str(e)}')
+                
+                return redirect('tronic_master:product_list')
 
         return redirect('tronic_master:product_list')
 
@@ -1581,6 +1630,7 @@ def add_bulk_product(request):
         'tenant': tenant,
     }
     return render(request, 'tronic_master/add_bulk_product.html', context)
+
 
 
 @login_required
@@ -1610,6 +1660,7 @@ def edit_bulk_product(request, product_id):
         branch_id = request.POST.get('branch_id')
         supplier_id = request.POST.get('supplier_id')
         barcode = request.POST.get('barcode', '').strip().upper()
+        sku_code = barcode
         buying_price = request.POST.get('buying_price', 0)
         selling_price = request.POST.get('selling_price', 0)
         best_price = request.POST.get('best_price')
@@ -1628,7 +1679,7 @@ def edit_bulk_product(request, product_id):
             messages.error(request, 'Selling price is required')
             return redirect('tronic_master:edit_bulk_product', product_id=product.id)
 
-        specs_dict = product.specifications or {}
+        specs_dict = product.description if isinstance(product.description, dict) else {}
         if specifications:
             specs_dict['description'] = specifications
         if color:
@@ -1646,13 +1697,13 @@ def edit_bulk_product(request, product_id):
         product.category_id = category_id if category_id else None
         product.branch_id = branch_id if branch_id else None
         product.supplier_id = supplier_id if supplier_id else None
-        product.barcode = barcode if barcode else None
-        product.buying_price = float(buying_price) if buying_price else 0
-        product.selling_price = float(selling_price) if selling_price else 0
-        product.best_price = float(best_price) if best_price else None
+        product.sku_code = sku_code if barcode else None
+        product.default_buying_price = float(buying_price) if buying_price else 0
+        product.default_selling_price = float(selling_price) if selling_price else 0
+        product.default_best_price = float(best_price) if best_price else None
         product.reorder_level = int(reorder_level) if reorder_level else 5
         product.warranty_months = int(warranty_months) if warranty_months else 12
-        product.specifications = specs_dict
+        product.description = specs_dict
         product.is_active = is_active
         product.is_discontinued = is_discontinued
         product.last_modified_by = request.user
@@ -1712,8 +1763,8 @@ def restock_product(request, product_id):
 
     if request.method == 'POST':
         quantity = int(request.POST.get('quantity', 0))
-        buying_price = request.POST.get('buying_price', product.buying_price)
-        selling_price = request.POST.get('selling_price', product.selling_price)
+        buying_price = request.POST.get('buying_price', product.default_buying_price)
+        selling_price = request.POST.get('selling_price', product.default_selling_price)
         branch_id = request.POST.get('branch_id')
         notes = request.POST.get('notes', '')
 
@@ -1732,15 +1783,14 @@ def restock_product(request, product_id):
             messages.error(request, 'Please select a branch')
             return redirect('tronic_master:restock_product', product_id=product.id)
 
-        # Update product quantities
-        product.bulk_quantity += quantity
+        # ✅ Only update total_quantity and available_quantity
         product.total_quantity += quantity
         product.available_quantity += quantity
 
-        if float(buying_price) != product.buying_price:
-            product.buying_price = float(buying_price)
-        if float(selling_price) != product.selling_price:
-            product.selling_price = float(selling_price)
+        if float(buying_price) != product.default_buying_price:
+            product.default_buying_price = float(buying_price)
+        if float(selling_price) != product.default_selling_price:
+            product.default_selling_price = float(selling_price)
 
         product.save()
 
@@ -1778,6 +1828,7 @@ def restock_product(request, product_id):
     return render(request, 'tronic_master/restock_product.html', context)
 
 
+
 @login_required
 def edit_product(request, product_id):
     """Edit product information with sync support"""
@@ -1812,36 +1863,36 @@ def edit_product(request, product_id):
             messages.error(request, 'Selling price is required')
             return redirect('tronic_master:edit_product', product_id=product.id)
 
-        specs_dict = product.specifications or {}
-        if description:
-            specs_dict['description'] = description
-
-        # Track old values for sync
+        # ✅ Track old values for sync
         old_data = {
             'name': product.name,
             'brand': product.brand,
             'model': product.model,
-            'buying_price': float(product.buying_price),
-            'selling_price': float(product.selling_price),
+            'default_buying_price': float(product.default_buying_price),
+            'default_selling_price': float(product.default_selling_price),
             'reorder_level': product.reorder_level,
             'is_active': product.is_active,
             'is_discontinued': product.is_discontinued,
         }
 
+        # ✅ Update Product with CORRECT fields
         product.name = name
         product.brand = brand
         product.model = model
-        product.buying_price = float(buying_price)
-        product.selling_price = float(selling_price)
-        product.reorder_level = int(reorder_level)
-        product.specifications = specs_dict
+        product.default_buying_price = float(buying_price) if buying_price else 0  # ✅ FIXED
+        product.default_selling_price = float(selling_price) if selling_price else 0  # ✅ FIXED
+        product.reorder_level = int(reorder_level) if reorder_level else 5
         product.is_active = is_active
         product.is_discontinued = is_discontinued
 
+        # ✅ Update relations
         if category_id:
             product.category_id = category_id
         if branch_id:
             product.branch_id = branch_id
+
+        # ✅ If you want to store description, use the description field (not specifications)
+        product.description = description  # ✅ FIXED - using the correct field
 
         product.save()
 
@@ -1859,11 +1910,12 @@ def edit_product(request, product_id):
                         'name': product.name,
                         'brand': product.brand,
                         'model': product.model,
-                        'buying_price': str(product.buying_price),
-                        'selling_price': str(product.selling_price),
+                        'default_buying_price': str(product.default_buying_price),
+                        'default_selling_price': str(product.default_selling_price),
                         'reorder_level': product.reorder_level,
                         'is_active': product.is_active,
                         'is_discontinued': product.is_discontinued,
+                        'description': product.description,
                         'previous_data': old_data,
                         'tenant_id': tenant.id,
                     },
@@ -1883,6 +1935,7 @@ def edit_product(request, product_id):
         'tenant': tenant,
     }
     return render(request, 'tronic_master/edit_product.html', context)
+
 
 
 @login_required
@@ -1983,7 +2036,7 @@ def assign_products_to_agent(request):
             'model': unit.product.model,
             'imei': unit.imei_number or '',
             'serial': unit.serial_number or '',
-            'selling_price': float(unit.unit_selling_price or unit.product.selling_price),
+            'selling_price': float(unit.unit_selling_price or unit.product.default_selling_price),
             'branch_name': unit.branch.name if unit.branch else 'Main Shop',
         })
 
@@ -2073,9 +2126,7 @@ def stock_adjustment(request, product_id):
             return redirect('tronic_master:product_detail', product_id=product.id)
 
         if adjustment_type == 'add':
-            # Add stock
-            product.bulk_quantity += quantity
-            product.total_quantity += quantity
+            # ✅ REMOVE bulk_quantity
             product.available_quantity += quantity
 
             StockEntry.objects.create(
@@ -2083,20 +2134,18 @@ def stock_adjustment(request, product_id):
                 product_sku=product,
                 quantity=quantity,
                 entry_type='adjustment',
-                unit_price=product.buying_price,
-                total_amount=quantity * product.buying_price,
+                unit_price=product.default_buying_price,
+                total_amount=quantity * product.default_buying_price,
                 notes=f"Stock addition: {reason}",
                 created_by=request.user
             )
             messages.success(request, f'Added {quantity} units to {product.name}')
 
         elif adjustment_type == 'remove':
-            # Remove stock
-            if quantity > product.bulk_quantity:
-                messages.error(request, f'Cannot remove {quantity} units. Only {product.bulk_quantity} units in stock.')
+            # ✅ REMOVE bulk_quantity
+            if quantity > product.total_quantity:
                 return redirect('tronic_master:product_detail', product_id=product.id)
 
-            product.bulk_quantity -= quantity
             product.total_quantity -= quantity
             product.available_quantity -= quantity
 
@@ -2105,20 +2154,18 @@ def stock_adjustment(request, product_id):
                 product_sku=product,
                 quantity=-quantity,
                 entry_type='adjustment',
-                unit_price=product.buying_price,
-                total_amount=-(quantity * product.buying_price),
+                unit_price=product.default_buying_price,
+                total_amount=-(quantity * product.default_buying_price),
                 notes=f"Stock removal: {reason}",
                 created_by=request.user
             )
             messages.success(request, f'Removed {quantity} units from {product.name}')
 
         elif adjustment_type == 'damage':
-            # Mark as damaged/loss
-            if quantity > product.bulk_quantity:
-                messages.error(request, f'Cannot mark {quantity} units as damaged. Only {product.bulk_quantity} units in stock.')
-                return redirect('tronic_master:product_detail', product_id=product.id)
+            # ✅ REMOVE bulk_quantity
+            if quantity > product.total_quantity:
+                messages.error(request, f'Cannot mark {quantity} units as damaged. Only {product.total_quantity} units in stock.')
 
-            product.bulk_quantity -= quantity
             product.total_quantity -= quantity
             product.available_quantity -= quantity
             product.damaged_quantity += quantity
@@ -2128,8 +2175,8 @@ def stock_adjustment(request, product_id):
                 product_sku=product,
                 quantity=-quantity,
                 entry_type='damage',
-                unit_price=product.buying_price,
-                total_amount=-(quantity * product.buying_price),
+                unit_price=product.default_buying_price,
+                total_amount=-(quantity * product.default_buying_price),
                 notes=f"Damaged/Loss: {reason}",
                 created_by=request.user
             )
@@ -2139,6 +2186,8 @@ def stock_adjustment(request, product_id):
         return redirect('tronic_master:product_detail', product_id=product.id)
 
     return redirect('tronic_master:product_detail', product_id=product.id)
+
+
 
 
 @login_required
@@ -2154,8 +2203,8 @@ def add_unit(request, product_id):
     branches = Branch.objects.filter(tenant=tenant, is_active=True)
 
     if request.method == 'POST':
-        buying_price = request.POST.get('buying_price', product.buying_price)
-        selling_price = request.POST.get('selling_price', product.selling_price)
+        buying_price = request.POST.get('buying_price', product.default_buying_price)
+        selling_price = request.POST.get('selling_price', product.default_selling_price)
         best_price = request.POST.get('best_price')
         branch_id = request.POST.get('branch_id')
         status = request.POST.get('status', 'available')
@@ -2616,7 +2665,7 @@ def bulk_print_labels(request):
                 status='available'
             )
             for unit in units:
-                price = unit.unit_selling_price or product.selling_price
+                price = unit.unit_selling_price or product.default_selling_price
                 items.append({
                     'id': unit.id,
                     'type': 'unit',
@@ -2634,10 +2683,10 @@ def bulk_print_labels(request):
                 'id': product.id,
                 'type': 'product',
                 'name': product.name,
-                'identifier': product.barcode or product.sku_code,
+                'identifier': product.sku_code or product.sku_code,
                 'brand': product.brand,
                 'model': product.model,
-                'price': float(product.selling_price),
+                'price': float(product.default_selling_price),
                 'category': product.category.name if product.category else 'Uncategorized',
                 'is_single': False,
             })
@@ -2936,7 +2985,7 @@ def branch_stock_list(request):
         # Calculate bulk stock value
         bulk_value = Decimal('0.00')
         for stock in bulk_stocks:
-            bulk_value += stock.quantity * stock.product.buying_price
+            bulk_value += stock.quantity * stock.product.default_buying_price
 
         # ============================================
         # GET SINGLE ITEMS (ProductUnit)
@@ -2952,7 +3001,7 @@ def branch_stock_list(request):
         # Calculate single items value
         single_value = Decimal('0.00')
         for unit in single_units:
-            price = unit.unit_buying_price or unit.product.buying_price
+            price = unit.unit_buying_price or unit.product.default_buying_price
             single_value += price
 
         # ============================================
@@ -3021,7 +3070,7 @@ def branch_stock_detail(request, branch_id):
     bulk_total_quantity = 0
 
     for stock in bulk_stocks:
-        stock_value = stock.quantity * stock.product.buying_price
+        stock_value = stock.quantity * stock.product.default_buying_price
         bulk_total_value += stock_value
         bulk_total_quantity += stock.quantity
 
@@ -3029,8 +3078,8 @@ def branch_stock_detail(request, branch_id):
             'type': 'bulk',
             'product': stock.product,
             'quantity': stock.quantity,
-            'unit_price': stock.product.buying_price,
-            'selling_price': stock.product.selling_price,
+            'unit_price': stock.product.default_buying_price,
+            'selling_price': stock.product.default_selling_price,
             'total_value': stock_value,
             'category': stock.product.category.name if stock.product.category else None,
         })
@@ -3049,7 +3098,7 @@ def branch_stock_detail(request, branch_id):
     single_total_quantity = 0
 
     for unit in single_units:
-        price = unit.unit_buying_price or unit.product.buying_price
+        price = unit.unit_buying_price or unit.product.default_buying_price
         single_total_value += price
         single_total_quantity += 1
 
@@ -3059,7 +3108,7 @@ def branch_stock_detail(request, branch_id):
             'unit': unit,
             'quantity': 1,
             'unit_price': price,
-            'selling_price': unit.unit_selling_price or unit.product.selling_price,
+            'selling_price': unit.unit_selling_price or unit.product.default_selling_price,
             'total_value': price,
             'category': unit.product.category.name if unit.product.category else None,
             'identifier': unit.imei_number or unit.serial_number or 'No ID',
@@ -3197,11 +3246,10 @@ def transfer_stock(request):
             to_stock.quantity += quantity
             to_stock.save()
 
-            # Update product quantities
-            product.bulk_quantity -= quantity
+            # ✅ REMOVE bulk_quantity - it doesn't exist
+            # ✅ Only update total_quantity and available_quantity
             product.total_quantity -= quantity
             product.available_quantity -= quantity
-            product.save()
 
             # Create stock entry for tracking
             StockEntry.objects.create(
@@ -3209,8 +3257,8 @@ def transfer_stock(request):
                 product_sku=product,
                 quantity=-quantity,
                 entry_type='adjustment',
-                unit_price=product.buying_price,
-                total_amount=-(quantity * product.buying_price),
+                unit_price=product.default_buying_price,
+                total_amount=-(quantity * product.default_buying_price),
                 branch=from_branch,
                 notes=f"Transferred to {to_branch.name}: {reason}",
                 created_by=request.user
@@ -3222,8 +3270,8 @@ def transfer_stock(request):
                 product_sku=product,
                 quantity=quantity,
                 entry_type='adjustment',
-                unit_price=product.buying_price,
-                total_amount=quantity * product.buying_price,
+                unit_price=product.default_buying_price,
+                total_amount=quantity * product.default_buying_price,
                 branch=to_branch,
                 notes=f"Received from {from_branch.name}: {reason}",
                 created_by=request.user
@@ -3240,7 +3288,6 @@ def transfer_stock(request):
         'active_tab': 'transfer',
     }
     return render(request, 'tronic_master/transfer_stock.html', context)
-
 
 
 # ============================================
@@ -3345,7 +3392,7 @@ def stock_report(request):
         tenant=tenant,
         is_active=True
     ).select_related('category', 'supplier', 'branch').annotate(
-        stock_value_annotated=F('available_quantity') * F('buying_price')
+        stock_value_annotated=F('available_quantity') * F('default_buying_price')
     )
 
     # Total stock value
@@ -3439,7 +3486,7 @@ def damaged_units_report(request):
     lost_count = 0
 
     for unit in damaged_units:
-        price = unit.unit_buying_price or unit.product.buying_price
+        price = unit.unit_buying_price or unit.product.default_buying_price
         total_value += price
         if unit.status == 'stolen':
             stolen_count += 1
@@ -3484,9 +3531,9 @@ def api_add_units(request, product_id):
     data = json.loads(request.body)
 
     identifiers = data.get('identifiers', [])
-    buying_price = data.get('buying_price', product.buying_price)
-    selling_price = data.get('selling_price', product.selling_price)
-    best_price = data.get('best_price', product.best_price)
+    buying_price = data.get('buying_price', product.default_buying_price)
+    selling_price = data.get('selling_price', product.default_selling_price)
+    best_price = data.get('best_price', product.default_best_price)
     branch_id = data.get('branch_id')
     unit_status = data.get('status', 'available')
 
@@ -3514,8 +3561,8 @@ def api_add_units(request, product_id):
                 'id': new_unit.id,
                 'identifier': identifier,
                 'branch_name': new_unit.branch.name if new_unit.branch else 'Main Shop',
-                'selling_price': float(new_unit.unit_selling_price or product.selling_price),
-                'buying_price': float(new_unit.unit_buying_price or product.buying_price)
+                'selling_price': float(new_unit.unit_selling_price or product.default_selling_price),
+                'buying_price': float(new_unit.unit_buying_price or product.default_buying_price)
             })
 
     product.update_quantities()
@@ -3548,9 +3595,9 @@ def get_unit_api(request, unit_id):
         'id': unit.id,
         'imei_number': unit.imei_number,
         'serial_number': unit.serial_number,
-        'buying_price': safe_float(unit.unit_buying_price) or safe_float(unit.product.buying_price),
-        'selling_price': safe_float(unit.unit_selling_price) or safe_float(unit.product.selling_price),
-        'best_price': safe_float(unit.best_price) or safe_float(unit.product.best_price),
+        'buying_price': safe_float(unit.unit_buying_price) or safe_float(unit.product.default_buying_price),
+        'selling_price': safe_float(unit.unit_selling_price) or safe_float(unit.product.default_selling_price),
+        'best_price': safe_float(unit.best_price) or safe_float(unit.product.default_best_price),
         'status': unit.status,
         'branch_id': unit.branch.id if unit.branch else None,
         'branch_name': unit.branch.name if unit.branch else 'Main Shop',
@@ -4051,8 +4098,8 @@ def agent_sale(request):
             'model': unit.product.model,
             'imei': unit.imei_number or '',
             'serial': unit.serial_number or '',
-            'selling_price': float(unit.unit_selling_price or unit.product.selling_price),
-            'buying_price': float(unit.unit_buying_price or unit.product.buying_price),
+            'selling_price': float(unit.unit_selling_price or unit.product.default_selling_price),
+            'buying_price': float(unit.unit_buying_price or unit.product.default_buying_price),
             'branch': unit.branch.name if unit.branch else 'Main Shop'
         })
 
@@ -4107,7 +4154,7 @@ def my_stock(request):
     # Calculate total value of assigned stock
     total_value = 0
     for unit in my_units:
-        price = unit.unit_selling_price or unit.product.selling_price
+        price = unit.unit_selling_price or unit.product.default_selling_price
         total_value += float(price)
 
     # Group by product for better display
@@ -4127,7 +4174,7 @@ def my_stock(request):
             grouped_stock[product_name]['total_available'] += 1
         elif unit.status == 'reserved':
             grouped_stock[product_name]['total_reserved'] += 1
-        price = unit.unit_selling_price or unit.product.selling_price
+        price = unit.unit_selling_price or unit.product.default_selling_price
         grouped_stock[product_name]['total_value'] += float(price)
 
     # Filter by product or search
@@ -4449,8 +4496,8 @@ def stock_take(request):
                             product_sku=product,
                             quantity=difference,
                             entry_type='adjustment',
-                            unit_price=product.buying_price,
-                            total_amount=difference * product.buying_price,
+                            unit_price=product.default_buying_price,
+                            total_amount=difference * product.default_buying_price,
                             notes=f"Stock take adjustment - physical count: {new_count}, system: {product.available_quantity}",
                             created_by=request.user
                         )
@@ -4502,7 +4549,6 @@ def manage_stock(request):
         products = products.filter(
             Q(name__icontains=search_query) |
             Q(sku_code__icontains=search_query) |
-            Q(barcode__icontains=search_query) |
             Q(brand__icontains=search_query) |
             Q(model__icontains=search_query)
         )
@@ -4530,7 +4576,7 @@ def manage_stock(request):
     # Statistics
     total_products = products.count()
     total_stock_value = products.aggregate(
-        total=Sum(F('available_quantity') * F('buying_price'))
+        total=Sum(F('available_quantity') * F('default_buying_price'))
     )['total'] or Decimal('0.00')
 
     total_quantity = products.aggregate(
@@ -5026,9 +5072,9 @@ def price_check_ajax(request):
                     'model': product.model,
                     'imei': product_unit.imei_number,
                     'serial': product_unit.serial_number,
-                    'selling_price': float(product_unit.effective_selling_price or product.selling_price),
-                    'best_price': float(product_unit.best_price or product.best_price or product.selling_price),
-                    'buying_price': float(product_unit.effective_buying_price or product.buying_price),
+                    'selling_price': float(product_unit.effective_selling_price or product.default_selling_price),
+                    'best_price': float(product_unit.best_price or product.default_best_price or product.default_selling_price),
+                    'buying_price': float(product_unit.effective_buying_price or product.default_buying_price),
                     'condition': product_unit.get_condition_display(),
                     'status': product_unit.get_status_display(),
                     'status_code': product_unit.status,
@@ -5064,9 +5110,9 @@ def price_check_ajax(request):
                     'model': product.model,
                     'imei': product_unit.imei_number,
                     'serial': product_unit.serial_number,
-                    'selling_price': float(product_unit.effective_selling_price or product.selling_price),
-                    'best_price': float(product_unit.best_price or product.best_price or product.selling_price),
-                    'buying_price': float(product_unit.effective_buying_price or product.buying_price),
+                    'selling_price': float(product_unit.effective_selling_price or product.default_selling_price),
+                    'best_price': float(product_unit.best_price or product.default_best_price or product.default_selling_price),
+                    'buying_price': float(product_unit.effective_buying_price or product.default_buying_price),
                     'condition': product_unit.get_condition_display(),
                     'status': product_unit.get_status_display(),
                     'status_code': product_unit.status,
@@ -5099,10 +5145,10 @@ def price_check_ajax(request):
                     'name': product.name,
                     'brand': product.brand,
                     'model': product.model,
-                    'barcode': product.barcode,
-                    'selling_price': float(product.selling_price),
-                    'best_price': float(product.best_price or product.selling_price),
-                    'buying_price': float(product.buying_price),
+                    'barcode': product.sku_code,
+                    'selling_price': float(product.default_selling_price),
+                    'best_price': float(product.default_best_price or product.default_selling_price),
+                    'buying_price': float(product.default_buying_price),
                     'available_quantity': product.available_quantity,
                     'total_quantity': product.total_quantity,
                     'reserved_quantity': product.reserved_quantity,
@@ -5121,7 +5167,6 @@ def price_check_ajax(request):
         # Search by Barcode (Product)
         product = Product.objects.filter(
             tenant=tenant,
-            barcode=query,
             is_active=True
         ).first()
 
@@ -5136,10 +5181,10 @@ def price_check_ajax(request):
                     'name': product.name,
                     'brand': product.brand,
                     'model': product.model,
-                    'barcode': product.barcode,
-                    'selling_price': float(product.selling_price),
-                    'best_price': float(product.best_price or product.selling_price),
-                    'buying_price': float(product.buying_price),
+                    'barcode': product.sku_code,
+                    'selling_price': float(product.default_selling_price),
+                    'best_price': float(product.default_best_price or product.default_selling_price),
+                    'buying_price': float(product.default_buying_price),
                     'available_quantity': product.available_quantity,
                     'total_quantity': product.total_quantity,
                     'reserved_quantity': product.reserved_quantity,
@@ -5171,9 +5216,9 @@ def price_check_ajax(request):
                     'name': product.name,
                     'brand': product.brand,
                     'model': product.model,
-                    'selling_price': float(product.selling_price),
-                    'best_price': float(product.best_price or product.selling_price),
-                    'buying_price': float(product.buying_price),
+                    'selling_price': float(product.default_selling_price),
+                    'best_price': float(product.default_best_price or product.default_selling_price),
+                    'buying_price': float(product.default_buying_price),
                     'available_quantity': product.available_quantity,
                     'status': 'In Stock' if product.available_quantity > 0 else 'Out of Stock',
                     'status_code': 'in_stock' if product.available_quantity > 0 else 'out_of_stock',
@@ -5354,7 +5399,7 @@ def create_return(request, sale_id):
         if sale_item:
             amount = sale_item.price * quantity
         else:
-            amount = product.selling_price * quantity
+            amount = product.default_selling_price * quantity
 
         # Create return
         return_obj = Return.objects.create(
@@ -6397,7 +6442,7 @@ def report_dashboard(request):
         tenant=tenant,
         is_active=True
     ).aggregate(
-        total=Sum('available_quantity') * F('buying_price')
+        total=Sum('available_quantity') * F('default_buying_price')
     )['total'] or Decimal('0.00')
 
     # ============================================
@@ -6565,7 +6610,7 @@ def inventory_report(request):
     # Summary stats
     total_products = products.count()
     total_value = products.aggregate(
-        total=Sum('available_quantity') * F('buying_price')
+        total=Sum('available_quantity') * F('default_buying_price')
     )['total'] or Decimal('0.00')
 
     # Products by category
@@ -6573,7 +6618,7 @@ def inventory_report(request):
         'category__name'
     ).annotate(
         count=Count('id'),
-        total_value=Sum('available_quantity') * F('buying_price')
+        total_value=Sum('available_quantity') * F('default_buying_price')
     ).order_by('-count')
 
     context = {
@@ -6797,7 +6842,7 @@ def export_inventory_report(request, tenant, format_type):
         ])
 
         for product in products:
-            stock_value = product.available_quantity * product.buying_price
+            stock_value = product.available_quantity * product.default_buying_price
             writer.writerow([
                 product.sku_code,
                 product.name,
@@ -6805,9 +6850,9 @@ def export_inventory_report(request, tenant, format_type):
                 product.model,
                 product.category.name if product.category else '',
                 product.branch.name if product.branch else '',
-                float(product.buying_price),
-                float(product.selling_price),
-                float(product.best_price) if product.best_price else '',
+                float(product.default_buying_price),
+                float(product.default_selling_price),
+                float(product.default_best_price) if product.default_best_price else '',
                 product.total_quantity,
                 product.available_quantity,
                 product.reserved_quantity,
@@ -6825,7 +6870,7 @@ def export_inventory_report(request, tenant, format_type):
 
             data = []
             for product in products:
-                stock_value = product.available_quantity * product.buying_price
+                stock_value = product.available_quantity * product.default_buying_price
                 data.append({
                     'SKU': product.sku_code,
                     'Name': product.name,
@@ -6833,9 +6878,9 @@ def export_inventory_report(request, tenant, format_type):
                     'Model': product.model,
                     'Category': product.category.name if product.category else '',
                     'Branch': product.branch.name if product.branch else '',
-                    'Buying Price': float(product.buying_price),
-                    'Selling Price': float(product.selling_price),
-                    'Best Price': float(product.best_price) if product.best_price else '',
+                    'Buying Price': float(product.default_buying_price),
+                    'Selling Price': float(product.default_selling_price),
+                    'Best Price': float(product.default_best_price) if product.default_best_price else '',
                     'Total Stock': product.total_quantity,
                     'Available': product.available_quantity,
                     'Reserved': product.reserved_quantity,
@@ -6894,8 +6939,8 @@ def export_stock_report(request, tenant, format_type):
                 unit.get_status_display(),
                 unit.get_condition_display(),
                 unit.current_owner.get_full_name() if unit.current_owner else '',
-                float(unit.unit_buying_price or unit.product.buying_price),
-                float(unit.unit_selling_price or unit.product.selling_price),
+                float(unit.unit_buying_price or unit.product.default_buying_price),
+                float(unit.unit_selling_price or unit.product.default_selling_price),
                 unit.purchase_date.strftime('%Y-%m-%d') if unit.purchase_date else '',
                 unit.warranty_end.strftime('%Y-%m-%d') if unit.warranty_end else '',
             ])
@@ -6918,8 +6963,8 @@ def export_stock_report(request, tenant, format_type):
                     'Status': unit.get_status_display(),
                     'Condition': unit.get_condition_display(),
                     'Owner': unit.current_owner.get_full_name() if unit.current_owner else '',
-                    'Buying Price': float(unit.unit_buying_price or unit.product.buying_price),
-                    'Selling Price': float(unit.unit_selling_price or unit.product.selling_price),
+                    'Buying Price': float(unit.unit_buying_price or unit.product.default_buying_price),
+                    'Selling Price': float(unit.unit_selling_price or unit.product.default_selling_price),
                     'Purchase Date': unit.purchase_date.strftime('%Y-%m-%d') if unit.purchase_date else '',
                     'Warranty End': unit.warranty_end.strftime('%Y-%m-%d') if unit.warranty_end else '',
                 })

@@ -132,9 +132,9 @@
                                         <i class="fas fa-tag me-1"></i>Selling Price (KES) *
                                     </label>
                                     <input type="number" name="selling_price" id="sellingPrice" class="form-control form-control-lg" 
-                                           value="{{ unit.unit_selling_price|default:unit.product.selling_price }}"
+                                           value="{{ unit.unit_selling_price|default:unit.product.default_selling_price }}"
                                            step="0.01" min="0" required>
-                                    <small class="text-muted">Default: KES {{ unit.unit_selling_price|default:unit.product.selling_price|floatformat:2 }}</small>
+                                    <small class="text-muted">Default: KES {{ unit.unit_selling_price|default:unit.product.default_selling_price|floatformat:2 }}</small>
                                 </div>
                             </div>
                             
@@ -151,7 +151,7 @@
                                             </div>
                                         </div>
                                         <div class="text-end mt-2 mt-sm-0">
-                                            <span class="fw-bold text-success fs-4" id="selectedProductPriceDisplay">KES {{ unit.unit_selling_price|default:unit.product.selling_price|floatformat:2 }}</span>
+                                            <span class="fw-bold text-success fs-4" id="selectedProductPriceDisplay">KES {{ unit.unit_selling_price|default:unit.product.default_selling_price|floatformat:2 }}</span>
                                         </div>
                                     </div>
                                 </div>

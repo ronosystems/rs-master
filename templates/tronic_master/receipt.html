@@ -504,16 +504,16 @@
                                             <br><small class="text-muted">{{ item.product.model }}</small>
                                         {% endif %}
                                         
-                                        {% if item.product.specifications %}
-                                            {% if item.product.specifications.ram or item.product.specifications.storage or item.product.specifications.color %}
+                                        {% if item.product.display_specs %}
+                                            {% if item.product.display_specs.ram or item.product.display_specs.storage or item.product.display_specs.color %}
                                             <br><small class="text-muted">
-                                                {% if item.product.specifications.ram %}{{ item.product.specifications.ram }}{% endif %}
-                                                {% if item.product.specifications.storage %} / {{ item.product.specifications.storage }}{% endif %}
-                                                {% if item.product.specifications.color %} / {{ item.product.specifications.color }}{% endif %}
+                                                {% if item.product.display_specs.ram %}{{ item.product.display_specs.ram }}{% endif %}
+                                                {% if item.product.display_specs.storage %} / {{ item.product.display_specs.storage }}{% endif %}
+                                                {% if item.product.display_specs.color %} / {{ item.product.display_specs.color }}{% endif %}
                                             </small>
                                             {% endif %}
-                                            {% if item.product.specifications.description %}
-                                            <br><small class="text-muted">{{ item.product.specifications.description|truncatechars:20 }}</small>
+                                            {% if item.product.display_specs.description %}
+                                            <br><small class="text-muted">{{ item.product.display_specs.description|truncatechars:20 }}</small>
                                             {% endif %}
                                         {% endif %}
                                         

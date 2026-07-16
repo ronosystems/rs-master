@@ -100,7 +100,7 @@
                                 {% endif %}
                             </td>
                             <td class="text-success fw-bold">
-                                KES {{ unit.unit_selling_price|default:unit.product.selling_price|floatformat:2 }}
+                                KES {{ unit.unit_selling_price|default:unit.product.default_selling_price|floatformat:2 }}
                             </td>
                             <td>
                                 {% if unit.assigned_date %}

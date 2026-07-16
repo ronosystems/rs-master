@@ -14,7 +14,7 @@
                     <div class="card bg-secondary text-white">
                         <div class="card-body text-center">
                             <h5>Stock Value (Cost)</h5>
-                            <h3>KES {{ product.stock_value|floatformat:2 }}</h3>
+                            <h3>KES {{ stock_value|floatformat:2|default:"0.00" }}</h3>
                         </div>
                     </div>
                 </div>
@@ -22,7 +22,7 @@
                     <div class="card bg-primary text-white">
                         <div class="card-body text-center">
                             <h5>Stock Value (Retail)</h5>
-                            <h3>KES {{ product.retail_value|floatformat:2 }}</h3>
+                            <h3>KES {{ retail_value|floatformat:2|default:"0.00" }}</h3>
                         </div>
                     </div>
                 </div>
@@ -30,7 +30,7 @@
                     <div class="card bg-success text-white">
                         <div class="card-body text-center">
                             <h5>Profit Potential</h5>
-                            <h3>KES {{ product.profit_margin|floatformat:2 }} ({{ product.profit_percentage|floatformat:1 }}%)</h3>
+                            <h3>KES {{ profit_margin|floatformat:2|default:"0.00" }} ({{ profit_percentage|floatformat:1|default:"0.0" }}%)</h3>
                         </div>
                     </div>
                 </div>
@@ -88,9 +88,9 @@
                         </div>
                         <div class="col-md-6">
                             <table class="table table-bordered">
-                                <tr><th>Buying Price:</th><td><strong>KES {{ product.buying_price|floatformat:2 }}</strong></td>
-                                <tr><th>Selling Price:</th><td><strong class="text-success">KES {{ product.selling_price|floatformat:2 }}</strong></td>
-                                <tr><th>Best/Retail Price:</th><td>KES {{ product.best_price|floatformat:2|default:"-" }}</td>
+                                <tr><th>Buying Price:</th><td><strong>KES {{ product.default_buying_price|floatformat:2 }}</strong></td>
+                                <tr><th>Selling Price:</th><td><strong class="text-success">KES {{ product.default_selling_price|floatformat:2 }}</strong></td>
+                                <tr><th>Best/Retail Price:</th><td>KES {{ product.default_best_price|floatformat:2|default:"-" }}</td>
                                 <tr><th>Reorder Level:</th><td>{{ product.reorder_level }} units</td>
                                 <tr><th>Warranty:</th><td>{{ product.warranty_months }} months</td>
                                 <tr><th>Status:</th><td>{% if product.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td>
@@ -244,7 +244,7 @@
                                         </td>
                                         <td>KES {{ unit.display_buying_price|floatformat:2 }}</td>
                                         <td class="text-success"><strong>KES {{ unit.display_selling_price|floatformat:2 }}</strong></td>
-                                        <td>KES {{ product.best_price|floatformat:2|default:"-" }}</td>
+                                        <td>KES {{ product.default_best_price|floatformat:2|default:"-" }}</td>
                                         <td>
                                             {% if unit.is_in_warranty %}
                                                 <span class="badge bg-success" title="{{ unit.warranty_remaining_days }} days left">Active</span>

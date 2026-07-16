@@ -150,8 +150,8 @@
                                 <small class="text-muted">{{ product.brand }} {{ product.model }}</small>
                             </td>
                             <td>{{ product.category.name|default:"-" }}</td>
-                            <td>KES {{ product.buying_price|floatformat:0 }}</td>
-                            <td>KES {{ product.selling_price|floatformat:0 }}</td>
+                            <td>KES {{ product.default_buying_price|floatformat:0 }}</td>
+                            <td>KES {{ product.default_selling_price|floatformat:0 }}</td>
                             <td>{{ product.available_quantity }}</td>
                             <td>
                                 <span class="fw-bold">

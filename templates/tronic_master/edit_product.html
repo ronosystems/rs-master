@@ -52,7 +52,7 @@
                                             <div class="col-md-3 mb-3">
                                                 <label for="color" class="form-label">Color</label>
                                                 <input type="text" class="form-control" id="color" name="color" 
-                                                       value="{% if product.specifications.color %}{{ product.specifications.color }}{% endif %}">
+                                                       value="{% if product.display_specs.color %}{{ product.display_specs.color }}{% endif %}">
                                             </div>
                                             <div class="col-md-3 mb-3">
                                                 <label for="category_id" class="form-label">Category</label>
@@ -99,13 +99,13 @@
                                             <div class="col-md-6 mb-3">
                                                 <label for="ram" class="form-label">RAM</label>
                                                 <input type="text" class="form-control" id="ram" name="ram" 
-                                                       value="{% if product.specifications.ram %}{{ product.specifications.ram }}{% endif %}"
+                                                       value="{% if product.display_specs.ram %}{{ product.display_specs.ram }}{% endif %}"
                                                        placeholder="e.g., 4GB, 6GB, 8GB">
                                             </div>
                                             <div class="col-md-6 mb-3">
                                                 <label for="storage" class="form-label">Storage</label>
                                                 <input type="text" class="form-control" id="storage" name="storage" 
-                                                       value="{% if product.specifications.storage %}{{ product.specifications.storage }}{% endif %}"
+                                                       value="{% if product.display_specs.storage %}{{ product.display_specs.storage }}{% endif %}"
                                                        placeholder="e.g., 64GB, 128GB, 256GB">
                                             </div>                                           
                                         </div>
@@ -117,7 +117,7 @@
                                         <div class="mb-3">
                                             <label for="description" class="form-label">Description</label>
                                             <textarea class="form-control" id="description" name="description" rows="2" 
-                                                      placeholder="Additional product description">{% if product.specifications.description %}{{ product.specifications.description }}{% endif %}</textarea>
+                                                      placeholder="Additional product description">{% if product.display_specs.description %}{{ product.display_specs.description }}{% endif %}</textarea>
                                         </div>
 
                                         <div class="form-check mb-3">
@@ -144,17 +144,17 @@
                                             <div class="col-md-4 mb-3">
                                                 <label for="buying_price" class="form-label">Buying Price (KES)</label>
                                                 <input type="number" step="0.01" class="form-control" id="buying_price" name="buying_price" 
-                                                       value="{{ product.buying_price }}">
+                                                       value="{{ product.default_buying_price }}">
                                             </div>
                                             <div class="col-md-4 mb-3">
                                                 <label for="selling_price" class="form-label">Selling Price (KES) *</label>
                                                 <input type="number" step="0.01" class="form-control" id="selling_price" name="selling_price" 
-                                                       required value="{{ product.selling_price }}">
+                                                       required value="{{ product.default_selling_price }}">
                                             </div>
                                             <div class="col-md-4 mb-3">
                                                 <label for="best_price" class="form-label">Best/Retail Price (KES)</label>
                                                 <input type="number" step="0.01" class="form-control" id="best_price" name="best_price" 
-                                                       value="{{ product.best_price|default:'' }}">
+                                                       value="{{ product.default_best_price|default:'' }}">
                                             </div>
                                         </div>
                                         
@@ -196,10 +196,10 @@
                                         <hr>
                                         <div class="row">
                                             <div class="col-md-4">
-                                                <small><strong>Buying:</strong> KES {{ product.buying_price|floatformat:2 }}</small>
+                                                <small><strong>Buying:</strong> KES {{ product.default_buying_price|floatformat:2 }}</small>
                                             </div>
                                             <div class="col-md-4">
-                                                <small><strong>Selling:</strong> KES {{ product.selling_price|floatformat:2 }}</small>
+                                                <small><strong>Selling:</strong> KES {{ product.default_selling_price|floatformat:2 }}</small>
                                             </div>
                                             <div class="col-md-4">
                                                 <small><strong>Profit/Unit:</strong> <span class="text-success">KES {{ product.profit_margin|floatformat:2 }}</span></small>

@@ -60,8 +60,8 @@
                                        data-product-barcode="{{ product.barcode|default:'' }}"
                                        data-product-brand="{{ product.brand|default:'' }}"
                                        data-product-model="{{ product.model|default:'' }}"
-                                       data-product-price="{{ product.selling_price }}"
-                                       data-product-specs="{% for key, value in product.specifications.items %}{{ value }} {% endfor %}"
+                                       data-product-price="{{ product.default_selling_price }}"
+                                       data-product-specs="{% for key, value in product.display_specs.items %}{{ value }} {% endfor %}"
                                        data-product-category="{{ product.category.name|default:'' }}"
                                        style="width: 16px; height: 16px;">
                             </td>
@@ -85,10 +85,10 @@
                             </td>
                             <td>
                                 <small class="text-muted">
-                                    {% if product.specifications %}
-                                        {% if product.specifications.ram %}RAM: {{ product.specifications.ram }}{% endif %}
-                                        {% if product.specifications.storage %} | Storage: {{ product.specifications.storage }}{% endif %}
-                                        {% if product.specifications.color %} | Color: {{ product.specifications.color }}{% endif %}
+                                    {% if product.display_specs %}
+                                        {% if product.display_specs.ram %}RAM: {{ product.display_specs.ram }}{% endif %}
+                                        {% if product.display_specs.storage %} | Storage: {{ product.display_specs.storage }}{% endif %}
+                                        {% if product.display_specs.color %} | Color: {{ product.display_specs.color }}{% endif %}
                                     {% else %}
                                         —
                                     {% endif %}
@@ -102,7 +102,7 @@
                                 </div>
                             </td>
                             <td class="text-nowrap text-success fw-bold">
-                                KES {{ product.selling_price|floatformat:2 }}
+                                KES {{ product.default_selling_price|floatformat:2 }}
                             </td>
                             <td>
                                 {% if product.is_active %}
