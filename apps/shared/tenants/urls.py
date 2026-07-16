@@ -9,6 +9,7 @@ urlpatterns = [
     # TENANT MANAGEMENT
     # ============================================
     path('', views.tenant_list, name='tenant_list'),
+    path('super-admin-dashboard/', views.super_admin_dashboard, name='super_admin_dashboard'),
     path('register/', views.register_tenant, name='register_tenant'),
     path('<int:tenant_id>/', views.tenant_detail, name='tenant_detail'),
     path('<int:tenant_id>/edit/', views.edit_tenant, name='edit_tenant'),
@@ -17,6 +18,12 @@ urlpatterns = [
     path('<int:tenant_id>/reject/', views.reject_tenant, name='reject_tenant'),
     path('<int:tenant_id>/assign-owner/', views.assign_owner, name='assign_owner'),
     path('<int:tenant_id>/edit-owner/', views.edit_tenant_owner, name='edit_tenant_owner'),
+
+    # ============================================
+    # 🔥 Tenant switching (preview)
+    # ============================================
+    path('switch-tenant/<int:tenant_id>/', views.switch_tenant, name='switch_tenant'),
+    path('exit-preview/', views.exit_preview, name='exit_preview'),
     
     # ============================================
     # PROJECT TYPE

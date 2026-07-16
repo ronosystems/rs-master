@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="card border-0 shadow-lg">
-        <div class="card-header bg-gradient-primary text-white py-3" style="background: linear-gradient(135deg, #00bbff 0%, #00c8ff 100%);">
+        <div class="card-header bg-gradient-primary text-white py-3" style="background: linear-gradient(135deg, #03f498 0%, #03f480 100%);">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <div class="mt-2 mt-sm-0">
                     <div class="d-flex gap-3">
@@ -94,8 +94,8 @@
                             <th style="width: 10%">Subscription</th>
                             <th style="width: 10%">Status</th>
                             <th style="width: 12%">Admin Owner</th>
-                            <th style="width: 10%">Registered</th>
-                            <th style="width: 13%">Actions</th>
+                            <th style="width: 8%">Registered</th>
+                            <th style="width: 15%">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -204,6 +204,14 @@
                             <td>{{ tenant.created_at|date:"Y-m-d" }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
+                                    <!-- 🔥 SWITCHER BUTTON - NEW! -->
+                                    <a href="{% url 'tenants:switch_tenant' tenant.id %}" 
+                                       class="btn btn-success" 
+                                       title="Switch to {{ tenant.company_name }} dashboard"
+                                       onclick="return confirm('Switch to {{ tenant.company_name }} dashboard?')">
+                                        <i class="fas fa-exchange-alt"></i> Switch
+                                    </a>
+                                    
                                     <a href="{% url 'tenants:tenant_detail' tenant.id %}" 
                                        class="btn btn-outline-primary" 
                                        title="View Details" 
@@ -410,6 +418,15 @@
         padding: 2px 6px;
         border-radius: 4px;
         font-size: 0.75rem;
+    }
+    /* ✅ Style for the Switch button */
+    .btn-success {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+    }
+    .btn-success:hover {
+        background: linear-gradient(135deg, #218838, #1aa179);
+        transform: scale(1.05);
     }
 </style>
 {% endblock %}

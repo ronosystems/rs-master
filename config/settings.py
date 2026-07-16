@@ -59,6 +59,10 @@ else:
         load_dotenv(env_file, override=True)
         print("✅ Created default .env.production")
 
+
+# ✅ Define ENV after loading (for both environments)
+ENV = os.getenv('DJANGO_ENV', 'development')
+
 # ✅ Now set OFFLINE_MODE AFTER loading .env
 OFFLINE_MODE = os.getenv('OFFLINE_MODE', 'False') == 'True'
 
@@ -215,8 +219,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    # Your custom middleware - order matters!
-    'apps.shared.middleware.TenantMiddleware',
+    # ✅ Keep ONLY ONE TenantMiddleware
+    'apps.shared.tenants.middleware.TenantMiddleware', 
+    
+    # Your other custom middleware
     'apps.shared.middleware.OfflineSyncMiddleware',
     'apps.shared.portal.middleware.ProjectTypeMiddleware',
     'apps.shared.portal.middleware.MaintenanceModeMiddleware',

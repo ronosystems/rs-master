@@ -1168,34 +1168,65 @@
         </div>
     </div>
 
-    <!-- ============================================ -->
-    <!-- MAIN CONTENT -->
-    <!-- ============================================ -->
-    <div class="main-content" id="mainContent">
 
-        <!-- Show restricted access warning for admin with expired subscription -->
-        {% if subscription_restricted %}
-        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Restricted Access!</strong> Your subscription has expired. 
-            Please <a href="{% url 'tenants:tenant_subscription' tenant.id %}" class="alert-link">renew now</a> to restore full access.
+
+
+<!-- ============================================ -->
+<!-- MAIN CONTENT -->
+<!-- ============================================ -->
+<div class="main-content" id="mainContent">
+
+    <!-- ✅ PREVIEW MODE BANNER - INSIDE MAIN CONTENT -->
+    {% if request.session.tenant_id and user.is_super_admin %}
+    <div class="preview-banner" style="background: linear-gradient(135deg, #ffc107, #ff9800); padding: 12px 20px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); border-left: 5px solid #e65100; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div>
+            <i class="fas fa-eye me-2" style="color: #000;"></i>
+            <strong style="color: #000;">🔍 PREVIEW MODE:</strong>
+            <span style="color: #333; font-weight: 500;">
+                You are viewing <strong style="color: #000;">{{ request.user.tenant.company_name|default:"Tenant" }}</strong>
+            </span>
+            <span class="badge bg-dark ms-2">
+                <i class="fas fa-code me-1"></i> {{ request.user.tenant.code|default:"N/A" }}
+            </span>
+            <span class="badge bg-danger ms-1">
+                <i class="fas fa-user-shield me-1"></i> Super Admin
+            </span>
+        </div>
+        <div>
+            <a href="{% url 'tenants:exit_preview' %}" class="btn btn-danger btn-sm px-4" 
+               onclick="return confirm('Exit preview mode and return to Super Admin dashboard?')">
+                <i class="fas fa-times-circle me-1"></i> Exit Preview
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Show restricted access warning for admin with expired subscription -->
+    {% if subscription_restricted %}
+    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Restricted Access!</strong> Your subscription has expired.
+        Please <a href="{% url 'tenants:tenant_subscription' tenant.id %}" class="alert-link">renew now</a> to restore full access.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+            {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        {% endif %}
+        {% endfor %}
+    {% endif %}
 
-        <!-- Django Messages -->
-        {% if messages %}
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}
-        {% endif %}
-            
-        {% block content %}{% endblock %}
-    </div>
+    {% block content %}{% endblock %}
+</div>
+
+
+
 
     <!-- ============================================ -->
     <!-- FIXED FOOTER -->

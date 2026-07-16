@@ -18,6 +18,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+
 # ============================================
 # HELPER FUNCTIONS
 # ============================================
@@ -39,6 +41,127 @@ def has_tenant_access(user, tenant):
     if is_tenant_admin(user) and user.tenant == tenant:
         return True
     return False
+
+
+
+
+
+# ============================================
+# SUPERADMIN DASHBOARD
+# ============================================
+@login_required
+def super_admin_dashboard(request):
+    """Super admin dashboard with tenant overview"""
+    
+    if not request.user.is_super_admin:
+        messages.error(request, 'Access denied. Super admin only.')
+        return redirect('dashboard')
+    
+    # Get all tenants
+    tenants = Tenant.objects.all().order_by('-created_at')
+    
+    # Check if in preview mode
+    is_preview_mode = request.session.get('tenant_id') is not None
+    preview_tenant = None
+    
+    if is_preview_mode:
+        try:
+            preview_tenant = Tenant.objects.get(id=request.session['tenant_id'])
+        except Tenant.DoesNotExist:
+            pass
+    
+    # Calculate statistics
+    total_tenants = tenants.count()
+    active_tenants = tenants.filter(status='active').count()
+    pending_tenants = tenants.filter(status='pending').count()
+    rejected_tenants = tenants.filter(status='rejected').count()
+    
+    # Get project type breakdown
+    project_types = {}
+    for tenant in tenants:
+        project_type = tenant.project_type.name if tenant.project_type else 'Unknown'
+        project_types[project_type] = project_types.get(project_type, 0) + 1
+    
+    context = {
+        'tenants': tenants,
+        'total_tenants': total_tenants,
+        'active_tenants': active_tenants,
+        'pending_tenants': pending_tenants,
+        'rejected_tenants': rejected_tenants,
+        'project_types': project_types,
+        'is_preview_mode': is_preview_mode,
+        'preview_tenant': preview_tenant,
+        'is_super_admin': True,
+    }
+    return render(request, 'shared/super_admin_dashboard.html', context)
+
+
+@login_required
+def switch_tenant(request, tenant_id):
+    """Switch to a tenant as a super admin to view their dashboard"""
+    
+    if not request.user.is_super_admin:
+        messages.error(request, 'Access denied. Super admin only.')
+        return redirect('super_admin_dashboard')
+    
+    tenant = get_object_or_404(Tenant, id=tenant_id)
+    
+    # Store original tenant to switch back
+    if 'original_tenant_id' not in request.session:
+        request.session['original_tenant_id'] = request.session.get('tenant_id')
+    
+    # Switch to selected tenant
+    request.session['tenant_id'] = tenant.id
+    
+    messages.success(request, f'🔍 Previewing: {tenant.company_name}')
+    
+    # Redirect based on tenant's project type
+    if tenant.project_type:
+        project_type = tenant.project_type.code.lower()
+        redirect_map = {
+            'tronic_master': 'tronic_master:dashboard',
+            'fashion_master': 'fashion_master:dashboard',
+            'food_master': 'food_master:dashboard',
+            'hotel_master': 'hotel_master:dashboard',
+            'rental_master': 'rental_master:dashboard',
+            'health_master': 'health_master:dashboard',
+        }
+        return redirect(redirect_map.get(project_type, 'portal:dashboard'))
+    
+    return redirect('portal:dashboard')
+
+
+@login_required
+def exit_preview(request):
+    """Exit tenant preview mode and return to super admin view"""
+    
+    if not request.user.is_super_admin:
+        messages.error(request, 'Access denied.')
+        return redirect('dashboard')
+    
+    # Clear tenant from session
+    request.session.pop('tenant_id', None)
+    request.session.pop('original_tenant_id', None)
+    
+    # Remove tenant from user if it was set
+    if hasattr(request.user, 'tenant'):
+        # Don't delete, just set to None
+        request.user.tenant = None
+        # Save if user model has tenant field
+        if hasattr(request.user, 'save'):
+            try:
+                request.user.save()
+            except:
+                pass
+    
+    messages.success(request, '✅ Exited preview mode')
+    
+    # ✅ Redirect to tenant list (the super admin page)
+    return redirect('tenants:tenant_list')
+
+
+
+
 
 
 
