@@ -715,7 +715,7 @@
                 {% elif tenant and tenant.company_name %}
                     {{ tenant.company_name }}
                 {% else %}
-                    Tech Master
+                    RONOSYSTEMS
                 {% endif %}
             </div>
         </div>
@@ -727,7 +727,9 @@
             <div class="user-info">
                 <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
                 <div class="user-role">
-                    {% if user.is_super_admin or user.is_tenant_admin %}
+                    {% if user.is_super_admin %}
+                        System Owner
+                    {% elif user.is_tenant_admin %}
                         Company Admin
                     {% elif user.is_regular_user %}
                         Company Staff
@@ -1344,7 +1346,7 @@
             </span>
         </div>
         <div>
-            <a href="{% url 'tenants:exit_preview' %}" class="btn btn-danger btn-sm px-4" 
+            <a href="{% url 'tenants:exit_preview' %}" class="btn btn-danger btn-sm px-4"
                onclick="return confirm('Exit preview mode and return to Super Admin dashboard?')">
                 <i class="fas fa-times-circle me-1"></i> Exit Preview
             </a>
@@ -1390,12 +1392,12 @@
             {% elif tenant and tenant.company_name %}
                 {{ tenant.company_name }}
             {% else %}
-                Tech Master
+                RONOSYSTEMS
             {% endif %}
             | All Rights Reserved
         </div>
         <div>
-            <i class="fas fa-code-branch me-1"></i> Powered By RS MasterAfrica
+            <i class="fas fa-code-branch me-1"></i> Powered By RonoSystems
         </div>
     </div>
 
