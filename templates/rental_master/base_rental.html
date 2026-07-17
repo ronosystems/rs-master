@@ -654,6 +654,10 @@
                 <li><a class="dropdown-item" href="{% url 'portal:profile' %}">
                     <i class="fas fa-user me-2"></i> My Profile
                 </a></li>
+                <li><a class="dropdown-item" href="{% url 'settings:profile_settings' %}" >
+                    <i class="fas fa-user me-2"></i> Profile settings
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'portal:change_password' %}">
                     <i class="fas fa-key me-2"></i> Change Password
@@ -1106,7 +1110,7 @@
     <div class="sidebar-footer">
         <a href="{% url 'portal:no_project_assigned' %}" class="footer-btn help-btn">
             <i class="fas fa-question-circle"></i>
-            <span><Center> 🔴🟡🟢 About RS Master </Center></span>
+            <span><Center> Support Center </Center></span>
             <span class="badge bg-danger ms-1" id="chatBadge" style="display: none;">0</span>
         </a>
     </div>
@@ -1171,27 +1175,30 @@
 
 
 
+    <!-- ============================================ -->
+    <!-- FIXED FOOTER -->
+    <!-- ============================================ -->
+    <div class="fixed-footer" id="footer">
+        <div>
+            Copyright
+            <i class="fas fa-copyright me-1"></i> <span id="currentYear"></span>
+            {% if company_settings and company_settings.company_name %}
+                {{ company_settings.company_name }}
+            {% elif tenant and tenant.company_name %}
+                {{ tenant.company_name }}
+            {% else %}
+                RONOSYSTEMS
+            {% endif %}
+            | All Rights Reserved
+        </div>
+        <div>
+            <i class="fas fa-code-branch me-1"></i> Powered By RonoSystems
+        </div>
+    </div>
 
 
-<!-- ============================================ -->
-<!-- FIXED FOOTER -->
-<!-- ============================================ -->
-<div class="fixed-footer" id="footer">
-    <div>
-        Copyright
-        <i class="fas fa-copyright me-1"></i> <span id="currentYear"></span> 
-        {{ company_settings.company_name|default:tenant.company_name|default:"Rental Master" }}
-        | All Rights Reserved
-    </div>
-    <div>
-        <i class="fas fa-code-branch me-1"></i> Version 2.0
-        {% if project_type %}
-            <span class="project-badge rental">
-                {{ project_type.name }}
-            </span>
-        {% endif %}
-    </div>
-</div>
+
+    
 
 <!-- jQuery - CDN with local fallback -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js" 
