@@ -13,6 +13,7 @@ from django.core.signing import Signer, BadSignature
 logger = logging.getLogger(__name__)
 
 
+
 class CompanySetting(models.Model):
     """Company/Business Settings per tenant"""
     tenant = models.OneToOneField(
@@ -29,9 +30,7 @@ class CompanySetting(models.Model):
     company_website = models.URLField(blank=True, default='')
     company_tax_pin = models.CharField(max_length=50, blank=True, default='')
     
-    # ============================================
-    # LOGO FIELD
-    # ============================================
+    # Logo
     logo = models.ImageField(
         upload_to='company_logos/',
         blank=True,
@@ -46,6 +45,68 @@ class CompanySetting(models.Model):
         null=True,
         help_text="Upload favicon (ICO, PNG - Max 1MB)"
     )
+    
+    # ============================================
+    # SLIDESHOW IMAGES - NEW
+    # ============================================
+    slide_image_1 = models.ImageField(
+        upload_to='company_slides/',
+        blank=True,
+        null=True,
+        help_text="Slide 1 - Upload image (recommended: 1920x1080)"
+    )
+    slide_title_1 = models.CharField(max_length=200, blank=True, default='', help_text="Title for slide 1")
+    slide_subtitle_1 = models.CharField(max_length=300, blank=True, default='', help_text="Subtitle for slide 1")
+    slide_button_text_1 = models.CharField(max_length=50, blank=True, default='', help_text="Button text for slide 1")
+    slide_button_url_1 = models.CharField(max_length=200, blank=True, default='', help_text="Button URL for slide 1")
+    
+    slide_image_2 = models.ImageField(
+        upload_to='company_slides/',
+        blank=True,
+        null=True,
+        help_text="Slide 2 - Upload image (recommended: 1920x1080)"
+    )
+    slide_title_2 = models.CharField(max_length=200, blank=True, default='', help_text="Title for slide 2")
+    slide_subtitle_2 = models.CharField(max_length=300, blank=True, default='', help_text="Subtitle for slide 2")
+    slide_button_text_2 = models.CharField(max_length=50, blank=True, default='', help_text="Button text for slide 2")
+    slide_button_url_2 = models.CharField(max_length=200, blank=True, default='', help_text="Button URL for slide 2")
+    
+    slide_image_3 = models.ImageField(
+        upload_to='company_slides/',
+        blank=True,
+        null=True,
+        help_text="Slide 3 - Upload image (recommended: 1920x1080)"
+    )
+    slide_title_3 = models.CharField(max_length=200, blank=True, default='', help_text="Title for slide 3")
+    slide_subtitle_3 = models.CharField(max_length=300, blank=True, default='', help_text="Subtitle for slide 3")
+    slide_button_text_3 = models.CharField(max_length=50, blank=True, default='', help_text="Button text for slide 3")
+    slide_button_url_3 = models.CharField(max_length=200, blank=True, default='', help_text="Button URL for slide 3")
+    
+    slide_image_4 = models.ImageField(
+        upload_to='company_slides/',
+        blank=True,
+        null=True,
+        help_text="Slide 4 - Upload image (recommended: 1920x1080)"
+    )
+    slide_title_4 = models.CharField(max_length=200, blank=True, default='', help_text="Title for slide 4")
+    slide_subtitle_4 = models.CharField(max_length=300, blank=True, default='', help_text="Subtitle for slide 4")
+    slide_button_text_4 = models.CharField(max_length=50, blank=True, default='', help_text="Button text for slide 4")
+    slide_button_url_4 = models.CharField(max_length=200, blank=True, default='', help_text="Button URL for slide 4")
+    
+    slide_image_5 = models.ImageField(
+        upload_to='company_slides/',
+        blank=True,
+        null=True,
+        help_text="Slide 5 - Upload image (recommended: 1920x1080)"
+    )
+    slide_title_5 = models.CharField(max_length=200, blank=True, default='', help_text="Title for slide 5")
+    slide_subtitle_5 = models.CharField(max_length=300, blank=True, default='', help_text="Subtitle for slide 5")
+    slide_button_text_5 = models.CharField(max_length=50, blank=True, default='', help_text="Button text for slide 5")
+    slide_button_url_5 = models.CharField(max_length=200, blank=True, default='', help_text="Button URL for slide 5")
+    
+    # Slide Settings
+    enable_slideshow = models.BooleanField(default=True, help_text="Enable slideshow on dashboard")
+    slideshow_interval = models.IntegerField(default=5000, help_text="Slideshow interval in milliseconds (e.g., 5000 = 5 seconds)")
     
     # Branding Colors
     primary_color = models.CharField(
@@ -83,6 +144,36 @@ class CompanySetting(models.Model):
     
     def __str__(self):
         return f"Company Settings - {self.tenant.company_name if self.tenant else 'No Tenant'}"
+    
+    def get_slides(self):
+        """Get list of slides with images and content"""
+        slides = []
+        slide_fields = [
+            (1, 'slide_image_1', 'slide_title_1', 'slide_subtitle_1', 'slide_button_text_1', 'slide_button_url_1'),
+            (2, 'slide_image_2', 'slide_title_2', 'slide_subtitle_2', 'slide_button_text_2', 'slide_button_url_2'),
+            (3, 'slide_image_3', 'slide_title_3', 'slide_subtitle_3', 'slide_button_text_3', 'slide_button_url_3'),
+            (4, 'slide_image_4', 'slide_title_4', 'slide_subtitle_4', 'slide_button_text_4', 'slide_button_url_4'),
+            (5, 'slide_image_5', 'slide_title_5', 'slide_subtitle_5', 'slide_button_text_5', 'slide_button_url_5'),
+        ]
+        
+        for num, img_field, title_field, subtitle_field, btn_text_field, btn_url_field in slide_fields:
+            img = getattr(self, img_field)
+            if img and img.name:
+                slides.append({
+                    'order': num,
+                    'image': img,
+                    'image_url': img.url if img else None,
+                    'title': getattr(self, title_field, ''),
+                    'subtitle': getattr(self, subtitle_field, ''),
+                    'button_text': getattr(self, btn_text_field, ''),
+                    'button_url': getattr(self, btn_url_field, ''),
+                })
+        
+        return slides
+    
+    def get_active_slides(self):
+        """Get only active slides with images"""
+        return [s for s in self.get_slides() if s['image']]
     
     def get_logo_url(self):
         """Get logo URL if it exists"""
@@ -130,6 +221,12 @@ class CompanySetting(models.Model):
                     old.logo.delete(save=False)
                 if old.favicon and old.favicon != self.favicon:
                     old.favicon.delete(save=False)
+                # Clean up old slide images
+                for i in range(1, 6):
+                    old_field = getattr(old, f'slide_image_{i}')
+                    new_field = getattr(self, f'slide_image_{i}')
+                    if old_field and old_field != new_field:
+                        old_field.delete(save=False)
             except CompanySetting.DoesNotExist:
                 pass
         
@@ -139,45 +236,50 @@ class CompanySetting(models.Model):
         if tenant_id:
             cache.delete(f"settings_{tenant_id}_global")
             cache.delete(f"settings_{tenant_id}_None_global")
-            # Also clear any user-specific caches
         
         # If offline, queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
+                sync_data = {
+                    'id': self.id,
+                    'tenant_id': tenant_id,
+                    'company_name': self.company_name,
+                    'company_address': self.company_address,
+                    'company_phone': self.company_phone,
+                    'company_email': self.company_email,
+                    'company_website': self.company_website,
+                    'company_tax_pin': self.company_tax_pin,
+                    'logo': self.logo.name if self.logo else None,
+                    'favicon': self.favicon.name if self.favicon else None,
+                    'primary_color': self.primary_color,
+                    'secondary_color': self.secondary_color,
+                    'accent_color': self.accent_color,
+                    'show_logo_on_receipts': self.show_logo_on_receipts,
+                    'show_logo_on_invoices': self.show_logo_on_invoices,
+                    'show_logo_on_reports': self.show_logo_on_reports,
+                    'show_logo_on_dashboard': self.show_logo_on_dashboard,
+                    'enable_slideshow': self.enable_slideshow,
+                    'slideshow_interval': self.slideshow_interval,
+                }
+                # Add slide data
+                for i in range(1, 6):
+                    img = getattr(self, f'slide_image_{i}')
+                    sync_data[f'slide_image_{i}'] = img.name if img else None
+                    sync_data[f'slide_title_{i}'] = getattr(self, f'slide_title_{i}', '')
+                    sync_data[f'slide_subtitle_{i}'] = getattr(self, f'slide_subtitle_{i}', '')
+                    sync_data[f'slide_button_text_{i}'] = getattr(self, f'slide_button_text_{i}', '')
+                    sync_data[f'slide_button_url_{i}'] = getattr(self, f'slide_button_url_{i}', '')
+                
                 SyncQueue.objects.create(
                     tenant_id=tenant_id,
                     model_name='CompanySetting',
                     object_id=self.id,
                     operation='create' if is_new else 'update',
-                    data={
-                        'id': self.id,
-                        'tenant_id': tenant_id,
-                        'company_name': self.company_name,
-                        'company_address': self.company_address,
-                        'company_phone': self.company_phone,
-                        'company_email': self.company_email,
-                        'company_website': self.company_website,
-                        'company_tax_pin': self.company_tax_pin,
-                        'logo': self.logo.name if self.logo else None,
-                        'favicon': self.favicon.name if self.favicon else None,
-                        'primary_color': self.primary_color,
-                        'secondary_color': self.secondary_color,
-                        'accent_color': self.accent_color,
-                        'show_logo_on_receipts': self.show_logo_on_receipts,
-                        'show_logo_on_invoices': self.show_logo_on_invoices,
-                        'show_logo_on_reports': self.show_logo_on_reports,
-                        'show_logo_on_dashboard': self.show_logo_on_dashboard,
-                    }
+                    data=sync_data
                 )
                 logger.debug(f"✅ Queued CompanySetting sync for tenant {tenant_id}")
             except Exception as e:
                 logger.error(f"Failed to queue CompanySetting sync: {e}")
-    
-    @classmethod
-    def get_or_create_for_tenant(cls, tenant):
-        """Get or create company settings for a tenant"""
-        settings, created = cls.objects.get_or_create(tenant=tenant)
-        return settings
 
 
 class SystemSetting(models.Model):

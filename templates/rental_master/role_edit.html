@@ -1,0 +1,319 @@
+{% extends 'rental_master/base_rental.html' %}
+{% load static %}
+
+{% block title %}Edit Role - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-edit text-primary me-2"></i>Edit Role
+        </h2>
+        <div>
+            <a href="{% url 'rental_master:role_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Roles
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="role_name" class="form-label">Role Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="role_name" name="role_name" 
+                                   value="{{ role.name }}" required>
+                            <div class="invalid-feedback">Please enter a role name.</div>
+                            <small class="text-muted">Display name for the role.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"
+                                      placeholder="Describe the responsibilities of this role...">{{ role.description|default:'' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                       {% if role.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    Active
+                                </label>
+                            </div>
+                            <small class="text-muted">Inactive roles cannot be assigned to users.</small>
+                        </div>
+
+                        {% if role.is_system_role %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            This is a <strong>system role</strong>. Some permissions may be restricted.
+                        </div>
+                        {% endif %}
+
+                        <hr>
+
+                        <h6 class="mb-3">
+                            <i class="fas fa-key me-2"></i>Permissions
+                        </h6>
+                        <p class="text-muted small">Select the permissions for this role.</p>
+
+                        <!-- Dynamic permission groups from context -->
+                        {% if permission_groups %}
+                            {% for group_name, permissions in permission_groups.items %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <strong>{{ group_name }}</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                {% for permission in permissions %}
+                                                <div class="col-md-6">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" 
+                                                               name="permissions" value="{{ permission.codename }}"
+                                                               id="perm_{{ permission.codename }}"
+                                                               {% if permission.codename in role.permissions %}checked{% endif %}>
+                                                        <label class="form-check-label" for="perm_{{ permission.codename }}">
+                                                            {{ permission.name }}
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Fallback static permissions if no dynamic permissions -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <strong>Property Management</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="view_properties"
+                                                       {% if 'view_properties' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">View Properties</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="add_properties"
+                                                       {% if 'add_properties' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Add Properties</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="edit_properties"
+                                                       {% if 'edit_properties' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Edit Properties</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="delete_properties"
+                                                       {% if 'delete_properties' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Delete Properties</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="view_units"
+                                                       {% if 'view_units' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">View Units</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="add_units"
+                                                       {% if 'add_units' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Add Units</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="edit_units"
+                                                       {% if 'edit_units' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Edit Units</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="delete_units"
+                                                       {% if 'delete_units' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Delete Units</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <strong>Tenant Management</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="view_tenants"
+                                                       {% if 'view_tenants' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">View Tenants</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="add_tenants"
+                                                       {% if 'add_tenants' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Add Tenants</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="edit_tenants"
+                                                       {% if 'edit_tenants' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Edit Tenants</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="delete_tenants"
+                                                       {% if 'delete_tenants' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Delete Tenants</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mt-3">
+                                        <div class="card-header">
+                                            <strong>Lease Management</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="view_leases"
+                                                       {% if 'view_leases' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">View Leases</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="add_leases"
+                                                       {% if 'add_leases' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Add Leases</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="edit_leases"
+                                                       {% if 'edit_leases' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Edit Leases</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="delete_leases"
+                                                       {% if 'delete_leases' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Delete Leases</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mt-3">
+                                        <div class="card-header">
+                                            <strong>Payments & Deposits</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="view_payments"
+                                                       {% if 'view_payments' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">View Payments</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="add_payments"
+                                                       {% if 'add_payments' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Add Payments</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="view_deposits"
+                                                       {% if 'view_deposits' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">View Deposits</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="refund_deposits"
+                                                       {% if 'refund_deposits' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Refund Deposits</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mt-3">
+                                        <div class="card-header">
+                                            <strong>Staff Management</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="view_staff"
+                                                       {% if 'view_staff' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">View Staff</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="add_staff"
+                                                       {% if 'add_staff' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Add Staff</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="edit_staff"
+                                                       {% if 'edit_staff' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Edit Staff</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions" value="delete_staff"
+                                                       {% if 'delete_staff' in role.permissions %}checked{% endif %}>
+                                                <label class="form-check-label">Delete Staff</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update Role
+                            </button>
+                            <a href="{% url 'rental_master:role_list' %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+
+// Auto-dismiss alerts
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(function(alert) {
+            alert.style.transition = 'opacity 0.5s ease';
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 500);
+        });
+    }, 5000);
+});
+</script>
+
+<style>
+.card-header {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.form-check {
+    margin-bottom: 0.5rem;
+}
+
+.form-check-label {
+    font-size: 0.95rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends 'rental_master/base_rental.html' %}
+{% load static %}
+
+{% block title %}Staff List - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-users text-primary me-2"></i>Staff Members
+        </h2>
+        <div>
+            <a href="{% url 'rental_master:staff_create' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Add Staff
+            </a>
+            <a href="{% url 'rental_master:manage_staff' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-cog me-2"></i>Manage
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <!-- Search and Filter -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="staffSearch" placeholder="Search staff by name, email, or username...">
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-secondary active" id="showAll">All</button>
+                        <button class="btn btn-sm btn-outline-success" id="showActive">Active</button>
+                        <button class="btn btn-sm btn-outline-danger" id="showInactive">Inactive</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover" id="staffTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Roles</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for staff in staff %}
+                        <tr class="{% if not staff.is_active %}table-danger{% endif %}">
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ staff.get_full_name|default:staff.username }}</strong>
+                                <br>
+                                <small class="text-muted">@{{ staff.username }}</small>
+                            </td>
+                            <td>{{ staff.email }}</td>
+                            <td>{{ staff.phone_number|default:"-" }}</td>
+                            <td>
+                                {% with roles=staff.role_assignments.all|dictsort:"role.name" %}
+                                    {% for assignment in roles %}
+                                        {% if assignment.is_active %}
+                                            <span class="badge bg-info mb-1 d-inline-block">{{ assignment.role.name }}</span>
+                                        {% endif %}
+                                    {% empty %}
+                                        <span class="badge bg-secondary">No Role</span>
+                                    {% endfor %}
+                                {% endwith %}
+                            </td>
+                            <td>
+                                {% if staff.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'rental_master:staff_detail' staff.id %}" class="btn btn-outline-info" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'rental_master:staff_edit' staff.id %}" class="btn btn-outline-primary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if staff.is_active %}
+                                        <button onclick="toggleStaffStatus({{ staff.id }}, 'deactivate')" class="btn btn-outline-danger" title="Deactivate">
+                                            <i class="fas fa-user-slash"></i>
+                                        </button>
+                                    {% else %}
+                                        <button onclick="toggleStaffStatus({{ staff.id }}, 'activate')" class="btn btn-outline-success" title="Activate">
+                                            <i class="fas fa-user-check"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-users fa-3x d-block mb-3 text-muted"></i>
+                                <h5>No staff members found</h5>
+                                <p class="mb-0">Click the "Add Staff" button to create a new staff member.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Staff Count -->
+            <div class="mt-3">
+                <small class="text-muted">
+                    Total: <strong>{{ staff|length }}</strong> staff members
+                    ({{ staff|length }} active, 0 inactive)
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden CSRF Token for AJAX -->
+{% csrf_token %}
+
+<script>
+// ============================================
+// STAFF STATUS TOGGLE
+// ============================================
+function toggleStaffStatus(userId, action) {
+    const actionText = action === 'activate' ? 'activate' : 'deactivate';
+    const confirmMsg = `Are you sure you want to ${actionText} this staff member?`;
+    
+    if (!confirm(confirmMsg)) return;
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+    
+    fetch("{% url 'rental_master:manage_staff' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken
+        },
+        body: new URLSearchParams({
+            'user_id': userId,
+            'action': action
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            return response.text().then(text => {
+                alert('Failed to update staff status. Please try again.');
+                console.error('Error:', text);
+            });
+        }
+    })
+    .catch(error => {
+        alert('An error occurred. Please try again.');
+        console.error('Error:', error);
+    });
+}
+
+// ============================================
+// SEARCH FUNCTIONALITY
+// ============================================
+document.getElementById('staffSearch').addEventListener('keyup', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#staffTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// ============================================
+// FILTER FUNCTIONALITY
+// ============================================
+document.getElementById('showAll').addEventListener('click', function() {
+    document.querySelectorAll('#staffTable tbody tr').forEach(row => {
+        row.style.display = '';
+    });
+    document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+});
+
+document.getElementById('showActive').addEventListener('click', function() {
+    document.querySelectorAll('#staffTable tbody tr').forEach(row => {
+        const isActive = row.querySelector('.badge.bg-success') !== null;
+        row.style.display = isActive ? '' : 'none';
+    });
+    document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+});
+
+document.getElementById('showInactive').addEventListener('click', function() {
+    document.querySelectorAll('#staffTable tbody tr').forEach(row => {
+        const isInactive = row.querySelector('.badge.bg-danger') !== null;
+        row.style.display = isInactive ? '' : 'none';
+    });
+    document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+});
+
+// ============================================
+// CSRF TOKEN HELPER
+// ============================================
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// ============================================
+// AUTO-DISMISS ALERTS
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(function(alert) {
+            alert.style.transition = 'opacity 0.5s ease';
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 500);
+        });
+    }, 5000);
+});
+</script>
+
+<style>
+/* Custom styles for staff list */
+#staffTable tbody tr:hover {
+    background-color: rgba(212, 163, 115, 0.1);
+    cursor: pointer;
+}
+
+#staffTable tbody tr.table-danger:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+#staffSearch:focus {
+    border-color: #d4a373;
+    box-shadow: 0 0 0 0.2rem rgba(212, 163, 115, 0.25);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    
+    .btn-group .btn {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends 'rental_master/base_rental.html' %}
+{% load static %}
+
+{% block title %}Staff Attendance - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-calendar-check text-primary me-2"></i>Staff Attendance
+        </h2>
+        <div>
+            <button class="btn btn-primary" onclick="window.location.reload()">
+                <i class="fas fa-sync me-2"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Present</h5>
+                    <h2 class="mb-0">{{ staff|length }}</h2>
+                    <small>Today's attendance</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Late</h5>
+                    <h2 class="mb-0">0</h2>
+                    <small>Arrived after 8:00 AM</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">On Leave</h5>
+                    <h2 class="mb-0">0</h2>
+                    <small>Approved leave today</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Absent</h5>
+                    <h2 class="mb-0">0</h2>
+                    <small>No show today</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <i class="fas fa-users me-2"></i>Today's Attendance - {{ today|date:"l, F d, Y" }}
+                </div>
+                <div class="col-auto">
+                    <input type="date" class="form-control form-control-sm" value="{{ today|date:'Y-m-d' }}" style="width: auto;">
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Staff Name</th>
+                            <th>Status</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for staff_member in staff %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ staff_member.user.get_full_name|default:staff_member.user.username }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Present
+                                </span>
+                            </td>
+                            <td>08:00 AM</td>
+                            <td>--:--</td>
+                            <td>--</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fas fa-clock fa-2x d-block mb-2"></i>
+                                No attendance records for today.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header">
+            <i class="fas fa-chart-bar me-2"></i>Weekly Attendance Summary
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>This Week</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-success" style="width: 85%">85%</div>
+                    </div>
+                    <p class="text-muted small">Average attendance rate</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Last Week</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-success" style="width: 78%">78%</div>
+                    </div>
+                    <p class="text-muted small">Average attendance rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

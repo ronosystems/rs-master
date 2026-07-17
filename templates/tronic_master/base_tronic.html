@@ -1237,13 +1237,6 @@
                             <span>Company Settings</span>
                         </a>
                         {% endif %}
-
-                        {% if user|tronic_can:'can_manage_settings' %}
-                        <a href="{% url 'settings:system_settings' %}" class="menu-item">
-                            <i class="fas fa-cogs"></i>
-                            <span>System Settings</span>
-                        </a>
-                        {% endif %}
                     </div>
                 </div>
                 {% endif %}

@@ -1,0 +1,152 @@
+{% extends 'rental_master/base_rental.html' %}
+{% load static %}
+
+{% block title %}Add Staff - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-user-plus text-primary me-2"></i>Add Staff Member
+        </h2>
+        <div>
+            <a href="{% url 'rental_master:staff_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                <div class="invalid-feedback">Please enter first name.</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" required>
+                                <div class="invalid-feedback">Please enter last name.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                            <div class="invalid-feedback">Please enter a username.</div>
+                            <small class="text-muted">Username must be unique and can contain letters, numbers, and underscores.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                            <div class="invalid-feedback">Please enter a valid email address.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phone_number" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone_number" name="phone_number" placeholder="+254 712 345 678">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="password" name="password" required minlength="8">
+                            <div class="invalid-feedback">Password must be at least 8 characters.</div>
+                            <small class="text-muted">Password must be at least 8 characters long.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password_confirm" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="password_confirm" required>
+                            <div class="invalid-feedback">Passwords do not match.</div>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <label class="form-label">Assign Roles</label>
+                            <div class="row">
+                                {% for role in roles %}
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="roles" value="{{ role.id }}" id="role_{{ role.id }}">
+                                        <label class="form-check-label" for="role_{{ role.id }}">
+                                            {{ role.name }}
+                                            <small class="text-muted d-block">{{ role.description|truncatechars:50 }}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="col-12">
+                                    <p class="text-muted">No roles available. <a href="{% url 'rental_master:role_create' %}">Create a role</a></p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Create Staff
+                            </button>
+                            <a href="{% url 'rental_master:staff_list' %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Password confirmation validation
+document.getElementById('password_confirm').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirm = this.value;
+    
+    if (password !== confirm) {
+        this.classList.add('is-invalid');
+        this.classList.remove('is-valid');
+    } else if (confirm.length > 0) {
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('password_confirm').value;
+    
+    if (password !== confirm) {
+        e.preventDefault();
+        alert('Passwords do not match!');
+        document.getElementById('password_confirm').classList.add('is-invalid');
+        return false;
+    }
+});
+
+// Enable Bootstrap validation
+(function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

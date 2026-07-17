@@ -1,0 +1,142 @@
+{% extends 'rental_master/base_rental.html' %}
+{% load static %}
+
+{% block title %}Assign Roles - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-user-plus text-primary me-2"></i>Assign Roles to Staff
+        </h2>
+        <div>
+            <a href="{% url 'rental_master:role_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Roles
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Staff Member</th>
+                            <th>Current Roles</th>
+                            <th>Available Roles</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ user.get_full_name|default:user.username }}</strong>
+                                <br>
+                                <small class="text-muted">{{ user.email }}</small>
+                            </td>
+                            <td>
+                                {% with user_roles=user.role_assignments.all|dictsort:"role.name" %}
+                                    {% for assignment in user_roles %}
+                                        {% if assignment.is_active %}
+                                            <span class="badge bg-info mb-1 d-block">
+                                                {{ assignment.role.name }}
+                                                <button onclick="removeRole({{ user.id }}, {{ assignment.role.id }})" 
+                                                        class="btn btn-sm btn-danger ms-2">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </span>
+                                        {% endif %}
+                                    {% empty %}
+                                        <span class="text-muted">No roles assigned</span>
+                                    {% endfor %}
+                                {% endwith %}
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm" id="roleSelect_{{ user.id }}">
+                                    <option value="">Select a role...</option>
+                                    {% for role in roles %}
+                                    <option value="{{ role.id }}">{{ role.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <button onclick="assignRole({{ user.id }})" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Assign
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="fas fa-users fa-2x d-block mb-2"></i>
+                                No staff members found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function assignRole(userId) {
+    const select = document.getElementById('roleSelect_' + userId);
+    const roleId = select.value;
+    
+    if (!roleId) {
+        alert('Please select a role to assign.');
+        return;
+    }
+    
+    if (!confirm('Assign this role to the staff member?')) return;
+    
+    fetch("{% url 'rental_master:role_assign' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: new URLSearchParams({
+            'user_id': userId,
+            'role_id': roleId,
+            'action': 'assign'
+        })
+    }).then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to assign role.');
+        }
+    });
+}
+
+function removeRole(userId, roleId) {
+    if (!confirm('Remove this role from the staff member?')) return;
+    
+    fetch("{% url 'rental_master:role_assign' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: new URLSearchParams({
+            'user_id': userId,
+            'role_id': roleId,
+            'action': 'remove'
+        })
+    }).then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to remove role.');
+        }
+    });
+}
+</script>
+{% endblock %}

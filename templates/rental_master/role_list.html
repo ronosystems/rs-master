@@ -1,0 +1,391 @@
+{% extends 'rental_master/base_rental.html' %}
+{% load static %}
+
+{% block title %}Roles - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-user-shield text-primary me-2"></i>Roles
+        </h2>
+        <div>
+            <a href="{% url 'rental_master:role_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Role
+            </a>
+            <a href="{% url 'rental_master:role_assign' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-user-plus me-2"></i>Assign Roles
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Roles</h5>
+                    <h2 class="mb-0">{{ roles|length }}</h2>
+                    <small>Active roles in system</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Active Roles</h5>
+                    <h2 class="mb-0">{{ roles|length }}</h2>
+                    <small>Currently active</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Users</h5>
+                    <h2 class="mb-0">{{ total_users|default:0 }}</h2>
+                    <small>Staff members with roles</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <!-- Search and Filter -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="roleSearch" placeholder="Search roles by name or description...">
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-secondary active" id="showAll">All</button>
+                        <button class="btn btn-sm btn-outline-success" id="showActive">Active</button>
+                        <button class="btn btn-sm btn-outline-danger" id="showInactive">Inactive</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover" id="roleTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Role Name</th>
+                            <th>Description</th>
+                            <th>Users</th>
+                            <th>Permissions</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for role in roles %}
+                        <tr class="{% if not role.is_active %}table-danger{% endif %}">
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ role.name }}</strong>
+                            </td>
+                            <td>
+                                {{ role.description|default:"-"|truncatechars:50 }}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">
+                                    <i class="fas fa-users me-1"></i>
+                                    {{ role.user_count|default:0 }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-key me-1"></i>
+                                    {{ role.permissions|length|default:0 }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if role.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                                {% if role.is_system_role %}
+                                    <span class="badge bg-warning text-dark">System</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'rental_master:role_edit' role.id %}" class="btn btn-outline-primary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if role.user_count == 0 and not role.is_system_role %}
+                                        <a href="{% url 'rental_master:role_delete' role.id %}" class="btn btn-outline-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    {% endif %}
+                                    <button onclick="viewRoleUsers({{ role.id }}, '{{ role.name|escapejs }}')" class="btn btn-outline-info" title="View Users">
+                                        <i class="fas fa-users"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-shield-alt fa-3x d-block mb-3 text-muted"></i>
+                                <h5>No roles created yet</h5>
+                                <p class="mb-0">Click the "Create Role" button to add your first role.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Stats Footer -->
+            <div class="mt-3">
+                <small class="text-muted">
+                    Total: <strong>{{ roles|length }}</strong> roles
+                    ({{ roles|length }} active, 0 inactive)
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Users Modal -->
+<div class="modal fade" id="viewUsersModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-users me-2"></i>
+                    Users with Role: <span id="modalRoleName"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="usersList">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading users...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// SEARCH FUNCTIONALITY
+// ============================================
+document.getElementById('roleSearch').addEventListener('keyup', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#roleTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// ============================================
+// FILTER FUNCTIONALITY
+// ============================================
+document.getElementById('showAll').addEventListener('click', function() {
+    document.querySelectorAll('#roleTable tbody tr').forEach(row => {
+        row.style.display = '';
+    });
+    document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+});
+
+document.getElementById('showActive').addEventListener('click', function() {
+    document.querySelectorAll('#roleTable tbody tr').forEach(row => {
+        const isActive = row.querySelector('.badge.bg-success') !== null;
+        row.style.display = isActive ? '' : 'none';
+    });
+    document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+});
+
+document.getElementById('showInactive').addEventListener('click', function() {
+    document.querySelectorAll('#roleTable tbody tr').forEach(row => {
+        const isInactive = row.querySelector('.badge.bg-danger') !== null;
+        row.style.display = isInactive ? '' : 'none';
+    });
+    document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+});
+
+// ============================================
+// VIEW ROLE USERS
+// ============================================
+function viewRoleUsers(roleId, roleName) {
+    const modal = new bootstrap.Modal(document.getElementById('viewUsersModal'));
+    document.getElementById('modalRoleName').textContent = roleName;
+    
+    // Show loading state
+    document.getElementById('usersList').innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading users...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch users for this role
+    fetch(`{% url 'rental_master:role_user_list' 0 %}`.replace('0', roleId))
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let html = '';
+                if (data.users.length === 0) {
+                    html = `
+                        <div class="text-center py-4">
+                            <i class="fas fa-users fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">No users assigned to this role.</p>
+                        </div>
+                    `;
+                } else {
+                    html = `
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Username</th>
+                                        <th>Full Name</th>
+                                        <th>Email</th>
+                                        <th>Assigned</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    data.users.forEach((user, index) => {
+                        html += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td><strong>${user.username}</strong></td>
+                                <td>${user.full_name}</td>
+                                <td>${user.email}</td>
+                                <td>${user.assigned_at}</td>
+                            </tr>
+                        `;
+                    });
+                    html += `
+                                </tbody>
+                            </table>
+                            <p class="text-muted small">Total: <strong>${data.count}</strong> users</p>
+                        </div>
+                    `;
+                }
+                document.getElementById('usersList').innerHTML = html;
+            } else {
+                document.getElementById('usersList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error loading users: ${data.error || 'Unknown error'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('usersList').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading users. Please try again.
+                </div>
+            `;
+            console.error('Error fetching role users:', error);
+        });
+}
+
+// ============================================
+// CSRF TOKEN HELPER (if needed for AJAX)
+// ============================================
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// ============================================
+// AUTO-DISMISS ALERTS
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(function(alert) {
+            alert.style.transition = 'opacity 0.5s ease';
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 500);
+        });
+    }, 5000);
+});
+</script>
+
+<style>
+/* Custom styles for role list */
+#roleTable tbody tr:hover {
+    background-color: rgba(212, 163, 115, 0.1);
+    cursor: pointer;
+}
+
+#roleTable tbody tr.table-danger:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+#roleSearch:focus {
+    border-color: #d4a373;
+    box-shadow: 0 0 0 0.2rem rgba(212, 163, 115, 0.25);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    
+    .btn-group .btn {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+}
+</style>
+{% endblock %}

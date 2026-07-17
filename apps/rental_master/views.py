@@ -13,6 +13,862 @@ from .models import (
     RentalUnit, Lease, TenantProfile, RentPayment, 
     Deposit
 )
+from django.utils import timezone
+from django.core.paginator import Paginator
+
+# Import models from rental_master.models
+from .models import (
+    Branch, RoomSize, PropertyType, Property, 
+    RentalUnit, Lease, TenantProfile, RentPayment, 
+    Deposit, MaintenanceRequest
+)
+import logging
+from django.contrib.auth import get_user_model
+
+# Import shared permissions (same as tronic_master)
+from apps.shared.permissions.models import UserRoleAssignment
+from apps.shared.roles.models import ProjectRole
+
+
+
+User = get_user_model()
+
+
+logger = logging.getLogger(__name__)
+
+
+
+# ============================================
+# STAFF MANAGEMENT VIEWS
+# ============================================
+
+@login_required
+def staff_list(request):
+    """List all staff members"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned to your account')
+        return redirect('portal:dashboard')
+
+    # Check permission
+    if not request.user.is_super_admin and not request.user.is_tenant_admin:
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('rental_master:dashboard')
+
+    # Get all users for this tenant
+    users = User.objects.filter(tenant=tenant).order_by('username')
+
+    # Get role assignments for each user (using shared permissions)
+    for user in users:
+        user.role_assignments_list = UserRoleAssignment.objects.filter(
+            user=user,
+            is_active=True
+        ).select_related('role')
+
+    # Filters
+    search = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '')
+
+    if search:
+        users = users.filter(
+            Q(username__icontains=search) |
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) |
+            Q(email__icontains=search)
+        )
+
+    if status:
+        users = users.filter(is_active=(status == 'active'))
+
+    # Pagination
+    paginator = Paginator(users, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'tenant': tenant,
+        'staff': page_obj,
+        'active_tab': 'staff',
+    }
+    return render(request, 'rental_master/staff_list.html', context)
+
+
+@login_required
+def staff_create(request):
+    """Create a new staff member"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    if not request.user.is_super_admin and not request.user.is_tenant_admin:
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('rental_master:dashboard')
+
+    # Get roles for assignment (using shared roles)
+    roles = ProjectRole.objects.filter(
+        tenant=tenant,
+        project_type='rental_master',
+        is_active=True
+    ).order_by('name')
+
+    # Get branches for the form
+    branches = Branch.objects.filter(tenant=tenant, is_active=True).order_by('name')
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        role_id = request.POST.get('role')  # Single role for rental_master
+        branch_id = request.POST.get('branch')
+        is_active = request.POST.get('is_active') == 'on'
+
+        # Validate
+        if not username:
+            messages.error(request, 'Username is required')
+            return redirect('rental_master:staff_create')
+
+        if not password:
+            messages.error(request, 'Password is required')
+            return redirect('rental_master:staff_create')
+
+        if len(password) < 8:
+            messages.error(request, 'Password must be at least 8 characters')
+            return redirect('rental_master:staff_create')
+
+        if not first_name or not last_name:
+            messages.error(request, 'First name and last name are required')
+            return redirect('rental_master:staff_create')
+
+        if not email:
+            messages.error(request, 'Email is required')
+            return redirect('rental_master:staff_create')
+
+        # Check if username exists
+        if User.objects.filter(username=username).exists():
+            messages.error(request, f'Username "{username}" already exists')
+            return redirect('rental_master:staff_create')
+
+        # Check if email exists
+        if User.objects.filter(email=email).exists():
+            messages.error(request, f'Email "{email}" already exists')
+            return redirect('rental_master:staff_create')
+
+        # Create user
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            tenant=tenant,
+            is_active=is_active,
+            is_staff=False
+        )
+
+        # Set phone number if field exists
+        if hasattr(user, 'phone_number'):
+            user.phone_number = phone_number
+            user.save()
+
+        # Assign branch
+        if branch_id:
+            try:
+                branch = Branch.objects.get(id=branch_id, tenant=tenant)
+                if hasattr(user, 'branch'):
+                    user.branch = branch
+                    user.save()
+            except Branch.DoesNotExist:
+                pass
+
+        # Assign role (using shared permissions)
+        if role_id:
+            try:
+                role = ProjectRole.objects.get(id=role_id, tenant=tenant)
+                # Add user to role's many-to-many
+                role.users.add(user)
+                messages.info(request, f'Role "{role.name}" assigned to {user.get_full_name()}')
+            except ProjectRole.DoesNotExist:
+                pass
+
+        messages.success(request, f'Staff {user.get_full_name()} created successfully!')
+        return redirect('rental_master:staff_list')
+
+    context = {
+        'tenant': tenant,
+        'roles': roles,
+        'branches': branches,
+        'active_tab': 'staff',
+    }
+    return render(request, 'rental_master/staff_create.html', context)
+
+
+@login_required
+def staff_detail(request, staff_id):
+    """View staff member details"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    staff = get_object_or_404(User, id=staff_id, tenant=tenant)
+
+    # Get role assignments (using shared permissions)
+    role_assignments = UserRoleAssignment.objects.filter(
+        user=staff,
+        is_active=True
+    ).select_related('role')
+
+    context = {
+        'tenant': tenant,
+        'staff': staff,
+        'role_assignments': role_assignments,
+        'active_tab': 'staff',
+    }
+    return render(request, 'rental_master/staff_detail.html', context)
+
+
+@login_required
+def staff_edit(request, staff_id):
+    """Edit staff member details"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    if not request.user.is_super_admin and not request.user.is_tenant_admin:
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('rental_master:dashboard')
+
+    staff = get_object_or_404(User, id=staff_id, tenant=tenant)
+
+    # Get roles for assignment
+    roles = ProjectRole.objects.filter(
+        tenant=tenant,
+        project_type='rental_master',
+        is_active=True
+    ).order_by('name')
+
+    # Get current role assignments
+    current_roles = UserRoleAssignment.objects.filter(
+        user=staff,
+        is_active=True
+    ).values_list('role_id', flat=True)
+
+    # Get branches
+    branches = Branch.objects.filter(tenant=tenant, is_active=True).order_by('name')
+
+    # Get user's current branch
+    user_branch_id = None
+    if hasattr(staff, 'branch') and staff.branch:
+        user_branch_id = staff.branch.id
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        role_id = request.POST.get('role')
+        branch_id = request.POST.get('branch')
+        is_active = request.POST.get('is_active') == 'on'
+        password = request.POST.get('password', '')
+
+        # Validate
+        if not first_name or not last_name:
+            messages.error(request, 'First name and last name are required')
+            return redirect('rental_master:staff_edit', staff_id=staff.id)
+
+        if not email:
+            messages.error(request, 'Email is required')
+            return redirect('rental_master:staff_edit', staff_id=staff.id)
+
+        # Update staff details
+        staff.first_name = first_name
+        staff.last_name = last_name
+        staff.email = email
+        staff.is_active = is_active
+
+        # Update phone number if field exists
+        if hasattr(staff, 'phone_number'):
+            staff.phone_number = phone_number
+
+        # Update password if provided
+        if password:
+            if len(password) < 8:
+                messages.error(request, 'Password must be at least 8 characters')
+                return redirect('rental_master:staff_edit', staff_id=staff.id)
+            staff.set_password(password)
+
+        staff.save()
+
+        # Update branch
+        if branch_id:
+            try:
+                branch = Branch.objects.get(id=branch_id, tenant=tenant)
+                if hasattr(staff, 'branch'):
+                    staff.branch = branch
+                    staff.save()
+            except Branch.DoesNotExist:
+                pass
+
+        # Update role assignments
+        # Remove existing roles
+        UserRoleAssignment.objects.filter(user=staff, is_active=True).update(is_active=False)
+
+        # Assign new role
+        if role_id:
+            try:
+                role = ProjectRole.objects.get(id=role_id, tenant=tenant)
+                # Create assignment
+                assignment, created = UserRoleAssignment.objects.get_or_create(
+                    user=staff,
+                    role=role,
+                    defaults={'is_active': True}
+                )
+                if not created:
+                    assignment.is_active = True
+                    assignment.save()
+                messages.info(request, f'Role "{role.name}" assigned to {staff.get_full_name()}')
+            except ProjectRole.DoesNotExist:
+                pass
+
+        messages.success(request, f'Staff {staff.get_full_name()} updated successfully!')
+        return redirect('rental_master:staff_detail', staff_id=staff.id)
+
+    context = {
+        'tenant': tenant,
+        'staff': staff,
+        'roles': roles,
+        'branches': branches,
+        'user_branch_id': user_branch_id,
+        'current_roles': list(current_roles),
+        'active_tab': 'staff',
+    }
+    return render(request, 'rental_master/staff_edit.html', context)
+
+
+@login_required
+def manage_staff(request):
+    """Manage staff members - activate/deactivate"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned to your account')
+        return redirect('portal:dashboard')
+
+    if not request.user.is_super_admin and not request.user.is_tenant_admin:
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('rental_master:dashboard')
+
+    staff_users = User.objects.filter(tenant=tenant).order_by('-date_joined')
+
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        action = request.POST.get('action')
+
+        try:
+            user = User.objects.get(id=user_id, tenant=tenant)
+
+            if action == 'deactivate':
+                user.is_active = False
+                user.save()
+                messages.success(request, f'Staff {user.get_full_name()} deactivated.')
+            elif action == 'activate':
+                user.is_active = True
+                user.save()
+                messages.success(request, f'Staff {user.get_full_name()} activated.')
+        except User.DoesNotExist:
+            messages.error(request, 'User not found.')
+
+        return redirect('rental_master:manage_staff')
+
+    context = {
+        'tenant': tenant,
+        'staff': staff_users,
+        'active_tab': 'staff',
+    }
+    return render(request, 'rental_master/manage_staff.html', context)
+
+
+@login_required
+def staff_attendance(request):
+    """View staff attendance"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    staff_users = User.objects.filter(tenant=tenant, is_active=True)
+
+    # Get today's date
+    today = date.today()
+
+    # For now, just show staff list with placeholder status
+    attendance_data = []
+    for user in staff_users:
+        attendance_data.append({
+            'user': user,
+            'status': 'present',
+            'check_in': None,
+            'check_out': None,
+        })
+
+    context = {
+        'tenant': tenant,
+        'staff': attendance_data,
+        'today': today,
+        'active_tab': 'staff',
+    }
+    return render(request, 'rental_master/staff_attendance.html', context)
+
+
+@login_required
+def staff_leave_list(request):
+    """View staff leave requests"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    staff_users = User.objects.filter(tenant=tenant, is_active=True)
+
+    context = {
+        'tenant': tenant,
+        'staff': staff_users,
+        'active_tab': 'staff',
+    }
+    return render(request, 'rental_master/staff_leave_list.html', context)
+
+
+# ============================================
+# ROLE MANAGEMENT VIEWS
+# ============================================
+
+@login_required
+def role_list(request):
+    """List all roles"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    if not request.user.is_super_admin and not request.user.is_tenant_admin:
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('rental_master:dashboard')
+
+    # Get rental_master roles
+    roles = ProjectRole.objects.filter(
+        tenant=tenant,
+        project_type='rental_master',
+        is_active=True
+    ).order_by('name')
+
+    # Get user count for each role
+    for role in roles:
+        role.user_count = role.users.count()
+        role.permission_count = len(role.permissions) if hasattr(role, 'permissions') else 0
+
+    context = {
+        'tenant': tenant,
+        'roles': roles,
+        'active_tab': 'roles',
+    }
+    return render(request, 'rental_master/role_list.html', context)
+
+
+@login_required
+def role_create(request):
+    """Create a new role"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    if not request.user.is_super_admin and not request.user.is_tenant_admin:
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('rental_master:dashboard')
+
+    # Get available permissions
+    from apps.rental_master.permissions import RENTAL_MASTER_PERMISSIONS
+
+    # Group permissions by category
+    permission_groups = {}
+    for codename, name in RENTAL_MASTER_PERMISSIONS.items():
+        category = 'Other'
+        if 'property' in codename:
+            category = 'Properties'
+        elif 'unit' in codename:
+            category = 'Units'
+        elif 'tenant' in codename:
+            category = 'Tenants'
+        elif 'lease' in codename:
+            category = 'Leases'
+        elif 'payment' in codename:
+            category = 'Payments'
+        elif 'deposit' in codename:
+            category = 'Deposits'
+        elif 'staff' in codename:
+            category = 'Staff'
+        elif 'report' in codename:
+            category = 'Reports'
+        elif 'setting' in codename:
+            category = 'Settings'
+        elif 'dashboard' in codename:
+            category = 'Dashboard'
+
+        if category not in permission_groups:
+            permission_groups[category] = []
+
+        permission_groups[category].append({
+            'codename': codename,
+            'name': name,
+            'id': codename
+        })
+
+    if request.method == 'POST':
+        # ✅ FIX: Use 'role_name' instead of 'name'
+        role_name = request.POST.get('role_name', '').strip()
+        description = request.POST.get('description', '').strip()
+        permission_list = request.POST.getlist('permissions')
+        is_system_role = request.POST.get('is_system_role') == 'on'
+        is_active = request.POST.get('is_active') == 'on'
+
+        # ✅ Debug logging
+        print(f"Creating role: {role_name}")
+
+        if not role_name:
+            messages.error(request, 'Role name is required')
+            return render(request, 'rental_master/role_create.html', {
+                'tenant': tenant,
+                'permission_groups': permission_groups,
+                'active_tab': 'roles',
+            })
+
+        # Check if role exists
+        if ProjectRole.objects.filter(
+            tenant=tenant,
+            project_type='rental_master',
+            name=role_name
+        ).exists():
+            messages.error(request, f'Role "{role_name}" already exists')
+            return render(request, 'rental_master/role_create.html', {
+                'tenant': tenant,
+                'permission_groups': permission_groups,
+                'active_tab': 'roles',
+            })
+
+        # ✅ Create the role WITHOUT codename field
+        role = ProjectRole.objects.create(
+            tenant=tenant,
+            project_type='rental_master',
+            name=role_name,  # ✅ name is the unique identifier
+            description=description,
+            permissions=permission_list,
+            is_system_role=is_system_role,
+            is_active=is_active,
+            created_by=request.user
+        )
+
+        messages.success(request, f'Role "{role_name}" created successfully!')
+        return redirect('rental_master:role_list')
+
+    context = {
+        'tenant': tenant,
+        'permission_groups': permission_groups,
+        'active_tab': 'roles',
+    }
+    return render(request, 'rental_master/role_create.html', context)
+
+
+@login_required
+def role_edit(request, role_id):
+    """Edit a role"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    if not request.user.is_super_admin and not request.user.is_tenant_admin:
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('rental_master:dashboard')
+
+    role = get_object_or_404(
+        ProjectRole,
+        id=role_id,
+        tenant=tenant,
+        project_type='rental_master'
+    )
+
+    # Get available permissions
+    from apps.rental_master.permissions import RENTAL_MASTER_PERMISSIONS
+
+    # Group permissions by category
+    permission_groups = {}
+    for codename, name in RENTAL_MASTER_PERMISSIONS.items():
+        category = 'Other'
+        if 'property' in codename:
+            category = 'Properties'
+        elif 'unit' in codename:
+            category = 'Units'
+        elif 'tenant' in codename:
+            category = 'Tenants'
+        elif 'lease' in codename:
+            category = 'Leases'
+        elif 'payment' in codename:
+            category = 'Payments'
+        elif 'deposit' in codename:
+            category = 'Deposits'
+        elif 'staff' in codename:
+            category = 'Staff'
+        elif 'report' in codename:
+            category = 'Reports'
+        elif 'setting' in codename:
+            category = 'Settings'
+        elif 'dashboard' in codename:
+            category = 'Dashboard'
+
+        if category not in permission_groups:
+            permission_groups[category] = []
+
+        permission_groups[category].append({
+            'codename': codename,
+            'name': name,
+            'id': codename
+        })
+
+    if request.method == 'POST':
+        role_name = request.POST.get('role_name', '').strip()
+        description = request.POST.get('description', '').strip()
+        permission_list = request.POST.getlist('permissions')
+        is_active = request.POST.get('is_active') == 'on'
+
+        if not role_name:
+            messages.error(request, 'Role name is required')
+            return redirect('rental_master:role_edit', role_id=role.id)
+
+        # Check if name conflicts
+        if ProjectRole.objects.filter(
+            tenant=tenant,
+            project_type='rental_master',
+            name=role_name
+        ).exclude(id=role.id).exists():
+            messages.error(request, f'Role "{role_name}" already exists')
+            return redirect('rental_master:role_edit', role_id=role.id)
+
+        # Update role
+        role.name = role_name
+        role.description = description
+        role.permissions = permission_list
+        role.is_active = is_active
+        role.save()
+
+        messages.success(request, f'Role "{role_name}" updated successfully!')
+        return redirect('rental_master:role_list')
+
+    context = {
+        'tenant': tenant,
+        'role': role,
+        'permission_groups': permission_groups,
+        'active_tab': 'roles',
+    }
+    return render(request, 'rental_master/role_edit.html', context)
+
+
+@login_required
+def role_delete(request, role_id):
+    """Delete a role"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    if not request.user.is_super_admin and not request.user.is_tenant_admin:
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('rental_master:dashboard')
+
+    role = get_object_or_404(
+        ProjectRole,
+        id=role_id,
+        tenant=tenant,
+        project_type='rental_master'
+    )
+
+    if request.method == 'POST':
+        # Check if system role
+        if role.is_system_role:
+            messages.error(request, 'Cannot delete system roles.')
+            return redirect('rental_master:role_list')
+
+        # Check if role has users
+        if role.users.count() > 0:
+            messages.error(
+                request,
+                f'Cannot delete "{role.name}" because it has {role.users.count()} users assigned.'
+            )
+            return redirect('rental_master:role_list')
+
+        role_name = role.name
+        role.delete()
+        messages.success(request, f'Role "{role_name}" deleted successfully!')
+        return redirect('rental_master:role_list')
+
+    context = {
+        'tenant': tenant,
+        'role': role,
+        'user_count': role.users.count(),
+        'active_tab': 'roles',
+    }
+    return render(request, 'rental_master/role_confirm_delete.html', context)
+
+
+@login_required
+def role_assign(request):
+    """Assign roles to users"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('portal:dashboard')
+
+    if not request.user.is_super_admin and not request.user.is_tenant_admin:
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('rental_master:dashboard')
+
+    users = User.objects.filter(tenant=tenant, is_active=True).order_by('username')
+    roles = ProjectRole.objects.filter(
+        tenant=tenant,
+        project_type='rental_master',
+        is_active=True
+    ).order_by('name')
+
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        role_id = request.POST.get('role_id')
+        action = request.POST.get('action', 'assign')
+
+        if not user_id or not role_id:
+            messages.error(request, 'Please select both user and role.')
+            return redirect('rental_master:role_assign')
+
+        try:
+            user = User.objects.get(id=user_id, tenant=tenant)
+            role = ProjectRole.objects.get(id=role_id, tenant=tenant, project_type='rental_master')
+
+            if action == 'assign':
+                if role.users.filter(id=user.id).exists():
+                    messages.info(request, f'User already has role "{role.name}"')
+                else:
+                    role.users.add(user)
+                    # Create UserRoleAssignment for compatibility
+                    UserRoleAssignment.objects.get_or_create(
+                        user=user,
+                        role=role,
+                        defaults={'is_active': True}
+                    )
+                    messages.success(request, f'Role "{role.name}" assigned to {user.get_full_name()}!')
+
+            elif action == 'remove':
+                if role.users.filter(id=user.id).exists():
+                    role.users.remove(user)
+                    # Deactivate UserRoleAssignment
+                    UserRoleAssignment.objects.filter(
+                        user=user,
+                        role=role,
+                        is_active=True
+                    ).update(is_active=False)
+                    messages.success(request, f'Role "{role.name}" removed from {user.get_full_name()}!')
+                else:
+                    messages.warning(request, f'User does not have role "{role.name}"')
+
+        except (User.DoesNotExist, ProjectRole.DoesNotExist) as e:
+            messages.error(request, f'Error: {str(e)}')
+
+        return redirect('rental_master:role_assign')
+
+    # Get current assignments
+    assignments = {}
+    for user in users:
+        user_roles = UserRoleAssignment.objects.filter(
+            user=user,
+            is_active=True
+        ).values_list('role_id', flat=True)
+        assignments[user.id] = list(user_roles)
+
+    context = {
+        'tenant': tenant,
+        'users': users,
+        'roles': roles,
+        'assignments': assignments,
+        'active_tab': 'roles',
+    }
+    return render(request, 'rental_master/role_assign.html', context)
+
+
+@login_required
+def role_user_list(request, role_id):
+    """Get users with a specific role (AJAX)"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        return JsonResponse({'error': 'No tenant assigned'}, status=400)
+
+    try:
+        role = get_object_or_404(
+            ProjectRole,
+            id=role_id,
+            tenant=tenant,
+            project_type='rental_master'
+        )
+
+        # Get users from the role's many-to-many
+        users = role.users.filter(is_active=True).order_by('first_name', 'last_name')
+
+        user_list = []
+        for user in users:
+            user_list.append({
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name() or user.username,
+                'email': user.email or '',
+                'assigned_at': role.created_at.strftime('%Y-%m-%d %H:%M'),
+            })
+
+        return JsonResponse({
+            'success': True,
+            'role_name': role.name,
+            'users': user_list,
+            'count': len(user_list)
+        })
+
+    except ProjectRole.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Role not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+
+
+        
+
 
 
 # ============================================
@@ -1382,3 +2238,6 @@ def update_maintenance_status(request, request_id):
             messages.error(request, 'Invalid status')
     
     return redirect('rental_master:maintenance_detail', request_id=request_id)
+
+
+

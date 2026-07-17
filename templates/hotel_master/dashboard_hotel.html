@@ -8,69 +8,77 @@
 <div class="container-fluid p-0">
     
     <!-- ============================================ -->
-    <!-- FULL SCREEN SLIDESHOW - HOTEL INTERIORS -->
+    <!-- FULL SCREEN SLIDESHOW - COMPANY IMAGES -->
     <!-- ============================================ -->
+    {% if company_settings and company_settings.enable_slideshow %}
     <div id="heroSlideshow" class="position-relative" style="height: 100vh; overflow: hidden;">
-        <!-- Slides -->
-        <div class="slide active" style="background-image: url('https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Welcome to {{ company_settings.company_name|default:tenant.company_name }}</h1>
-                    <p class="lead fs-2 mb-4">Luxury Hotel & Accommodation</p>
-                    <p class="fs-4">Experience Comfort & Elegance</p>
+        <!-- Get company slides using the model method -->
+        {% with slides=company_settings.get_active_slides %}
+            {% if slides %}
+                <!-- Company Slides -->
+                {% for slide in slides %}
+                <div class="slide {% if forloop.first %}active{% endif %}" 
+                     style="background-image: url('{{ slide.image_url }}');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            {% if slide.title %}
+                            <h1 class="display-1 fw-bold mb-3">{{ slide.title }}</h1>
+                            {% endif %}
+                            {% if slide.subtitle %}
+                            <p class="lead fs-2 mb-4">{{ slide.subtitle }}</p>
+                            {% endif %}
+                            {% if slide.button_text and slide.button_url %}
+                            <a href="{{ slide.button_url }}" class="btn btn-lg btn-warning text-dark mt-3 px-5">
+                                {{ slide.button_text }}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Luxurious Rooms</h1>
-                    <p class="lead fs-2 mb-4">Designed for Your Comfort</p>
-                    <p class="fs-4">Elegant & Spacious Suites</p>
+                {% endfor %}
+            {% else %}
+                <!-- Default Fallback Slides if no company slides -->
+                <div class="slide active" style="background-image: url('https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            <h1 class="display-1 fw-bold mb-3">Welcome to {{ company_settings.company_name|default:tenant.company_name }}</h1>
+                            <p class="lead fs-2 mb-4">Luxury Hotel & Accommodation</p>
+                            <p class="fs-4">Experience Comfort & Elegance</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">BNB Experience</h1>
-                    <p class="lead fs-2 mb-4">Home Away From Home</p>
-                    <p class="fs-4">Cozy & Welcoming Atmosphere</p>
+                
+                <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            <h1 class="display-1 fw-bold mb-3">Luxurious Rooms</h1>
+                            <p class="lead fs-2 mb-4">Designed for Your Comfort</p>
+                            <p class="fs-4">Elegant & Spacious Suites</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Modern Amenities</h1>
-                    <p class="lead fs-2 mb-4">Everything You Need</p>
-                    <p class="fs-4">Pool, Spa & Fine Dining</p>
+                
+                <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=1200');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            <h1 class="display-1 fw-bold mb-3">BNB Experience</h1>
+                            <p class="lead fs-2 mb-4">Home Away From Home</p>
+                            <p class="fs-4">Cozy & Welcoming Atmosphere</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1584132967330-4a1cfad3e362?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Beautiful Interiors</h1>
-                    <p class="lead fs-2 mb-4">Designed With You in Mind</p>
-                    <p class="fs-4">Contemporary & Stylish</p>
+                
+                <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            <h1 class="display-1 fw-bold mb-3">Modern Amenities</h1>
+                            <p class="lead fs-2 mb-4">Everything You Need</p>
+                            <p class="fs-4">Pool, Spa & Fine Dining</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Book Your Stay</h1>
-                    <p class="lead fs-2 mb-4">Unforgettable Experience</p>
-                    <p class="fs-4">Best Prices Guaranteed</p>
-                </div>
-            </div>
-        </div>
+            {% endif %}
+        {% endwith %}
 
         <!-- Navigation Arrows -->
         <button class="slide-arrow prev-arrow" onclick="changeSlide(-1)">
@@ -82,12 +90,18 @@
 
         <!-- Dots Navigation -->
         <div class="slide-dots">
-            <span class="dot active" onclick="currentSlide(0)"></span>
-            <span class="dot" onclick="currentSlide(1)"></span>
-            <span class="dot" onclick="currentSlide(2)"></span>
-            <span class="dot" onclick="currentSlide(3)"></span>
-            <span class="dot" onclick="currentSlide(4)"></span>
-            <span class="dot" onclick="currentSlide(5)"></span>
+            {% with slides=company_settings.get_active_slides %}
+                {% if slides %}
+                    {% for slide in slides %}
+                    <span class="dot {% if forloop.first %}active{% endif %}" onclick="currentSlide({{ forloop.counter0 }})"></span>
+                    {% endfor %}
+                {% else %}
+                    <span class="dot active" onclick="currentSlide(0)"></span>
+                    <span class="dot" onclick="currentSlide(1)"></span>
+                    <span class="dot" onclick="currentSlide(2)"></span>
+                    <span class="dot" onclick="currentSlide(3)"></span>
+                {% endif %}
+            {% endwith %}
         </div>
 
         <!-- Scroll Down Indicator -->
@@ -98,6 +112,7 @@
             <span class="scroll-text">Scroll Down</span>
         </div>
     </div>
+    {% endif %}
 
     <!-- ============================================ -->
     <!-- DASHBOARD STATS - ONLY FOR AUTHENTICATED USERS -->
@@ -447,6 +462,7 @@ let currentSlideIndex = 0;
 const slides = document.querySelectorAll('.slide');
 const dots = document.querySelectorAll('.dot');
 let slideInterval;
+const intervalTime = {{ company_settings.slideshow_interval|default:5000 }};
 
 function showSlide(index) {
     // Remove active class from all slides
@@ -486,9 +502,11 @@ function currentSlide(index) {
 
 function resetInterval() {
     clearInterval(slideInterval);
-    slideInterval = setInterval(() => {
-        changeSlide(1);
-    }, 5000);
+    if (slides.length > 1) {
+        slideInterval = setInterval(() => {
+            changeSlide(1);
+        }, intervalTime);
+    }
 }
 
 // Keyboard navigation
@@ -504,28 +522,36 @@ document.addEventListener('keydown', function(e) {
 let touchStartX = 0;
 let touchEndX = 0;
 
-document.getElementById('heroSlideshow').addEventListener('touchstart', function(e) {
-    touchStartX = e.changedTouches[0].screenX;
-}, {passive: true});
+const slideshow = document.getElementById('heroSlideshow');
+if (slideshow) {
+    slideshow.addEventListener('touchstart', function(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }, {passive: true});
 
-document.getElementById('heroSlideshow').addEventListener('touchend', function(e) {
-    touchEndX = e.changedTouches[0].screenX;
-    const diff = touchStartX - touchEndX;
-    if (Math.abs(diff) > 50) {
-        if (diff > 0) {
-            changeSlide(1);
-        } else {
-            changeSlide(-1);
+    slideshow.addEventListener('touchend', function(e) {
+        touchEndX = e.changedTouches[0].screenX;
+        const diff = touchStartX - touchEndX;
+        if (Math.abs(diff) > 50) {
+            if (diff > 0) {
+                changeSlide(1);
+            } else {
+                changeSlide(-1);
+            }
         }
-    }
-}, {passive: true});
+    }, {passive: true});
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    showSlide(0);
-    slideInterval = setInterval(() => {
-        changeSlide(1);
-    }, 5000);
+    const slideCount = slides.length;
+    if (slideCount > 0) {
+        showSlide(0);
+        if (slideCount > 1) {
+            slideInterval = setInterval(() => {
+                changeSlide(1);
+            }, intervalTime);
+        }
+    }
 });
 
 // Scroll to stats section when clicking scroll indicator

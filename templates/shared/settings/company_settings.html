@@ -126,6 +126,52 @@
         display: inline-block;
         margin: 3px;
     }
+    
+    /* Slideshow styles */
+    .slide-preview {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f0f0f0;
+        border: 2px dashed #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+    }
+    .slide-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .slide-preview .slide-placeholder {
+        text-align: center;
+    }
+    .slide-preview .slide-placeholder i {
+        font-size: 3rem;
+        display: block;
+        margin-bottom: 10px;
+    }
+    .slide-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: white;
+        transition: all 0.3s ease;
+    }
+    .slide-card:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 2px 10px rgba(13, 110, 253, 0.1);
+    }
+    .slide-card .slide-number {
+        font-size: 0.8rem;
+        color: #6c757d;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -249,6 +295,236 @@
                             </div>
                         </div>
                         
+                        <!-- ============================================ -->
+                        <!-- SLIDESHOW SETTINGS - NEW SECTION -->
+                        <!-- ============================================ -->
+                        <div class="form-section">
+                            <h6><i class="fas fa-images text-success me-2"></i>Dashboard Slideshow</h6>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="setting-checkbox">
+                                        <input type="checkbox" name="enable_slideshow" id="enable_slideshow" class="form-check-input" 
+                                               {% if settings.enable_slideshow %}checked{% endif %} onchange="updatePreview()">
+                                        <label for="enable_slideshow">Enable Slideshow on Dashboard</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Slideshow Interval</label>
+                                    <select name="slideshow_interval" id="slideshow_interval" class="form-select" onchange="updatePreview()">
+                                        <option value="3000" {% if settings.slideshow_interval == 3000 %}selected{% endif %}>3 seconds</option>
+                                        <option value="5000" {% if settings.slideshow_interval == 5000 %}selected{% endif %}>5 seconds</option>
+                                        <option value="7000" {% if settings.slideshow_interval == 7000 %}selected{% endif %}>7 seconds</option>
+                                        <option value="10000" {% if settings.slideshow_interval == 10000 %}selected{% endif %}>10 seconds</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <hr class="my-3">
+                            
+                            <p class="text-muted small">Upload up to 5 images for your dashboard slideshow. Recommended size: 1920x1080 pixels.</p>
+                            
+                            <!-- Slide 1 -->
+                            <div class="slide-card">
+                                <div class="slide-number">Slide 1</div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="slide-preview" id="slidePreview1">
+                                            {% if settings.slide_image_1 %}
+                                                <img src="{{ settings.slide_image_1.url }}" alt="Slide 1">
+                                            {% else %}
+                                                <div class="slide-placeholder">
+                                                    <i class="fas fa-image"></i>
+                                                    <span>No image uploaded</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <input type="file" name="slide_image_1" id="slide_image_1" class="form-control mt-2" accept="image/*" onchange="previewSlideImage(this, 1)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Title</label>
+                                        <input type="text" name="slide_title_1" id="slide_title_1" class="form-control" 
+                                               value="{{ settings.slide_title_1|default:'' }}" placeholder="e.g., Welcome to Our Properties" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subtitle</label>
+                                        <input type="text" name="slide_subtitle_1" id="slide_subtitle_1" class="form-control" 
+                                               value="{{ settings.slide_subtitle_1|default:'' }}" placeholder="e.g., Premium Rental Spaces" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button Text</label>
+                                        <input type="text" name="slide_button_text_1" id="slide_button_text_1" class="form-control" 
+                                               value="{{ settings.slide_button_text_1|default:'' }}" placeholder="e.g., Learn More" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button URL</label>
+                                        <input type="text" name="slide_button_url_1" id="slide_button_url_1" class="form-control" 
+                                               value="{{ settings.slide_button_url_1|default:'' }}" placeholder="e.g., /properties/" onkeyup="updatePreview()">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Slide 2 -->
+                            <div class="slide-card">
+                                <div class="slide-number">Slide 2</div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="slide-preview" id="slidePreview2">
+                                            {% if settings.slide_image_2 %}
+                                                <img src="{{ settings.slide_image_2.url }}" alt="Slide 2">
+                                            {% else %}
+                                                <div class="slide-placeholder">
+                                                    <i class="fas fa-image"></i>
+                                                    <span>No image uploaded</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <input type="file" name="slide_image_2" id="slide_image_2" class="form-control mt-2" accept="image/*" onchange="previewSlideImage(this, 2)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Title</label>
+                                        <input type="text" name="slide_title_2" id="slide_title_2" class="form-control" 
+                                               value="{{ settings.slide_title_2|default:'' }}" placeholder="e.g., Modern Apartments" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subtitle</label>
+                                        <input type="text" name="slide_subtitle_2" id="slide_subtitle_2" class="form-control" 
+                                               value="{{ settings.slide_subtitle_2|default:'' }}" placeholder="e.g., Luxury Living Spaces" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button Text</label>
+                                        <input type="text" name="slide_button_text_2" id="slide_button_text_2" class="form-control" 
+                                               value="{{ settings.slide_button_text_2|default:'' }}" placeholder="e.g., View Properties" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button URL</label>
+                                        <input type="text" name="slide_button_url_2" id="slide_button_url_2" class="form-control" 
+                                               value="{{ settings.slide_button_url_2|default:'' }}" placeholder="e.g., /properties/" onkeyup="updatePreview()">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Slide 3 -->
+                            <div class="slide-card">
+                                <div class="slide-number">Slide 3</div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="slide-preview" id="slidePreview3">
+                                            {% if settings.slide_image_3 %}
+                                                <img src="{{ settings.slide_image_3.url }}" alt="Slide 3">
+                                            {% else %}
+                                                <div class="slide-placeholder">
+                                                    <i class="fas fa-image"></i>
+                                                    <span>No image uploaded</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <input type="file" name="slide_image_3" id="slide_image_3" class="form-control mt-2" accept="image/*" onchange="previewSlideImage(this, 3)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Title</label>
+                                        <input type="text" name="slide_title_3" id="slide_title_3" class="form-control" 
+                                               value="{{ settings.slide_title_3|default:'' }}" placeholder="e.g., Commercial Spaces" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subtitle</label>
+                                        <input type="text" name="slide_subtitle_3" id="slide_subtitle_3" class="form-control" 
+                                               value="{{ settings.slide_subtitle_3|default:'' }}" placeholder="e.g., Perfect for Your Business" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button Text</label>
+                                        <input type="text" name="slide_button_text_3" id="slide_button_text_3" class="form-control" 
+                                               value="{{ settings.slide_button_text_3|default:'' }}" placeholder="e.g., Explore" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button URL</label>
+                                        <input type="text" name="slide_button_url_3" id="slide_button_url_3" class="form-control" 
+                                               value="{{ settings.slide_button_url_3|default:'' }}" placeholder="e.g., /properties/" onkeyup="updatePreview()">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Slide 4 -->
+                            <div class="slide-card">
+                                <div class="slide-number">Slide 4</div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="slide-preview" id="slidePreview4">
+                                            {% if settings.slide_image_4 %}
+                                                <img src="{{ settings.slide_image_4.url }}" alt="Slide 4">
+                                            {% else %}
+                                                <div class="slide-placeholder">
+                                                    <i class="fas fa-image"></i>
+                                                    <span>No image uploaded</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <input type="file" name="slide_image_4" id="slide_image_4" class="form-control mt-2" accept="image/*" onchange="previewSlideImage(this, 4)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Title</label>
+                                        <input type="text" name="slide_title_4" id="slide_title_4" class="form-control" 
+                                               value="{{ settings.slide_title_4|default:'' }}" placeholder="e.g., Secure & Safe" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subtitle</label>
+                                        <input type="text" name="slide_subtitle_4" id="slide_subtitle_4" class="form-control" 
+                                               value="{{ settings.slide_subtitle_4|default:'' }}" placeholder="e.g., 24/7 Security" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button Text</label>
+                                        <input type="text" name="slide_button_text_4" id="slide_button_text_4" class="form-control" 
+                                               value="{{ settings.slide_button_text_4|default:'' }}" placeholder="e.g., Learn More" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button URL</label>
+                                        <input type="text" name="slide_button_url_4" id="slide_button_url_4" class="form-control" 
+                                               value="{{ settings.slide_button_url_4|default:'' }}" placeholder="e.g., /about/" onkeyup="updatePreview()">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Slide 5 -->
+                            <div class="slide-card">
+                                <div class="slide-number">Slide 5</div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="slide-preview" id="slidePreview5">
+                                            {% if settings.slide_image_5 %}
+                                                <img src="{{ settings.slide_image_5.url }}" alt="Slide 5">
+                                            {% else %}
+                                                <div class="slide-placeholder">
+                                                    <i class="fas fa-image"></i>
+                                                    <span>No image uploaded</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <input type="file" name="slide_image_5" id="slide_image_5" class="form-control mt-2" accept="image/*" onchange="previewSlideImage(this, 5)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Title</label>
+                                        <input type="text" name="slide_title_5" id="slide_title_5" class="form-control" 
+                                               value="{{ settings.slide_title_5|default:'' }}" placeholder="e.g., Affordable Rentals" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Subtitle</label>
+                                        <input type="text" name="slide_subtitle_5" id="slide_subtitle_5" class="form-control" 
+                                               value="{{ settings.slide_subtitle_5|default:'' }}" placeholder="e.g., Quality Housing for Everyone" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button Text</label>
+                                        <input type="text" name="slide_button_text_5" id="slide_button_text_5" class="form-control" 
+                                               value="{{ settings.slide_button_text_5|default:'' }}" placeholder="e.g., Contact Us" onkeyup="updatePreview()">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Button URL</label>
+                                        <input type="text" name="slide_button_url_5" id="slide_button_url_5" class="form-control" 
+                                               value="{{ settings.slide_button_url_5|default:'' }}" placeholder="e.g., /contact/" onkeyup="updatePreview()">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Display Settings -->
                         <div class="form-section">
                             <h6><i class="fas fa-eye text-info me-2"></i>Display Settings</h6>
@@ -325,6 +601,19 @@
 </div>
 
 <script>
+    function previewSlideImage(input, slideNum) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('slidePreview' + slideNum);
+                if (preview) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Slide ${slideNum}">`;
+                }
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    
     function updatePreview() {
         // Get form values
         const companyName = document.getElementById('company_name')?.value || 'Your Company';
@@ -344,6 +633,10 @@
         const showLogoOnReceipts = document.getElementById('show_logo_on_receipts')?.checked || false;
         const showLogoOnInvoices = document.getElementById('show_logo_on_invoices')?.checked || false;
         const showLogoOnReports = document.getElementById('show_logo_on_reports')?.checked || false;
+        
+        // Get slideshow settings
+        const enableSlideshow = document.getElementById('enable_slideshow')?.checked || false;
+        const slideshowInterval = document.getElementById('slideshow_interval')?.value || 5000;
         
         // Check if logo exists (from server)
         const hasLogo = {% if settings.has_valid_logo %}true{% else %}false{% endif %};
@@ -404,8 +697,20 @@
                 </div>`;
         html += '</div>';
         
-        // Display Settings Status
+        // Slideshow Status
         html += '<div class="mt-3">';
+        html += '<small class="text-muted">Slideshow Settings:</small>';
+        html += '<div class="d-flex flex-wrap gap-2 mt-1">';
+        if (enableSlideshow) {
+            html += `<span class="badge bg-success">Enabled</span>`;
+            html += `<span class="badge bg-info">Interval: ${parseInt(slideshowInterval)/1000}s</span>`;
+        } else {
+            html += `<span class="badge bg-secondary">Disabled</span>`;
+        }
+        html += '</div></div>';
+        
+        // Display Settings Status
+        html += '<div class="mt-2">';
         html += '<small class="text-muted">Display Settings:</small>';
         html += '<div class="d-flex flex-wrap gap-2 mt-1">';
         if (showLogoOnDashboard) html += '<span class="badge bg-success">Dashboard</span>';
@@ -443,7 +748,7 @@
             input.addEventListener('keyup', updatePreview);
         });
         
-        // File input change handler
+        // File input change handler for logo
         document.getElementById('logo')?.addEventListener('change', function() {
             if (this.files && this.files[0]) {
                 const reader = new FileReader();

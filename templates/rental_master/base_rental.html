@@ -721,35 +721,63 @@
             </div>
             {% endif %}
 
-            <!-- ============================================ -->
-            <!-- MEMBERS - ADMIN ONLY -->
-            <!-- ============================================ -->
-            {% if user.is_super_admin or user.is_tenant_admin %}
-            <div class="menu-group">
-                <div class="menu-title" onclick="toggleSubMenu(this)">
-                    👥 MEMBERS
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+
+                <!-- ============================================ -->
+                <!-- MEMBERS -->
+                <!-- ============================================ -->
+                {% if user.is_super_admin or user.is_tenant_admin %}
+                <div class="menu-group">
+                    <div class="menu-title" onclick="toggleSubMenu(this)">
+                        👥 MEMBERS
+                        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="{% url 'rental_master:staff_list' %}" class="menu-item">
+                            <i class="fas fa-users"></i>
+                            <span>Staff List</span>
+                        </a>
+                        
+                        <a href="{% url 'rental_master:manage_staff' %}" class="menu-item">
+                            <i class="fas fa-edit"></i>
+                            <span>Manage Staff</span>
+                        </a>
+
+                        <a href="{% url 'rental_master:staff_create' %}" class="menu-item">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Add Staff</span>
+                        </a>
+
+                        <a href="{% url 'rental_master:staff_attendance' %}" class="menu-item">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Staff Attendance</span>
+                        </a>
+
+                        <a href="{% url 'rental_master:staff_leave_list' %}" class="menu-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Staff Leave</span>
+                        </a>
+                        
+
+                        <div class="menu-divider"></div>
+
+                        <a href="{% url 'rental_master:role_list' %}" class="menu-item {% if active_tab == 'roles' %}active{% endif %}">
+                            <i class="fas fa-user-shield"></i>
+                            <span>Roles List</span>
+                        </a>
+
+                        <a href="{% url 'rental_master:role_create' %}" class="menu-item">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Create Role</span>
+                        </a>
+
+                        <a href="{% url 'rental_master:role_assign' %}" class="menu-item">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Assign Role</span>
+                        </a>
+                        
+                    </div>
                 </div>
-                <div class="sub-menu">
-                    <a href="{% url 'users:user_list' %}" class="menu-item">
-                        <i class="fas fa-users"></i>
-                        <span>Manage Users</span>
-                    </a>
-                    <a href="{% url 'users:user_create' %}" class="menu-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Onboard Staff</span>
-                    </a>
-                    <a href="{% url 'permissions:role_list' %}" class="menu-item">
-                        <i class="fas fa-user-shield"></i>
-                        <span>Role Permissions</span>
-                    </a>
-                    <a href="{% url 'permissions:system_permissions' %}" class="menu-item">
-                        <i class="fas fa-lock"></i>
-                        <span>System Permissions</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
+                {% endif %}
 
             <!-- ============================================ -->
             <!-- BRANCHES - ADMIN & PROPERTY MANAGER -->

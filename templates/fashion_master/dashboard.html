@@ -8,69 +8,77 @@
 <div class="container-fluid p-0">
     
     <!-- ============================================ -->
-    <!-- FULL SCREEN SLIDESHOW - FASHION COLLECTIONS -->
+    <!-- FULL SCREEN SLIDESHOW - COMPANY IMAGES -->
     <!-- ============================================ -->
+    {% if company_settings and company_settings.enable_slideshow %}
     <div id="heroSlideshow" class="position-relative" style="height: 100vh; overflow: hidden;">
-        <!-- Slides -->
-        <div class="slide active" style="background-image: url('https://images.unsplash.com/photo-1445205170230-053b83016050?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Welcome to {{ company_settings.company_name|default:tenant.company_name }}</h1>
-                    <p class="lead fs-2 mb-4">Premium Fashion & Lifestyle</p>
-                    <p class="fs-4">Discover the Latest Trends</p>
+        <!-- Get company slides using the model method -->
+        {% with slides=company_settings.get_active_slides %}
+            {% if slides %}
+                <!-- Company Slides -->
+                {% for slide in slides %}
+                <div class="slide {% if forloop.first %}active{% endif %}" 
+                     style="background-image: url('{{ slide.image_url }}');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            {% if slide.title %}
+                            <h1 class="display-1 fw-bold mb-3">{{ slide.title }}</h1>
+                            {% endif %}
+                            {% if slide.subtitle %}
+                            <p class="lead fs-2 mb-4">{{ slide.subtitle }}</p>
+                            {% endif %}
+                            {% if slide.button_text and slide.button_url %}
+                            <a href="{{ slide.button_url }}" class="btn btn-lg btn-primary mt-3 px-5">
+                                {{ slide.button_text }}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Elegant Collections</h1>
-                    <p class="lead fs-2 mb-4">Curated for Every Occasion</p>
-                    <p class="fs-4">Sophisticated & Timeless</p>
+                {% endfor %}
+            {% else %}
+                <!-- Default Fallback Slides if no company slides -->
+                <div class="slide active" style="background-image: url('https://images.unsplash.com/photo-1445205170230-053b83016050?w=1200');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            <h1 class="display-1 fw-bold mb-3">Welcome to {{ company_settings.company_name|default:tenant.company_name }}</h1>
+                            <p class="lead fs-2 mb-4">Premium Fashion & Lifestyle</p>
+                            <p class="fs-4">Discover the Latest Trends</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Boutique Experience</h1>
-                    <p class="lead fs-2 mb-4">Unique Pieces, Personal Service</p>
-                    <p class="fs-4">Discover Your Style</p>
+                
+                <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1200');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            <h1 class="display-1 fw-bold mb-3">Elegant Collections</h1>
+                            <p class="lead fs-2 mb-4">Curated for Every Occasion</p>
+                            <p class="fs-4">Sophisticated & Timeless</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Luxury Fashion</h1>
-                    <p class="lead fs-2 mb-4">Premium Quality, Affordable Prices</p>
-                    <p class="fs-4">Shop the Best Brands</p>
+                
+                <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            <h1 class="display-1 fw-bold mb-3">Boutique Experience</h1>
+                            <p class="lead fs-2 mb-4">Unique Pieces, Personal Service</p>
+                            <p class="fs-4">Discover Your Style</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">New Arrivals</h1>
-                    <p class="lead fs-2 mb-4">Stay Ahead of the Trends</p>
-                    <p class="fs-4">Season's Hottest Styles</p>
+                
+                <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=1200');">
+                    <div class="slide-overlay">
+                        <div class="slide-content text-center text-white">
+                            <h1 class="display-1 fw-bold mb-3">Luxury Fashion</h1>
+                            <p class="lead fs-2 mb-4">Premium Quality, Affordable Prices</p>
+                            <p class="fs-4">Shop the Best Brands</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=1200');">
-            <div class="slide-overlay">
-                <div class="slide-content text-center text-white">
-                    <h1 class="display-1 fw-bold mb-3">Shop With Confidence</h1>
-                    <p class="lead fs-2 mb-4">Quality Guaranteed</p>
-                    <p class="fs-4">Hassle-Free Returns</p>
-                </div>
-            </div>
-        </div>
+            {% endif %}
+        {% endwith %}
 
         <!-- Navigation Arrows -->
         <button class="slide-arrow prev-arrow" onclick="changeSlide(-1)">
@@ -82,12 +90,18 @@
 
         <!-- Dots Navigation -->
         <div class="slide-dots">
-            <span class="dot active" onclick="currentSlide(0)"></span>
-            <span class="dot" onclick="currentSlide(1)"></span>
-            <span class="dot" onclick="currentSlide(2)"></span>
-            <span class="dot" onclick="currentSlide(3)"></span>
-            <span class="dot" onclick="currentSlide(4)"></span>
-            <span class="dot" onclick="currentSlide(5)"></span>
+            {% with slides=company_settings.get_active_slides %}
+                {% if slides %}
+                    {% for slide in slides %}
+                    <span class="dot {% if forloop.first %}active{% endif %}" onclick="currentSlide({{ forloop.counter0 }})"></span>
+                    {% endfor %}
+                {% else %}
+                    <span class="dot active" onclick="currentSlide(0)"></span>
+                    <span class="dot" onclick="currentSlide(1)"></span>
+                    <span class="dot" onclick="currentSlide(2)"></span>
+                    <span class="dot" onclick="currentSlide(3)"></span>
+                {% endif %}
+            {% endwith %}
         </div>
 
         <!-- Scroll Down Indicator -->
@@ -98,6 +112,7 @@
             <span class="scroll-text">Scroll Down</span>
         </div>
     </div>
+    {% endif %}
 
     <!-- ============================================ -->
     <!-- DASHBOARD STATS - ONLY FOR AUTHENTICATED USERS -->
@@ -520,6 +535,7 @@ let currentSlideIndex = 0;
 const slides = document.querySelectorAll('.slide');
 const dots = document.querySelectorAll('.dot');
 let slideInterval;
+const intervalTime = {{ company_settings.slideshow_interval|default:5000 }};
 
 function showSlide(index) {
     // Remove active class from all slides
@@ -559,9 +575,11 @@ function currentSlide(index) {
 
 function resetInterval() {
     clearInterval(slideInterval);
-    slideInterval = setInterval(() => {
-        changeSlide(1);
-    }, 5000);
+    if (slides.length > 1) {
+        slideInterval = setInterval(() => {
+            changeSlide(1);
+        }, intervalTime);
+    }
 }
 
 // Keyboard navigation
@@ -577,28 +595,36 @@ document.addEventListener('keydown', function(e) {
 let touchStartX = 0;
 let touchEndX = 0;
 
-document.getElementById('heroSlideshow').addEventListener('touchstart', function(e) {
-    touchStartX = e.changedTouches[0].screenX;
-}, {passive: true});
+const slideshow = document.getElementById('heroSlideshow');
+if (slideshow) {
+    slideshow.addEventListener('touchstart', function(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }, {passive: true});
 
-document.getElementById('heroSlideshow').addEventListener('touchend', function(e) {
-    touchEndX = e.changedTouches[0].screenX;
-    const diff = touchStartX - touchEndX;
-    if (Math.abs(diff) > 50) {
-        if (diff > 0) {
-            changeSlide(1);
-        } else {
-            changeSlide(-1);
+    slideshow.addEventListener('touchend', function(e) {
+        touchEndX = e.changedTouches[0].screenX;
+        const diff = touchStartX - touchEndX;
+        if (Math.abs(diff) > 50) {
+            if (diff > 0) {
+                changeSlide(1);
+            } else {
+                changeSlide(-1);
+            }
         }
-    }
-}, {passive: true});
+    }, {passive: true});
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    showSlide(0);
-    slideInterval = setInterval(() => {
-        changeSlide(1);
-    }, 5000);
+    const slideCount = slides.length;
+    if (slideCount > 0) {
+        showSlide(0);
+        if (slideCount > 1) {
+            slideInterval = setInterval(() => {
+                changeSlide(1);
+            }, intervalTime);
+        }
+    }
 });
 
 // Scroll to stats section when clicking scroll indicator

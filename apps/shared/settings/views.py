@@ -18,6 +18,10 @@ from .models import ReceiptSetting, ProfileSetting, SystemSetting
 from apps.shared.users.models import User
 from apps.shared.tenants.models import Tenant
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.contrib.auth.hashers import check_password
 from apps.shared.settings.models import (
     SystemSetting, 
     ReceiptSetting, 
@@ -30,9 +34,6 @@ import json
 logger = logging.getLogger(__name__)
 
 
-# ============================================
-# SYSTEM SETTINGS - SUPER ADMIN ONLY
-# ============================================
 
 @staff_member_required
 def system_settings(request):
@@ -122,11 +123,6 @@ def system_settings_export(request):
         'settings': settings_dict,
         'exported_at': timezone.now().isoformat()
     })
-
-
-# ============================================
-# RECEIPT SETTINGS - TENANT ADMIN ONLY
-# ============================================
 
 
 @login_required
@@ -221,11 +217,6 @@ def receipt_settings(request):
     }
     return render(request, 'shared/settings/receipt_settings.html', context)
 
-
-
-# ============================================
-# PROFILE SETTINGS - ALL USERS
-# ============================================
 
 @login_required
 def profile_settings(request):
@@ -365,13 +356,6 @@ def profile_settings(request):
     return render(request, 'shared/settings/profile_settings.html', context)
 
 
-# apps/shared/settings/views.py - Add this if not exists
-
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.contrib.auth.hashers import check_password
-
 
 @login_required
 def change_pin(request):
@@ -420,8 +404,6 @@ def change_pin(request):
     }
     return render(request, 'shared/settings/change_pin.html', context)
 
-
-# ============ PAYMENT SETTINGS VIEWS ============
 
 @login_required
 def payment_settings_view(request):
@@ -652,6 +634,30 @@ def company_settings(request):
         settings.show_logo_on_reports = request.POST.get('show_logo_on_reports') == 'on'
         settings.show_logo_on_dashboard = request.POST.get('show_logo_on_dashboard') == 'on'
         
+        # ============================================
+        # SLIDESHOW SETTINGS - NEW
+        # ============================================
+        settings.enable_slideshow = request.POST.get('enable_slideshow') == 'on'
+        settings.slideshow_interval = int(request.POST.get('slideshow_interval', 5000))
+        
+        # Handle Slide Images and Text (1-5)
+        for i in range(1, 6):
+            # Handle image upload
+            image_field = f'slide_image_{i}'
+            if request.FILES.get(image_field):
+                setattr(settings, image_field, request.FILES[image_field])
+            
+            # Handle text fields
+            title_field = f'slide_title_{i}'
+            subtitle_field = f'slide_subtitle_{i}'
+            button_text_field = f'slide_button_text_{i}'
+            button_url_field = f'slide_button_url_{i}'
+            
+            setattr(settings, title_field, request.POST.get(title_field, ''))
+            setattr(settings, subtitle_field, request.POST.get(subtitle_field, ''))
+            setattr(settings, button_text_field, request.POST.get(button_text_field, ''))
+            setattr(settings, button_url_field, request.POST.get(button_url_field, ''))
+        
         # Handle Logo Upload
         if request.FILES.get('logo'):
             settings.logo = request.FILES['logo']
@@ -678,5 +684,4 @@ def company_settings(request):
         'active_tab': 'settings',
     }
     return render(request, 'shared/settings/company_settings.html', context)
-
 

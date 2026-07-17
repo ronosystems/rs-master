@@ -8,6 +8,23 @@ app_name = 'rental_master'
 urlpatterns = [
     # Dashboard
     path('', views.dashboard, name='dashboard'),
+
+    # Staff Management
+    path('staff/', views.staff_list, name='staff_list'),
+    path('staff/manage/', views.manage_staff, name='manage_staff'),
+    path('staff/create/', views.staff_create, name='staff_create'),
+    path('staff/<int:staff_id>/', views.staff_detail, name='staff_detail'),
+    path('staff/<int:staff_id>/edit/', views.staff_edit, name='staff_edit'),
+    path('staff/attendance/', views.staff_attendance, name='staff_attendance'),
+    path('staff/leave/', views.staff_leave_list, name='staff_leave_list'),
+    
+    # Role Management
+    path('roles/', views.role_list, name='role_list'),
+    path('roles/create/', views.role_create, name='role_create'),
+    path('roles/<int:role_id>/edit/', views.role_edit, name='role_edit'),
+    path('roles/<int:role_id>/delete/', views.role_delete, name='role_delete'),
+    path('roles/<int:role_id>/users/', views.role_user_list, name='role_user_list'),
+    path('roles/assign/', views.role_assign, name='role_assign'),
     
     # Branches
     path('branches/', views.branches, name='branches'),
@@ -58,4 +75,5 @@ urlpatterns = [
     path('maintenance/tasks/', views.task_list, name='task_list'),
     path('maintenance/<int:request_id>/', views.maintenance_detail, name='maintenance_detail'),
     path('maintenance/<int:request_id>/update-status/', views.update_maintenance_status, name='update_maintenance_status'),
+
 ]
