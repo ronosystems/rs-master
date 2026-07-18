@@ -99,7 +99,7 @@ LOGOUT_REDIRECT_URL = '/login/'
 PROJECT_TYPES = {
     'TRONIC_MASTER': {
         'name': 'TRONIC MASTER',
-        'code': 'TRONIC_MASTER',
+        'code': '001',
         'icon': 'fa-microchip',
         'color': '#0d6efd',
         'active': True,
@@ -107,7 +107,7 @@ PROJECT_TYPES = {
     },
     'HOTEL_MASTER': {
         'name': 'HOTEL MASTER',
-        'code': 'HOTEL_MASTER',
+        'code': '002',
         'icon': 'fa-hotel',
         'color': '#fd7e14',
         'active': True,
@@ -115,7 +115,7 @@ PROJECT_TYPES = {
     },
     'FOOD_MASTER': {
         'name': 'FOOD MASTER',
-        'code': 'FOOD_MASTER',
+        'code': '003',
         'icon': 'fa-utensils',
         'color': '#198754',
         'active': True,
@@ -123,7 +123,7 @@ PROJECT_TYPES = {
     },
     'RETAIL_MASTER': {
         'name': 'RETAIL MASTER',
-        'code': 'RETAIL_MASTER',
+        'code': '004',
         'icon': 'fa-store',
         'color': '#6f42c1',
         'active': True,
@@ -131,7 +131,7 @@ PROJECT_TYPES = {
     },
     'HEALTH_MASTER': {
         'name': 'HEALTH MASTER',
-        'code': 'HEALTH_MASTER',
+        'code': '005',
         'icon': 'fa-heartbeat',
         'color': '#dc3545',
         'active': True,
@@ -139,7 +139,7 @@ PROJECT_TYPES = {
     },
     'FASHION_MASTER': {
         'name': 'FASHION MASTER',
-        'code': 'FASHION_MASTER',
+        'code': '006',
         'icon': 'fa-tshirt',
         'color': '#e83e8c',
         'active': True,
@@ -147,11 +147,35 @@ PROJECT_TYPES = {
     },
     'RENTAL_MASTER': {
         'name': 'RENTAL MASTER',
-        'code': 'RENTAL_MASTER',
+        'code': '007',
         'icon': 'fa-rental',
         'color': "#ffee00",
         'active': True,
-        'description': 'Rental & Apartments Management'
+        'description': 'Rooms & Apartments Management'
+    },
+    'HARDWARE_MASTER': {
+        'name': 'HARDWARE MASTER',
+        'code': '008',
+        'icon': 'fa-store',
+        'color': "#000000",
+        'active': True,
+        'description': 'General Hardware Management'
+    },
+    'CARWASH_MASTER': {
+        'name': 'CARWASH MASTER',
+        'code': '009',
+        'icon': 'fa-store',
+        'color': '#6f42c1',
+        'active': True,
+        'description': 'Car Wash  Management'
+    },
+    'LINQUOR_MASTER': {
+        'name': 'LINQUOR MASTER',
+        'code': '010',
+        'icon': 'fa-store',
+        'color': '#6f42c1',
+        'active': True,
+        'description': 'Linquor Store Management'
     }
 }
 
@@ -159,6 +183,7 @@ PROJECT_TYPES = {
 # INSTALLED APPS
 # ============================================
 INSTALLED_APPS = [
+    # Django core apps ...
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -190,19 +215,17 @@ INSTALLED_APPS = [
     'apps.shared.expenses',
     'apps.shared.reports',
 
-    # TRONIC Master apps (renamed from tech_master)
+    # Master Apps
     'apps.tronic_master',
-
-    # Hotel_master apps
     'apps.hotel_master',
-
-    # Rental master apps
-    'apps.rental_master',
-
     'apps.food_master',
     'apps.retail_master',
     'apps.health_master',
     'apps.fashion_master',
+    'apps.rental_master',
+    'apps.hardware_master',   
+    'apps.carwash_master',     
+    'apps.linquor_master', 
 ]
 
 # ============================================

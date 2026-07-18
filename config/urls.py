@@ -49,6 +49,9 @@ urlpatterns = [
     path('health/', include('apps.health_master.urls', namespace='health_master')),
     path('fashion/', include('apps.fashion_master.urls', namespace='fashion_master')),
     path('rental/', include('apps.rental_master.urls', namespace='rental_master')),
+    path('hardware/', include('apps.hardware_master.urls', namespace='hardware_master')),
+    path('carwash/', include('apps.carwash_master.urls', namespace='carwash_master')),
+    path('linquor/', include('apps.linquor_master.urls', namespace='linquor_master')),
 
     # ============================================
     # FAVICON

@@ -1,0 +1,1 @@
+default_app_config = 'apps.linquor_master.apps.LinquorMasterConfig'
