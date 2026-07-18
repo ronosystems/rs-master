@@ -39,7 +39,7 @@
             <!-- Search and Filter Bar -->
             <div class="p-3 bg-light border-bottom">
                 <div class="row g-2">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0">
                                 <i class="fas fa-search text-muted"></i>
@@ -48,7 +48,7 @@
                                    placeholder="Search by company name, code, or email...">
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select id="statusFilter" class="form-select">
                             <option value="">All Status</option>
                             <option value="active">Active</option>
@@ -58,13 +58,21 @@
                             <option value="rejected">Rejected</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select id="planFilter" class="form-select">
                             <option value="">All Plans</option>
                             <option value="basic">Basic</option>
                             <option value="standard">Standard</option>
                             <option value="premium">Premium</option>
                             <option value="enterprise">Enterprise</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="projectTypeFilter" class="form-select">
+                            <option value="">All Project Types</option>
+                            {% for pt in project_types %}
+                                <option value="{{ pt.id }}">{{ pt.name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -79,85 +87,121 @@
                 <table class="table table-hover align-middle mb-0" id="tenantTable">
                     <thead class="bg-light">
                         <tr>
-                            <th style="width: 5%">Tenant Code</th>
-                            <th style="width: 18%">Company Details</th>
-                            <th style="width: 12%">Project TypE Code</th> 
-                            <th style="width: 10%">Contact</th>
-                            <th style="width: 10%">Subscription</th>
-                            <th style="width: 10%">Status</th>
-                            <th style="width: 12%">Admin Owner</th>
-                            <th style="width: 8%">Registered</th>
-                            <th style="width: 15%">Actions</th>
+                            <th style="width: 8%">Login As Tenant</th>
+                            <th style="width: 6%">Tenant Code</th>
+                            <th style="width: 6%">Project Code</th>
+                            <th style="width: 15%">Tenant Company Name</th>
+                            <th style="width: 15%">Company Admin Owner</th>
+                            <th style="width: 8%">Project Type</th>
+                            <th style="width: 8%">Plan Type</th>
+                            <th style="width: 8%">Plan Amount</th>
+                            <th style="width: 8%">Status</th>
+                            <th style="width: 18%">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for tenant in tenants %}
-                        <tr data-status="{{ tenant.status }}" data-plan="{{ tenant.subscription_plan }}">
-                            <td class="text-muted">{{ forloop.counter }}
-                                <small class="text-dark">Code: <code>{{ tenant.code }}</code></small>
+                        <tr data-status="{{ tenant.status }}" data-plan="{{ tenant.subscription_plan }}" data-project-type="{{ tenant.project_type.id }}">
+                            
+                            <!-- COLUMN 1: Login As Tenant (Switch Button) -->
+                            <td>
+                                <a href="{% url 'tenants:switch_tenant' tenant.id %}" 
+                                   class="btn btn-success btn-sm w-100" 
+                                   title="Switch to {{ tenant.company_name }}"
+                                   onclick="return confirm('Switch to {{ tenant.company_name }} dashboard?')">
+                                    <i class="fas fa-exchange-alt me-1"></i> Switch
+                                </a>
+                            </td>  
+                                    
+                            <!-- COLUMN 2: Tenant Code -->
+                            <td>
+                                <code class="fw-bold">{{ tenant.code }}</code>
                             </td>
+                            
+                            <!-- COLUMN 3: Project Code -->
+                            <td>
+                                {% if tenant.project_type %}
+                                    <code class="text-primary">{{ tenant.project_type.code }}</code>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- COLUMN 4: Tenant Name -->
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="flex-shrink-0">
                                         {% if tenant.logo %}
                                             <img src="{{ tenant.logo.url }}" alt="{{ tenant.company_name }}" 
-                                                 class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                                 class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
                                         {% else %}
-                                            <div class="bg-primary bg-opacity-50 rounded-circle d-flex align-items-center justify-content-center"
-                                                 style="width: 40px; height: 40px;">
-                                                <i class="fas fa-building text-primary"></i>
+                                            <div class="bg-secondary bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center"
+                                                 style="width: 32px; height: 32px;">
+                                                <i class="fas fa-building text-secondary"></i>
                                             </div>
                                         {% endif %}
                                     </div>
-                                    <div class="flex-grow-1 ms-3">
-                                        <strong class="d-block">{{ tenant.company_name }}</strong>
+                                    <div class="flex-grow-1 ms-2">
+                                        <strong>{{ tenant.company_name }}</strong>
                                     </div>
                                 </div>
                             </td>
+                            
+                            <!-- COLUMN 5: Admin Owner -->
+                            <td>
+                                {% if tenant.owner %}
+                                    <div>
+                                        <span class="fw-semibold">{{ tenant.owner.first_name }} {{ tenant.owner.last_name }}</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Not assigned</span>
+                                    <a href="{% url 'tenants:assign_owner' tenant.id %}" class="btn btn-link btn-sm p-0 ms-1">
+                                        <i class="fas fa-plus-circle text-success"></i>
+                                    </a>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- COLUMN 6: Project Type -->
                             <td>
                                 {% if tenant.project_type %}
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="fas {{ tenant.project_type.icon }} text-{{ tenant.project_type.color }}"></i>
-                                        <span class="badge bg-{{ tenant.project_type.color }}"></span>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">
-                                        <code>{{ tenant.project_type.code }}</code>
-                                    </small>
+                                    <span class="badge bg-info">
+                                        <i class="fas {{ tenant.project_type.icon }} me-1"></i>
+                                        {{ tenant.project_type.name }}
+                                    </span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
+                            
+                            <!-- COLUMN 7: Plan Type -->
                             <td>
-                                {% if tenant.company_phone %}
-                                <div><i class="fas fa-phone-alt fa-fw text-muted me-1"></i> {{ tenant.company_phone }}</div>
-                                {% endif %}
-                                {% if tenant.company_email %}
-                                <div><i class="fas fa-envelope fa-fw text-muted me-1"></i> {{ tenant.company_email|truncatechars:20 }}</div>
-                                {% endif %}
-                                {% if not tenant.company_phone and not tenant.company_email %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="mb-1">
-                                    <span class="badge {% if tenant.subscription_plan == 'premium' %}bg-warning{% elif tenant.subscription_plan == 'standard' %}bg-info{% elif tenant.subscription_plan == 'enterprise' %}bg-dark{% else %}bg-secondary{% endif %}">
-                                        {{ tenant.get_subscription_plan_display }}
-                                    </span>
-                                </div>
-                                <div class="small text-muted">
-                                    {% if tenant.subscription_end %}
-                                        <i class="fas fa-calendar-alt me-1"></i>
-                                        Expires: {{ tenant.subscription_end|date:"M d, Y" }}
-                                        {% if tenant.days_remaining <= 7 and tenant.days_remaining > 0 %}
-                                            <span class="badge bg-warning text-dark ms-1">⚠️ {{ tenant.days_remaining }}d left</span>
-                                        {% elif tenant.days_remaining <= 0 %}
-                                            <span class="badge bg-danger ms-1">Expired</span>
-                                        {% endif %}
+                                {% if tenant.subscription_plan %}
+                                    {% if tenant.subscription_plan == 'premium' %}
+                                        <span class="badge bg-warning text-dark">Premium</span>
+                                    {% elif tenant.subscription_plan == 'standard' %}
+                                        <span class="badge bg-info">Standard</span>
+                                    {% elif tenant.subscription_plan == 'enterprise' %}
+                                        <span class="badge bg-dark text-white">Enterprise</span>
+                                    {% elif tenant.subscription_plan == 'basic' %}
+                                        <span class="badge bg-secondary">Basic</span>
                                     {% else %}
-                                        No subscription
+                                        <span class="badge bg-secondary">{{ tenant.subscription_plan|title }}</span>
                                     {% endif %}
-                                </div>
+                                {% else %}
+                                    <span class="badge bg-secondary">No Plan</span>
+                                {% endif %}
                             </td>
+
+                            <!-- COLUMN 8: Plan Amount -->
+                            <td>
+                                {% if tenant.plan_price %}
+                                   <code class="fw-bold">KES {{ tenant.plan_price|floatformat:2 }}</code>
+                                {% else %}
+                                   <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- COLUMN 9: Current Status -->
                             <td>
                                 {% if tenant.status == 'active' %}
                                     <span class="badge bg-success px-3 py-2">Active</span>
@@ -166,80 +210,57 @@
                                 {% elif tenant.status == 'suspended' %}
                                     <span class="badge bg-warning text-dark px-3 py-2">Suspended</span>
                                 {% elif tenant.status == 'pending' %}
-                                    <span class="badge bg-info px-3 py-2">Pending Approval</span>
+                                    <span class="badge bg-info px-3 py-2">Pending</span>
                                 {% elif tenant.status == 'rejected' %}
                                     <span class="badge bg-danger px-3 py-2">Rejected</span>
                                 {% else %}
                                     <span class="badge bg-secondary px-3 py-2">{{ tenant.status|title }}</span>
                                 {% endif %}
                             </td>
+                            
+                            <!-- COLUMN 10: Actions -->
                             <td>
-                                {% if tenant.owner %}
-                                    <div class="d-flex align-items-center">
-                                        <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2"
-                                             style="width: 32px; height: 32px;">
-                                            <i class="fas fa-user-circle text-success"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fw-semibold">{{ tenant.owner.username }}</div>
-                                            <small class="text-muted">{{ tenant.owner.first_name }} {{ tenant.owner.last_name }}</small>
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <span class="text-muted">Not assigned</span>
-                                    <a href="{% url 'tenants:assign_owner' tenant.id %}" class="btn btn-link btn-sm p-0 ms-2">
-                                        <i class="fas fa-plus-circle text-success"></i>
-                                    </a>
-                                {% endif %}
-                            </td>
-                            <td>{{ tenant.created_at|date:"Y-m-d" }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <!-- 🔥 SWITCHER BUTTON - NEW! -->
-                                    <a href="{% url 'tenants:switch_tenant' tenant.id %}" 
-                                       class="btn btn-success" 
-                                       title="Switch to {{ tenant.company_name }} dashboard"
-                                       onclick="return confirm('Switch to {{ tenant.company_name }} dashboard?')">
-                                        <i class="fas fa-exchange-alt"></i> Switch
-                                    </a>
-                                    
+                                <div class="d-flex flex-wrap gap-1">
+                                    <!-- View Details -->
                                     <a href="{% url 'tenants:tenant_detail' tenant.id %}" 
-                                       class="btn btn-outline-primary" 
-                                       title="View Details" 
-                                       data-bs-toggle="tooltip">
+                                       class="btn btn-outline-primary btn-sm" 
+                                       title="View Details">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     
-                                    <!-- Approve/Reject buttons for pending tenants -->
+                                    <!-- Approve/Reject for pending tenants -->
                                     {% if tenant.status == 'pending' %}
                                         <a href="{% url 'tenants:approve_tenant' tenant.id %}" 
-                                           class="btn btn-outline-success" 
+                                           class="btn btn-outline-success btn-sm" 
                                            title="Approve Tenant"
-                                           onclick="return confirm('Approve {{ tenant.company_name }}? This will activate the tenant and send login credentials.')">
+                                           onclick="return confirm('Approve {{ tenant.company_name }}?')">
                                             <i class="fas fa-check-circle"></i>
                                         </a>
                                         <a href="{% url 'tenants:reject_tenant' tenant.id %}" 
-                                           class="btn btn-outline-danger" 
+                                           class="btn btn-outline-danger btn-sm" 
                                            title="Reject Tenant"
-                                           onclick="return confirm('Reject {{ tenant.company_name }}? This will deny access.')">
+                                           onclick="return confirm('Reject {{ tenant.company_name }}?')">
                                             <i class="fas fa-times-circle"></i>
                                         </a>
                                     {% endif %}
                                     
+                                    <!-- Edit Tenant -->
                                     <a href="{% url 'tenants:edit_tenant' tenant.id %}" 
-                                       class="btn btn-outline-secondary" 
-                                       title="Edit Tenant" 
-                                       data-bs-toggle="tooltip">
+                                       class="btn btn-outline-secondary btn-sm" 
+                                       title="Edit Tenant">
                                         <i class="fas fa-edit"></i>
                                     </a>
+                                    
+                                    <!-- Edit Owner -->
                                     <a href="{% url 'tenants:edit_tenant_owner' tenant.id %}" 
-                                       class="btn btn-outline-info" 
-                                       title="Edit Owner" 
-                                       data-bs-toggle="tooltip">
+                                       class="btn btn-outline-info btn-sm" 
+                                       title="Edit Owner">
                                         <i class="fas fa-user-cog"></i>
                                     </a>
+                                    
+                                    <!-- Delete -->
                                     <button type="button" 
-                                            class="btn btn-outline-danger" 
+                                            class="btn btn-outline-danger btn-sm" 
                                             title="Delete Tenant" 
                                             data-bs-toggle="modal"
                                             data-bs-target="#deleteModal{{ tenant.id }}">
@@ -272,7 +293,7 @@
                         </div>
                         {% empty %}
                         <tr>
-                            <td colspan="9" class="text-center py-5">
+                            <td colspan="10" class="text-center py-5">
                                 <div class="py-4">
                                     <i class="fas fa-building fa-4x text-muted mb-3 d-block"></i>
                                     <h5 class="text-muted">No tenants found</h5>
@@ -297,29 +318,34 @@
         const searchTerm = document.getElementById('searchTenant').value.toLowerCase();
         const statusFilter = document.getElementById('statusFilter').value;
         const planFilter = document.getElementById('planFilter').value;
+        const projectTypeFilter = document.getElementById('projectTypeFilter').value;
         const rows = document.querySelectorAll('#tenantTable tbody tr:not([id="noResultsRow"])');
         let visibleCount = 0;
         let activeCount = 0;
         let pendingCount = 0;
         let expiredCount = 0;
+        let rejectedCount = 0;
         
         rows.forEach(row => {
             const text = row.textContent.toLowerCase();
             const status = row.getAttribute('data-status');
             const plan = row.getAttribute('data-plan');
+            const projectType = row.getAttribute('data-project-type');
             
             const matchesSearch = text.includes(searchTerm);
             const matchesStatus = !statusFilter || status === statusFilter;
             const matchesPlan = !planFilter || plan === planFilter;
+            const matchesProjectType = !projectTypeFilter || projectType === projectTypeFilter;
             
-            if (matchesSearch && matchesStatus && matchesPlan) {
+            if (matchesSearch && matchesStatus && matchesPlan && matchesProjectType) {
                 row.style.display = '';
                 visibleCount++;
                 
                 // Count statistics
                 if (status === 'active') activeCount++;
                 if (status === 'pending') pendingCount++;
-                if (status === 'expired' || status === 'rejected' || status === 'suspended') expiredCount++;
+                if (status === 'rejected') rejectedCount++;
+                if (status === 'expired' || status === 'suspended' || status === 'inactive') expiredCount++;
             } else {
                 row.style.display = 'none';
             }
@@ -329,9 +355,11 @@
         const activeCountEl = document.getElementById('activeCount');
         const pendingCountEl = document.getElementById('pendingCount');
         const expiredCountEl = document.getElementById('expiredCount');
+        const rejectedCountEl = document.getElementById('rejectedCount');
         if (activeCountEl) activeCountEl.innerText = activeCount;
         if (pendingCountEl) pendingCountEl.innerText = pendingCount;
         if (expiredCountEl) expiredCountEl.innerText = expiredCount;
+        if (rejectedCountEl) rejectedCountEl.innerText = rejectedCount;
         
         // Show/hide no results message
         let noResultsRow = document.getElementById('noResultsRow');
@@ -340,7 +368,7 @@
                 const tbody = document.querySelector('#tenantTable tbody');
                 noResultsRow = document.createElement('tr');
                 noResultsRow.id = 'noResultsRow';
-                noResultsRow.innerHTML = '<td colspan="9" class="text-center py-5"><i class="fas fa-search fa-3x text-muted mb-3 d-block"></i><p class="text-muted">No tenants match your filters</p><button class="btn btn-link" onclick="resetFilters()">Clear filters</button></td>';
+                noResultsRow.innerHTML = '<td colspan="10" class="text-center py-5"><i class="fas fa-search fa-3x text-muted mb-3 d-block"></i><p class="text-muted">No tenants match your filters</p><button class="btn btn-link" onclick="resetFilters()">Clear filters</button></td>';
                 tbody.appendChild(noResultsRow);
             }
             noResultsRow.style.display = '';
@@ -353,10 +381,11 @@
         document.getElementById('searchTenant').value = '';
         document.getElementById('statusFilter').value = '';
         document.getElementById('planFilter').value = '';
+        document.getElementById('projectTypeFilter').value = '';
         filterTable();
     }
     
-    // Initialize tooltips
+    // Initialize
     document.addEventListener('DOMContentLoaded', function() {
         filterTable();
         
@@ -364,16 +393,12 @@
         const searchInput = document.getElementById('searchTenant');
         const statusSelect = document.getElementById('statusFilter');
         const planSelect = document.getElementById('planFilter');
+        const projectTypeSelect = document.getElementById('projectTypeFilter');
         
         if (searchInput) searchInput.addEventListener('keyup', filterTable);
         if (statusSelect) statusSelect.addEventListener('change', filterTable);
         if (planSelect) planSelect.addEventListener('change', filterTable);
-        
-        // Initialize Bootstrap tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        if (projectTypeSelect) projectTypeSelect.addEventListener('change', filterTable);
     });
 </script>
 
@@ -383,14 +408,16 @@
     }
     .table th {
         font-weight: 600;
-        font-size: 0.8rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         border-bottom: 2px solid #000000;
+        white-space: nowrap;
     }
     .table td {
         vertical-align: middle;
-        padding: 1rem 0.75rem;
+        padding: 0.6rem 0.5rem;
+        font-size: 0.85rem;
     }
     .btn-group .btn {
         margin: 0 2px;
@@ -398,19 +425,18 @@
     }
     .form-control:focus, .form-select:focus {
         border-color: #000000;
-        box-shadow: 0 0 0 0.2rem rgb(0, 0, 0);
+        box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.15);
     }
     .badge {
         font-weight: 500;
         border-radius: 8px;
     }
     code {
-        background: #00eeff;
+        background: #f0f0f0;
         padding: 2px 6px;
         border-radius: 4px;
         font-size: 0.75rem;
     }
-    /* ✅ Style for the Switch button */
     .btn-success {
         background: linear-gradient(135deg, #28a745, #20c997);
         border: none;
@@ -418,6 +444,12 @@
     .btn-success:hover {
         background: linear-gradient(135deg, #218838, #1aa179);
         transform: scale(1.05);
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .table th, .table td {
+        white-space: nowrap;
     }
 </style>
 {% endblock %}

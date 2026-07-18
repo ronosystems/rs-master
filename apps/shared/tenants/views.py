@@ -115,19 +115,56 @@ def switch_tenant(request, tenant_id):
     
     messages.success(request, f'🔍 Previewing: {tenant.company_name}')
     
-    # Redirect based on tenant's project type
+    # ✅ FIX: Redirect based on tenant's project type
     if tenant.project_type:
-        project_type = tenant.project_type.code.lower()
+        # Get the project type code and name
+        project_code = tenant.project_type.code.lower()  # e.g., "001", "008"
+        project_name = tenant.project_type.name.lower().replace(' ', '_')  # e.g., "tronic_master", "hardware_master"
+        
+        # Map project type codes to URL names
         redirect_map = {
+            # By Code
+            '001': 'tronic_master:dashboard',
+            '002': 'hotel_master:dashboard',
+            '003': 'food_master:dashboard',
+            '004': 'retail_master:dashboard',
+            '005': 'health_master:dashboard',
+            '006': 'fashion_master:dashboard',
+            '007': 'rental_master:dashboard',
+            '008': 'hardware_master:dashboard',
+            '009': 'carwash_master:dashboard',
+            '010': 'linquor_master:dashboard',
+            # By Name
             'tronic_master': 'tronic_master:dashboard',
-            'fashion_master': 'fashion_master:dashboard',
-            'food_master': 'food_master:dashboard',
             'hotel_master': 'hotel_master:dashboard',
-            'rental_master': 'rental_master:dashboard',
+            'food_master': 'food_master:dashboard',
+            'retail_master': 'retail_master:dashboard',
             'health_master': 'health_master:dashboard',
+            'fashion_master': 'fashion_master:dashboard',
+            'rental_master': 'rental_master:dashboard',
+            'hardware_master': 'hardware_master:dashboard',
+            'carwash_master': 'carwash_master:dashboard',
+            'linquor_master': 'linquor_master:dashboard',
         }
-        return redirect(redirect_map.get(project_type, 'portal:dashboard'))
+        
+        # Try to find the redirect URL - first by code, then by name
+        redirect_url = None
+        
+        if project_code in redirect_map:
+            redirect_url = redirect_map[project_code]
+        elif project_name in redirect_map:
+            redirect_url = redirect_map[project_name]
+        
+        # If we have a redirect URL, use it
+        if redirect_url:
+            try:
+                return redirect(redirect_url)
+            except Exception as e:
+                logger.error(f"Error redirecting to {redirect_url}: {e}")
+                # Fall through to portal dashboard
     
+    # Fallback: redirect to portal dashboard
+    messages.warning(request, f'No specific dashboard found for {tenant.company_name}. Redirecting to portal.')
     return redirect('portal:dashboard')
 
 
@@ -198,8 +235,22 @@ def tenant_list(request):
     
     tenants = Tenant.objects.all().order_by('-created_at')
     
+    # Add plan price to each tenant
+    for tenant in tenants:
+        if tenant.subscription_plan:
+            try:
+                plan = SubscriptionPlan.objects.filter(code=tenant.subscription_plan).first()
+                tenant.plan_price = plan.price_monthly if plan else None
+            except:
+                tenant.plan_price = None
+        else:
+            tenant.plan_price = None
+    
+    project_types = ProjectType.objects.filter(is_active=True)
+    
     context = {
         'tenants': tenants,
+        'project_types': project_types,
         'is_super_admin': True,
     }
     return render(request, 'shared/tenant_list.html', context)
@@ -235,12 +286,22 @@ def tenant_detail(request, tenant_id):
             is_subscription_active = True
             days_remaining = (end_date - today).days
     
+    # ✅ ADD THIS: Get plan price
+    plan_price = None
+    if tenant.subscription_plan:
+        try:
+            plan = SubscriptionPlan.objects.filter(code=tenant.subscription_plan).first()
+            plan_price = plan.price_monthly if plan else None
+        except:
+            plan_price = None
+    
     context = {
         'tenant': tenant,
         'admin_users': admin_users,
         'subscription_plans': subscription_plans,
         'is_subscription_active': is_subscription_active,
         'days_remaining': days_remaining,
+        'plan_price': plan_price,  # ✅ Add this
         'is_super_admin': is_super_admin(request.user),
         'is_tenant_admin': is_tenant_admin(request.user),
     }

@@ -5,250 +5,301 @@
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="row">
-        <div class="col-lg-8 mx-auto">
+        <div class="col-lg-12">
             <div class="card border-0 shadow-lg">
                 <div class="card-header bg-primary text-white py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-building me-2"></i>Tenant Details</h4>
-                        <a href="{% url 'tenants:tenant_list' %}" class="btn btn-light btn-sm">
-                            <i class="fas fa-arrow-left me-1"></i>Back to List
-                        </a>
+                        <div>
+                            <a href="{% url 'tenants:tenant_list' %}" class="btn btn-light btn-sm me-2">
+                                <i class="fas fa-arrow-left me-1"></i>Back to List
+                            </a>
+                            <a href="{% url 'tenants:edit_tenant' tenant.id %}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </a>
+                        </div>
                     </div>
                 </div>
+                
                 <div class="card-body p-4">
-                    
-                    <!-- ============================================ -->
-                    <!-- PROJECT TYPE / SUB-PROJECT SECTION -->
-                    <!-- ============================================ -->
-                    <div class="card border-2 mb-4" style="border-color: {% if tenant.project_type %} {{ tenant.project_type.color }} {% else %} #0f67b3 {% endif %};">
-                        <div class="card-header {% if tenant.project_type %}bg-{{ tenant.project_type.color }}{% else %}bg-primary{% endif %} text-white py-2">
-                            <h6 class="mb-0">
-                                <i class="fas fa-project-diagram me-2"></i>
-                                Sub-Project / Business Type
-                            </h6>
+                    <!-- Tenant Status Banner -->
+                    <div class="alert alert-{% if tenant.status == 'active' %}success{% elif tenant.status == 'pending' %}warning{% elif tenant.status == 'rejected' %}danger{% else %}secondary{% endif %} mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-{% if tenant.status == 'active' %}check-circle{% elif tenant.status == 'pending' %}clock{% elif tenant.status == 'rejected' %}times-circle{% else %}info-circle{% endif %} me-2"></i>
+                                <strong>Status:</strong> {{ tenant.status|title }}
+                                {% if tenant.status == 'pending' %}
+                                    <span class="badge bg-warning text-dark ms-2">Awaiting Approval</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Registered: {{ tenant.created_at|date:"M d, Y" }}
+                                </span>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-4">
-                                <!-- Project Icon -->
-                                <div class="project-icon-display border rounded p-3 bg-light">
-                                    {% if tenant.project_type %}
-                                        <i class="fas {{ tenant.project_type.icon }} fa-3x text-{{ tenant.project_type.color }}"></i>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- 3 COLUMN LAYOUT -->
+                    <!-- ============================================ -->
+                    <div class="row">
+                        <!-- ============================================ -->
+                        <!-- LEFT COLUMN: Tenant Company Details -->
+                        <!-- ============================================ -->
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-building me-2"></i>Company Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Company Logo -->
+                                    <div class="text-center mb-3">
+                                        {% if tenant.logo %}
+                                            <img src="{{ tenant.logo.url }}" alt="{{ tenant.company_name }} Logo" 
+                                                 style="max-width: 100px; max-height: 100px; object-fit: contain; border-radius: 8px; border: 1px solid #e9ecef;">
+                                        {% else %}
+                                            <div class="border rounded d-flex align-items-center justify-content-center bg-light" 
+                                                 style="width: 100px; height: 100px; margin: 0 auto;">
+                                                <i class="fas fa-building fa-3x text-muted"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Company Name</label>
+                                        <p class="fw-bold mb-0">{{ tenant.company_name }}</p>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Company Code</label>
+                                        <p><code class="fw-bold">{{ tenant.code }}</code></p>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Address</label>
+                                        <p class="mb-0">{{ tenant.company_address|default:"<span class='text-muted'>Not provided</span>" }}</p>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Phone</label>
+                                        <p class="mb-0">{{ tenant.company_phone|default:"<span class='text-muted'>Not provided</span>" }}</p>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Email</label>
+                                        <p class="mb-0">{{ tenant.company_email|default:"<span class='text-muted'>Not provided</span>" }}</p>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Tax PIN</label>
+                                        <p class="mb-0">{{ tenant.company_pin|default:"<span class='text-muted'>Not provided</span>" }}</p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="text-muted small text-uppercase fw-bold">Project Type</label>
+                                        <p>
+                                            {% if tenant.project_type %}
+                                                <span class="badge bg-{{ tenant.project_type.color }}">
+                                                    <i class="fas {{ tenant.project_type.icon }} me-1"></i>
+                                                    {{ tenant.project_type.name }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">Not assigned</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ============================================ -->
+                        <!-- MIDDLE COLUMN: Tenant Owner Details -->
+                        <!-- ============================================ -->
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-user-cog me-2"></i>Owner Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    {% if admin_users %}
+                                        {% for admin in admin_users %}
+                                            <!-- Owner Avatar -->
+                                            <div class="text-center mb-3">
+                                                <div class="bg-success bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center mx-auto"
+                                                     style="width: 80px; height: 80px;">
+                                                    <i class="fas fa-user-circle fa-4x text-success"></i>
+                                                </div>
+                                            </div>
+                                            
+                                            <hr>
+                                            
+                                            <div class="mb-2">
+                                                <label class="text-muted small text-uppercase fw-bold">Username</label>
+                                                <p class="fw-bold mb-0">{{ admin.username }}</p>
+                                            </div>
+                                            
+                                            <div class="mb-2">
+                                                <label class="text-muted small text-uppercase fw-bold">Full Name</label>
+                                                <p class="mb-0">{{ admin.first_name }} {{ admin.last_name }}</p>
+                                            </div>
+                                            
+                                            <div class="mb-2">
+                                                <label class="text-muted small text-uppercase fw-bold">Email</label>
+                                                <p class="mb-0">{{ admin.email|default:"<span class='text-muted'>Not provided</span>" }}</p>
+                                            </div>
+                                            
+                                            <div class="mb-2">
+                                                <label class="text-muted small text-uppercase fw-bold">Phone</label>
+                                                <p class="mb-0">{{ admin.phone_number|default:"<span class='text-muted'>Not provided</span>" }}</p>
+                                            </div>
+                                            
+                                            <div class="mb-2">
+                                                <label class="text-muted small text-uppercase fw-bold">Role</label>
+                                                <p><span class="badge bg-warning text-dark">Admin</span></p>
+                                            </div>
+                                            
+                                            <div>
+                                                <label class="text-muted small text-uppercase fw-bold">PIN Code</label>
+                                                <p>{% if admin.pin_code %}••••••{% else %}<span class="text-muted">Not set</span>{% endif %}</p>
+                                            </div>
+                                        {% endfor %}
                                     {% else %}
-                                        <i class="fas fa-building fa-3x text-primary"></i>
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-user-slash fa-3x text-muted mb-3 d-block"></i>
+                                            <p class="text-muted">No owner assigned to this tenant</p>
+                                            <a href="{% url 'tenants:assign_owner' tenant.id %}" class="btn btn-success btn-sm">
+                                                <i class="fas fa-user-plus me-1"></i>Assign Owner
+                                            </a>
+                                        </div>
                                     {% endif %}
                                 </div>
-                                
-                                <!-- Project Details -->
-                                <div>
-                                    {% if tenant.project_type %}
-                                        <h5 class="mb-1">
-                                            {{ tenant.project_type.name }}
-                                            <span class="badge bg-{{ tenant.project_type.color }} ms-2">
-                                                {{ tenant.project_type.code }}
-                                            </span>
-                                        </h5>
-                                        <p class="text-muted mb-1">{{ tenant.project_type.description }}</p>
-                                        <div class="d-flex gap-2 mt-2">
-                                            <span class="badge bg-{{ tenant.project_type.color }}">
-                                                <i class="fas {{ tenant.project_type.icon }} me-1"></i>
-                                                {{ tenant.project_type.name }}
-                                            </span>
-                                            {% if tenant.project_type.is_active %}
+                            </div>
+                        </div>
+                        
+                        <!-- ============================================ -->
+                        <!-- RIGHT COLUMN: Subscription & Plan Details -->
+                        <!-- ============================================ -->
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="fas fa-crown me-2"></i>Subscription & Plan</h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Plan Icon -->
+                                    <div class="text-center mb-3">
+                                        <div class="bg-warning bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center mx-auto"
+                                             style="width: 80px; height: 80px;">
+                                            <i class="fas fa-crown fa-4x text-warning"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Plan Type</label>
+                                        <p>
+                                            {% if tenant.subscription_plan %}
+                                                <span class="badge {% if tenant.subscription_plan == 'premium' %}bg-warning text-dark{% elif tenant.subscription_plan == 'standard' %}bg-info{% elif tenant.subscription_plan == 'enterprise' %}bg-dark text-white{% else %}bg-secondary{% endif %}">
+                                                    <i class="fas fa-crown me-1"></i>
+                                                    {{ tenant.subscription_plan|upper }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">No plan assigned</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Plan Amount</label>
+                                        <p>
+                                            {% if plan_price %}
+                                                <strong class="text-success">KES {{ plan_price|floatformat:2 }}</strong>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Start Date</label>
+                                        <p>{{ tenant.subscription_start|date:"M d, Y"|default:"<span class='text-muted'>Not set</span>" }}</p>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">End Date</label>
+                                        <p>{{ tenant.subscription_end|date:"M d, Y"|default:"<span class='text-muted'>Not set</span>" }}</p>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Status</label>
+                                        <p>
+                                            {% if tenant.is_subscription_active %}
                                                 <span class="badge bg-success">Active</span>
                                             {% else %}
-                                                <span class="badge bg-danger">Inactive</span>
+                                                <span class="badge bg-danger">Expired</span>
                                             {% endif %}
-                                        </div>
-                                    {% else %}
-                                        <h5 class="mb-1 text-muted">No Project Type Assigned</h5>
-                                        <p class="text-muted">Please assign a project type to this tenant</p>
-                                        <a href="{% url 'tenants:edit_tenant' tenant.id %}" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-edit me-1"></i>Assign Project Type
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Company Details Section -->
-                    <div class="card border mb-4">
-                        <div class="card-header bg-light">
-                            <h6 class="mb-0"><i class="fas fa-building text-primary me-2"></i>Company Information</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <!-- Company Logo -->
-                                <div class="col-md-3 text-center mb-3">
-                                    {% if tenant.logo %}
-                                        <img src="{{ tenant.logo.url }}" alt="{{ tenant.company_name }} Logo" 
-                                             style="max-width: 120px; max-height: 120px; object-fit: contain; border-radius: 8px; border: 1px solid #e9ecef;">
-                                    {% else %}
-                                        <div class="border rounded d-flex align-items-center justify-content-center bg-light" 
-                                             style="width: 120px; height: 120px; margin: 0 auto;">
-                                            <i class="fas fa-building fa-3x text-muted"></i>
-                                        </div>
-                                    {% endif %}
-                                    <div class="mt-1">
-                                        <small class="text-muted">Company Logo</small>
+                                        </p>
                                     </div>
-                                </div>
-                                
-                                <div class="col-md-9">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p class="mb-2"><strong>Company Name:</strong><br> {{ tenant.company_name }}</p>
-                                            <p class="mb-2"><strong>Company Address:</strong><br> {{ tenant.company_address|default:"—" }}</p>
-                                            <p class="mb-2"><strong>Company Phone:</strong><br> {{ tenant.company_phone|default:"—" }}</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <p class="mb-2"><strong>Company Email:</strong><br> {{ tenant.company_email|default:"—" }}</p>
-                                            <p class="mb-2"><strong>Company PIN/Tax ID:</strong><br> {{ tenant.company_pin|default:"—" }}</p>
-                                            <p class="mb-2"><strong>Tenant Code:</strong><br> <code>{{ tenant.code }}</code></p>
-                                        </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="text-muted small text-uppercase fw-bold">Days Remaining</label>
+                                        <p>
+                                            {% if tenant.days_remaining > 0 %}
+                                                <span class="badge bg-{% if tenant.days_remaining <= 7 %}warning{% else %}success{% endif %}">
+                                                    {{ tenant.days_remaining }} days
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Expired</span>
+                                            {% endif %}
+                                        </p>
                                     </div>
-                                </div>
-                            </div>
-                            <hr>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <p class="mb-2"><strong>Status:</strong><br>
-                                        {% if tenant.status == 'active' %}
-                                            <span class="badge bg-success">Active</span>
-                                        {% elif tenant.status == 'inactive' %}
-                                            <span class="badge bg-secondary">Inactive</span>
-                                        {% elif tenant.status == 'suspended' %}
-                                            <span class="badge bg-warning">Suspended</span>
-                                        {% elif tenant.status == 'pending' %}
-                                            <span class="badge bg-info">Pending Approval</span>
-                                        {% elif tenant.status == 'rejected' %}
-                                            <span class="badge bg-danger">Rejected</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ tenant.status|title }}</span>
-                                        {% endif %}
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p class="mb-2"><strong>Subscription Plan:</strong><br> 
-                                        <span class="badge bg-info">{{ tenant.subscription_plan|title|default:"Not set" }}</span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p class="mb-2"><strong>Registered:</strong><br> {{ tenant.created_at|date:"Y-m-d H:i:s" }}</p>
-                                </div>
-                            </div>
-                            
-                            <!-- Project Type Summary -->
-                            <div class="row mt-2">
-                                <div class="col-12">
-                                    <hr>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="fas fa-project-diagram text-muted"></i>
-                                        <strong>Sub-Project:</strong>
-                                        {% if tenant.project_type %}
-                                            <span class="badge bg-{{ tenant.project_type.color }}">
-                                                <i class="fas {{ tenant.project_type.icon }} me-1"></i>
-                                                {{ tenant.project_type.name }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">Not assigned</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Tenant Admin (Owner) Section -->
-                    <div class="card border mb-4">
-                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0"><i class="fas fa-user-cog text-primary me-2"></i>Tenant Admin (Owner)</h6>
-                            {% if not admin_users %}
-                            <a href="{% url 'tenants:assign_owner' tenant.id %}" class="btn btn-success btn-sm">
-                                <i class="fas fa-user-plus me-1"></i> Assign Owner
-                            </a>
-                            {% endif %}
-                        </div>
-                        <div class="card-body">
-                            {% for admin in admin_users %}
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p class="mb-2"><strong>Username:</strong><br> {{ admin.username }}</p>
-                                    <p class="mb-2"><strong>Full Name:</strong><br> {{ admin.first_name }} {{ admin.last_name }}</p>
-                                    <p class="mb-2"><strong>Email:</strong><br> {{ admin.email|default:"—" }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p class="mb-2"><strong>Phone Number:</strong><br> {{ admin.phone_number|default:"—" }}</p>
-                                    <p class="mb-2"><strong>PIN Code:</strong><br> 
-                                        {% if admin.pin_code %}••••••{% else %}Not set{% endif %}
-                                    </p>
-                                    <p class="mb-2"><strong>Role:</strong><br> 
-                                        <span class="badge bg-warning">Admin</span>
-                                    </p>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <p class="text-muted text-center">No admin user assigned yet. Click "Assign Owner" to create one.</p>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    
-                    <!-- Subscription Details Section -->
-                    <div class="card border mb-4">
-                        <div class="card-header bg-light">
-                            <h6 class="mb-0"><i class="fas fa-crown text-warning me-2"></i>Subscription Details</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p class="mb-2"><strong>Plan:</strong><br> 
-                                        <span class="badge bg-info">{{ tenant.subscription_plan|title|default:"Not set" }}</span>
-                                    </p>
-                                    <p class="mb-2"><strong>Start Date:</strong><br> {{ tenant.subscription_start|date:"Y-m-d H:i"|default:"—" }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p class="mb-2"><strong>End Date:</strong><br> {{ tenant.subscription_end|date:"Y-m-d H:i"|default:"—" }}</p>
-                                    <p class="mb-2"><strong>Status:</strong><br>
+                                    
+                                    <div class="mt-3">
                                         {% if tenant.is_subscription_active %}
-                                            <span class="badge bg-success">Active</span>
+                                            <a href="#" class="btn btn-outline-warning btn-sm w-100" title="Auto-renew enabled">
+                                                <i class="fas fa-sync-alt me-1"></i> Auto-Renew: {% if tenant.auto_renew %}Enabled{% else %}Disabled{% endif %}
+                                            </a>
                                         {% else %}
-                                            <span class="badge bg-danger">Expired</span>
+                                            <a href="{% url 'tenants:renew_subscription' tenant.id %}" class="btn btn-warning btn-sm w-100">
+                                                <i class="fas fa-sync me-1"></i>Renew Subscription
+                                            </a>
                                         {% endif %}
-                                    </p>
-                                    <p class="mb-2"><strong>Days Remaining:</strong><br>
-                                        {% if tenant.days_remaining > 0 %}
-                                            <span class="badge bg-{% if tenant.days_remaining <= 7 %}warning{% else %}success{% endif %}">
-                                                {{ tenant.days_remaining }} days
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-danger">Expired</span>
-                                        {% endif %}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
-                            {% if not tenant.is_subscription_active %}
-                            <div class="mt-2">
-                                <a href="{% url 'tenants:renew_subscription' tenant.id %}" class="btn btn-warning btn-sm">
-                                    <i class="fas fa-sync me-1"></i>Renew Subscription
-                                </a>
-                            </div>
-                            {% endif %}
                         </div>
                     </div>
                     
-                    <!-- Action Buttons -->
-                    <div class="d-flex gap-2 flex-wrap">
-                        <a href="{% url 'tenants:edit_tenant' tenant.id %}" class="btn btn-warning">
-                            <i class="fas fa-edit me-2"></i>Edit Tenant Details
-                        </a>
-                        {% if admin_users %}
-                        <a href="{% url 'tenants:edit_tenant_owner' tenant.id %}" class="btn btn-info text-white">
-                            <i class="fas fa-user-cog me-2"></i>Edit Owner Credentials
-                        </a>
-                        {% endif %}
-                        <button class="btn btn-danger" onclick="confirmDelete()">
-                            <i class="fas fa-trash-alt me-2"></i>Delete Tenant
-                        </button>
+                    <!-- ============================================ -->
+                    <!-- ACTION BUTTONS - FULL WIDTH -->
+                    <!-- ============================================ -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <div class="d-flex gap-2 flex-wrap justify-content-center">
+                                        <a href="{% url 'tenants:edit_tenant' tenant.id %}" class="btn btn-warning">
+                                            <i class="fas fa-edit me-2"></i>Edit Company Details
+                                        </a>
+                                        {% if admin_users %}
+                                        <a href="{% url 'tenants:edit_tenant_owner' tenant.id %}" class="btn btn-info text-white">
+                                            <i class="fas fa-user-cog me-2"></i>Edit Owner
+                                        </a>
+                                        {% endif %}
+                                        <a href="{% url 'tenants:switch_tenant' tenant.id %}" class="btn btn-success" onclick="return confirm('Switch to {{ tenant.company_name }} dashboard?')">
+                                            <i class="fas fa-exchange-alt me-2"></i>Login as Tenant
+                                        </a>
+                                        <button class="btn btn-danger" onclick="confirmDelete()">
+                                            <i class="fas fa-trash-alt me-2"></i>Delete Tenant
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -258,29 +309,46 @@
 
 <script>
 function confirmDelete() {
-    if (confirm('WARNING: This will delete the tenant and all associated data. This action cannot be undone! Are you sure?')) {
+    if (confirm('WARNING: This will delete the tenant "{{ tenant.company_name }}" and all associated data. This action cannot be undone! Are you sure?')) {
         window.location.href = "{% url 'tenants:delete_tenant' tenant.id %}";
     }
 }
 </script>
 
 <style>
-    .project-icon-display {
-        min-width: 80px;
-        min-height: 80px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .border-2 {
-        border-width: 2px !important;
-    }
     .card {
         border-radius: 12px;
         overflow: hidden;
     }
     .card-header {
         border-bottom: none;
+    }
+    .card-header h6 {
+        font-weight: 600;
+    }
+    .card-body label {
+        font-size: 0.7rem;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+    .card-body p {
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+    .bg-opacity-25 {
+        background-color: rgba(0, 0, 0, 0.99);
+    }
+    .h-100 {
+        min-height: 100%;
+    }
+    .col-md-4 .card {
+        min-height: 450px;
+    }
+    @media (max-width: 768px) {
+        .col-md-4 .card {
+            min-height: auto;
+            margin-bottom: 15px;
+        }
     }
 </style>
 {% endblock %}
