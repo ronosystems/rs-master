@@ -32,14 +32,6 @@
                         </div>                       
                     </div>
                 </div>
-                <div class="mt-2 mt-sm-0">
-                    <a href="{% url 'tenants:register_tenant' %}" class="btn btn-light btn-sm px-3 py-2 fw-semibold">
-                        <i class="fas fa-plus-circle me-2 text-primary"></i>Add New Tenant
-                    </a>
-                    <a href="#" class="btn btn-light btn-sm px-3 py-2 fw-semibold">
-                        <i class="fas fa-database me-1"></i> Total Tenants: <strong>{{ tenants|length }}</strong>
-                    </a>
-                </div>
             </div>
         </div>
         
@@ -87,9 +79,9 @@
                 <table class="table table-hover align-middle mb-0" id="tenantTable">
                     <thead class="bg-light">
                         <tr>
-                            <th style="width: 5%">#</th>
+                            <th style="width: 5%">Tenant Code</th>
                             <th style="width: 18%">Company Details</th>
-                            <th style="width: 12%">Project Type</th> 
+                            <th style="width: 12%">Project TypE Code</th> 
                             <th style="width: 10%">Contact</th>
                             <th style="width: 10%">Subscription</th>
                             <th style="width: 10%">Status</th>
@@ -101,7 +93,9 @@
                     <tbody>
                         {% for tenant in tenants %}
                         <tr data-status="{{ tenant.status }}" data-plan="{{ tenant.subscription_plan }}">
-                            <td class="text-muted">{{ forloop.counter }}</td>
+                            <td class="text-muted">{{ forloop.counter }}
+                                <small class="text-dark">Code: <code>{{ tenant.code }}</code></small>
+                            </td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="flex-shrink-0">
@@ -117,7 +111,6 @@
                                     </div>
                                     <div class="flex-grow-1 ms-3">
                                         <strong class="d-block">{{ tenant.company_name }}</strong>
-                                        <small class="text-dark">Code: <code>{{ tenant.code }}</code></small>
                                     </div>
                                 </div>
                             </td>
@@ -125,9 +118,7 @@
                                 {% if tenant.project_type %}
                                     <div class="d-flex align-items-center gap-2">
                                         <i class="fas {{ tenant.project_type.icon }} text-{{ tenant.project_type.color }}"></i>
-                                        <span class="badge bg-{{ tenant.project_type.color }}">
-                                            {{ tenant.project_type.name }}
-                                        </span>
+                                        <span class="badge bg-{{ tenant.project_type.color }}"></span>
                                     </div>
                                     <small class="text-muted d-block mt-1">
                                         <code>{{ tenant.project_type.code }}</code>

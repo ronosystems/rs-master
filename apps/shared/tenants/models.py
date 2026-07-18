@@ -10,11 +10,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# ============================================
+# PROJECT TYPE  MODEL
+# ============================================
 
 class ProjectType(models.Model):
-    """Project Types - Synced from settings.PROJECT_TYPES"""
+    """Project Types - Auto-generated numeric codes with leading zeros"""
     name = models.CharField(max_length=100, unique=True)
-    code = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=50, unique=True, db_index=True)  # Use existing code field
     description = models.TextField(blank=True, null=True)
     icon = models.CharField(max_length=50, default='fa-building')
     color = models.CharField(max_length=20, default='primary')
@@ -23,10 +26,29 @@ class ProjectType(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.code})"
     
     class Meta:
-        ordering = ['name']
+        ordering = ['code']
+    
+    def save(self, *args, **kwargs):
+        """Auto-generate sequential numeric code with leading zeros"""
+        is_new = self.pk is None
+        
+        # Generate code only for new project types
+        if is_new:
+            # Get the last project type and increment the numeric value
+            last_project_type = ProjectType.objects.all().order_by('id').last()
+            
+            if last_project_type and last_project_type.code.isdigit():
+                last_number = int(last_project_type.code)
+                next_number = last_number + 1
+            else:
+                next_number = 1
+            
+            self.code = str(next_number).zfill(3)
+        
+        super().save(*args, **kwargs)
     
     @classmethod
     def sync_from_settings(cls):
@@ -36,21 +58,29 @@ class ProjectType(models.Model):
         updated_count = 0
         
         for code, data in project_types.items():
-            obj, created = cls.objects.update_or_create(
-                code=code.upper(),
-                defaults={
-                    'name': data.get('name', code),
-                    'description': data.get('description', ''),
-                    'icon': data.get('icon', 'fa-building'),
-                    'color': data.get('color', 'primary'),
-                    'is_active': data.get('active', True),
-                }
-            )
-            if created:
+            # Check if project type exists by name
+            existing = cls.objects.filter(name=data.get('name', code)).first()
+            
+            if existing:
+                # Update existing
+                existing.description = data.get('description', '')
+                existing.icon = data.get('icon', 'fa-building')
+                existing.color = data.get('color', 'primary')
+                existing.is_active = data.get('active', True)
+                existing.save()
+                updated_count += 1
+                print(f"  🔄 Updated project type: {existing.name} ({existing.code})")
+            else:
+                # Create new with auto-generated code
+                obj = cls.objects.create(
+                    name=data.get('name', code),
+                    description=data.get('description', ''),
+                    icon=data.get('icon', 'fa-building'),
+                    color=data.get('color', 'primary'),
+                    is_active=data.get('active', True),
+                )
                 created_count += 1
                 print(f"  ✅ Created project type: {obj.name} ({obj.code})")
-            else:
-                updated_count += 1
         
         return {'created': created_count, 'updated': updated_count}
     
@@ -58,7 +88,10 @@ class ProjectType(models.Model):
     def ensure_default_types(cls):
         """Ensure all default project types exist"""
         return cls.sync_from_settings()
-
+    
+# ============================================
+# TENANT MODEL
+# ============================================
 
 class Tenant(models.Model):
     """Tenant - Multi-tenant core model"""
@@ -103,8 +136,8 @@ class Tenant(models.Model):
         related_name='tenants'
     )
     
-    # Identification
-    code = models.CharField(max_length=50, unique=True)
+    # Identification - Auto-incrementing numeric code
+    code = models.CharField(max_length=50, unique=True, db_index=True)
     
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -116,8 +149,7 @@ class Tenant(models.Model):
     show_paybill = models.BooleanField(default=True)
     show_account_number = models.BooleanField(default=True)
 
-
-    # ✅ SUBSCRIPTION FIELDS
+    # SUBSCRIPTION FIELDS
     subscription_plan = models.CharField(
         max_length=50,
         blank=True,
@@ -153,14 +185,12 @@ class Tenant(models.Model):
 
     
     def __str__(self):
-        return self.company_name
-
+        return f"{self.company_name} ({self.code})"
 
     def get_logo_url(self):
         """Get logo URL only if the file exists"""
         if not self.logo:
             return None
-        # Check if file actually exists in storage
         try:
             if self.logo.name and default_storage.exists(self.logo.name):
                 return self.logo.url
@@ -180,12 +210,24 @@ class Tenant(models.Model):
             return False
     
     def save(self, *args, **kwargs):
-        """Auto-generate code if not provided, and validate logo"""
+        """Auto-generate sequential numeric code with leading zeros"""
         is_new = self.pk is None
-        tenant_id = self.id if self.pk else None
         
-        if not self.code:
-            self.code = self.company_name.upper().replace(' ', '_')[:50]
+        # Generate code only for new tenants
+        if is_new:
+            # Get the last tenant and increment the numeric value
+            last_tenant = Tenant.objects.all().order_by('id').last()
+            
+            if last_tenant and last_tenant.code.isdigit():
+                # Extract numeric value from existing code
+                last_number = int(last_tenant.code)
+                next_number = last_number + 1
+            else:
+                # Start from 1 if no tenants exist or existing codes aren't numeric
+                next_number = 1
+            
+            # Format with leading zeros (3 digits)
+            self.code = str(next_number).zfill(3)
         
         # Check if logo file exists, if not clear it
         if self.logo and not self.has_valid_logo():
@@ -193,9 +235,10 @@ class Tenant(models.Model):
         
         super().save(*args, **kwargs)
         
-        # ✅ If offline, queue for sync
+        # If offline, queue for sync
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
+                from .models import SyncQueue  # Import here to avoid circular imports
                 SyncQueue.objects.create(
                     tenant_id=self.id,
                     model_name='Tenant',
@@ -224,7 +267,7 @@ class Tenant(models.Model):
                 logger.error(f"Failed to queue Tenant sync: {e}")
 
     # ============================================
-    # ✅ SUBSCRIPTION PROPERTIES
+    # SUBSCRIPTION PROPERTIES
     # ============================================
     
     @property
@@ -263,7 +306,6 @@ class Tenant(models.Model):
             return SubscriptionPlan.objects.get(code=self.subscription_plan)
         except SubscriptionPlan.DoesNotExist:
             return None
-
 
 # ============================================
 # SUBSCRIPTION PLAN MODEL
