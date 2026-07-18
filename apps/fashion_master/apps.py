@@ -1,12 +1,9 @@
 # apps/fashion_master/apps.py
-
 from django.apps import AppConfig
+from django.db.models.signals import post_migrate
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-
 
 class FashionMasterConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
@@ -14,18 +11,12 @@ class FashionMasterConfig(AppConfig):
     verbose_name = 'Fashion Master'
 
     def ready(self):
-        """Auto-setup default roles and categories when app starts"""
-        # Comment this out to stop auto-creating roles
-        # self.setup_default_roles()
-        self.setup_default_categories()
+        """Connect signals when app is ready"""
+        # Connect the post_migrate signal
+        post_migrate.connect(self.setup_default_categories, sender=self)
         logger.info("Fashion Master app ready!")
 
-    def setup_default_roles(self):
-        """Create default fashion roles if they don't exist"""
-        # ... keep the function but it won't be called
-        pass
-
-    def setup_default_categories(self):
+    def setup_default_categories(self, **kwargs):
         """Create default fashion categories if they don't exist"""
         try:
             from apps.shared.tenants.models import Tenant

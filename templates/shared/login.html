@@ -4,310 +4,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - POS Portal</title>
+    <title>Login · POS Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        /* ----- RESET & BASE ----- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            background: linear-gradient(135deg, #808080 0%, #8b8b8b 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #808080, #8b8b8b);
+            background-size: cover;
+            background-position: center;
+            transition: background-image 0.8s ease-in-out;
         }
-        
+
         .login-container {
             width: 100%;
             max-width: 420px;
             padding: 20px;
         }
-        
+
         .login-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 15px 50px rgb(0, 0, 0);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(6px);
+            border-radius: 28px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
             padding: 40px 35px;
             animation: slideUp 0.5s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         @keyframes slideUp {
-            from {
-                transform: translateY(30px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
-        
-        .login-header {
-            text-align: center;
-            margin-bottom: 35px;
-        }
-        
+
+        /* ----- HEADER ----- */
+        .login-header { text-align: center; margin-bottom: 30px; }
         .login-header .logo {
-            width: 80px;
-            height: 80px;
+            width: 80px; height: 80px;
             background: linear-gradient(135deg, #002fff, #0026ff);
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             margin: 0 auto 15px;
-            font-size: 35px;
-            color: white;
-            box-shadow: 0 5px 15px rgb(0, 0, 0);
+            font-size: 35px; color: white;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
         }
-        
-        .login-header h3 {
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 5px;
-        }
-        
-        .login-header p {
-            color: #718096;
-            font-size: 0.9rem;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
+        .login-header h3 { font-weight: 700; color: #1e293b; margin-bottom: 5px; }
+        .login-header p { color: #475569; font-size: 0.9rem; }
+
+        /* ----- FORM ----- */
+        .form-group { margin-bottom: 20px; }
         .form-group label {
-            font-weight: 600;
-            color: #4a5568;
-            font-size: 0.85rem;
-            margin-bottom: 6px;
-            display: block;
+            font-weight: 600; color: #334155; font-size: 0.85rem;
+            margin-bottom: 6px; display: block;
         }
-        
         .form-group .input-group {
-            border-radius: 10px;
-            overflow: hidden;
-            border: 2px solid #e2e8f0;
-            transition: all 0.3s;
+            border-radius: 12px; overflow: hidden;
+            border: 2px solid #e2e8f0; transition: all 0.3s;
             background: white;
         }
-        
         .form-group .input-group:focus-within {
-            border-color: #000000;
-            box-shadow: 0 0 0 3px rgb(0, 0, 0);
+            border-color: #000000; box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.15);
         }
-        
         .form-group .input-group-text {
-            background: white;
-            border: none;
-            color: #000000;
+            background: white; border: none; color: #1e293b;
             padding: 0 12px 0 15px;
         }
-        
         .form-group .form-control {
-            border: none;
-            padding: 12px 15px 12px 5px;
-            font-size: 0.95rem;
-            background: white;
+            border: none; padding: 12px 15px 12px 5px;
+            font-size: 0.95rem; background: white;
         }
-        
-        .form-group .form-control:focus {
-            box-shadow: none;
-        }
-        
-        .form-group .form-control::placeholder {
-            color: #a0aec0;
-        }
-        
+        .form-group .form-control:focus { box-shadow: none; }
+        .form-group .form-control::placeholder { color: #94a3b8; }
+
         .form-options {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            font-size: 0.85rem;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 25px; font-size: 0.85rem;
         }
-        
-        .form-options .form-check {
-            margin: 0;
-        }
-        
-        .form-options .form-check-input {
-            cursor: pointer;
-        }
-        
-        .form-options .form-check-label {
-            color: #000000;
-            cursor: pointer;
-        }
-        
-        .form-options a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .form-options a:hover {
-            text-decoration: underline;
-        }
-        
+        .form-options .form-check { margin: 0; }
+        .form-options .form-check-input { cursor: pointer; }
+        .form-options .form-check-label { color: #1e293b; cursor: pointer; }
+        .form-options a { color: #0026ff; text-decoration: none; font-weight: 500; }
+        .form-options a:hover { text-decoration: underline; }
+
         .btn-login {
             background: linear-gradient(135deg, #0024c7, #001aff);
-            box-shadow: 0 8px 25px rgb(0, 0, 0);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 1rem;
-            width: 100%;
-            transition: all 0.3s;
-            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+            color: white; border: none; padding: 14px;
+            border-radius: 12px; font-weight: 600; font-size: 1rem;
+            width: 100%; transition: all 0.3s; cursor: pointer;
         }
-        
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgb(0, 0, 0);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             color: white;
         }
-        
-        .btn-login:active {
-            transform: translateY(0);
-        }
-        
-        .btn-login i {
-            margin-right: 8px;
-        }
-        
+        .btn-login:active { transform: translateY(0); }
+        .btn-login i { margin-right: 8px; }
+
         .login-footer {
-            text-align: center;
-            margin-top: 25px;
-            color: #a0aec0;
-            font-size: 0.8rem;
+            text-align: center; margin-top: 25px;
+            color: #94a3b8; font-size: 0.8rem;
         }
-        
-        .login-footer a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
+        .login-footer a { color: #0026ff; text-decoration: none; }
+
+        /* ----- ALERTS ----- */
         .alert {
-            border-radius: 10px;
-            border: none;
-            padding: 12px 16px;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
+            border-radius: 12px; border: none; padding: 12px 16px;
+            font-size: 0.9rem; margin-bottom: 20px;
         }
-        
-        .alert-success {
-            background: #f0fff4;
-            color: #22543d;
-        }
-        
-        .alert-error {
-            background: #fff5f5;
-            color: #9b2c2c;
-        }
-        
-        .alert-warning {
-            background: #fffff0;
-            color: #744210;
-        }
-        
-        .alert-info {
-            background: #ebf8ff;
-            color: #2a69ac;
-        }
-        
-        .alert i {
-            margin-right: 8px;
-        }
-        
-        /* Dark mode support */
+        .alert-success { background: #f0fff4; color: #22543d; }
+        .alert-error { background: #fff5f5; color: #9b2c2c; }
+        .alert-warning { background: #fffff0; color: #744210; }
+        .alert-info { background: #ebf8ff; color: #2a69ac; }
+        .alert i { margin-right: 8px; }
+
+        /* ----- DARK MODE (preserves readability) ----- */
         @media (prefers-color-scheme: dark) {
-            body {
-                background: linear-gradient(135deg, #1a1a2e, #16213e);
-            }
-            
             .login-card {
-                background: #1e1e2e;
+                background: rgba(20, 20, 35, 0.92);
+                backdrop-filter: blur(8px);
+                border-color: rgba(255,255,255,0.08);
             }
-            
-            .login-header h3 {
-                color: #e0e0e0;
-            }
-            
-            .login-header p {
-                color: #a0a0a0;
-            }
-            
-            .form-group label {
-                color: #c0c0c0;
-            }
-            
-            .form-group .input-group {
-                border-color: #3d3d54;
-                background: #1a1a2e;
-            }
-            
-            .form-group .input-group-text {
-                background: #1a1a2e;
-                color: #6c6c8a;
-            }
-            
+            .login-header h3 { color: #e2e8f0; }
+            .login-header p { color: #a0aec0; }
+            .form-group label { color: #cbd5e1; }
+            .form-group .input-group,
+            .form-group .input-group-text,
             .form-group .form-control {
-                background: #1a1a2e;
-                color: #e0e0e0;
+                background: #1e1e2f;
+                border-color: #3d3d5c;
+                color: #e2e8f0;
             }
-            
-            .form-group .form-control::placeholder {
-                color: #6c6c8a;
-            }
-            
-            .form-options .form-check-label {
-                color: #c0c0c0;
-            }
-            
-            .login-footer {
-                color: #6c6c8a;
-            }
+            .form-group .form-control::placeholder { color: #6b6b8a; }
+            .form-options .form-check-label { color: #cbd5e1; }
+            .login-footer { color: #6b6b8a; }
+            .btn-login { background: linear-gradient(135deg, #3b4fff, #0026ff); }
+            .alert-info { background: #1a2a3a; color: #8bb8e0; }
         }
-        
-        /* Responsive */
+
         @media (max-width: 480px) {
-            .login-card {
-                padding: 30px 20px;
-            }
-            
-            .login-header .logo {
-                width: 60px;
-                height: 60px;
-                font-size: 28px;
-            }
-            
-            .login-header h3 {
-                font-size: 1.2rem;
-            }
+            .login-card { padding: 30px 20px; }
+            .login-header .logo { width: 60px; height: 60px; font-size: 28px; }
+            .login-header h3 { font-size: 1.2rem; }
+        }
+
+        /* ----- TIME BADGE (bottom-right) ----- */
+        .time-badge {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            color: white;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(255,255,255,0.15);
+            pointer-events: none;
+            z-index: 999;
+            text-transform: capitalize;
         }
     </style>
 </head>
-<body>
+<body id="loginBody">
+
     <div class="login-container">
         <div class="login-card">
-            <!-- Header -->
+
+            <!-- HEADER -->
             <div class="login-header">
-                <div class="logo">
-                    <i class="fas fa-store"></i>
-                </div>
+                <div class="logo"><i class="fas fa-store"></i></div>
                 <h3>Welcome Back</h3>
-                <p>Sign in to your account to continue</p>
+                <p>Sign in to your account</p>
             </div>
-            
-            <!-- Messages -->
+
+            <!-- DJANGO MESSAGES (auto-dismiss) -->
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }}">
@@ -316,11 +195,13 @@
                     </div>
                 {% endfor %}
             {% endif %}
-            
-            <!-- Login Form -->
-            <form method="post">
+
+            <!-- ========================================================= -->
+            <!--  LOGIN FORM – action="" submits to current URL             -->
+            <!-- ========================================================= -->
+            <form method="post" action="">
                 {% csrf_token %}
-                
+
                 <div class="form-group">
                     <label for="username"><i class="fas fa-user me-2"></i>Username</label>
                     <div class="input-group">
@@ -328,18 +209,18 @@
                         <input type="text" name="username" id="username" class="form-control" placeholder="Enter your username" required autofocus>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="password"><i class="fas fa-lock me-2"></i>Password</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-lock"></i></span>
                         <input type="password" name="password" id="password" class="form-control" placeholder="Enter your password" required>
-                        <button type="button" class="btn btn-outline-secondary border-0" onclick="togglePassword()" style="background: white;">
+                        <button type="button" class="btn btn-outline-secondary border-0" onclick="togglePassword()" style="background: white; z-index: 5;">
                             <i class="fas fa-eye" id="togglePasswordIcon"></i>
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="form-options">
                     <div class="form-check">
                         <input type="checkbox" name="remember" id="remember" class="form-check-input">
@@ -347,47 +228,121 @@
                     </div>
                     <a href="#">Forgot password?</a>
                 </div>
-                
+
                 <button type="submit" class="btn-login">
                     <i class="fas fa-sign-in-alt"></i> Sign In
                 </button>
             </form>
-            
+
             <div class="login-footer">
                 &copy; {% now "Y" %} POS Portal. All rights reserved.
             </div>
         </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- TIME BADGE (shows current period) -->
+    <div class="time-badge" id="timeBadge">🌅 loading…</div>
+
+    <!-- ============================================================ -->
+    <!--  JAVASCRIPT: time‑based backgrounds + password toggle         -->
+    <!-- ============================================================ -->
     <script>
-        // Toggle password visibility
-        function togglePassword() {
-            const passwordInput = document.getElementById('password');
-            const icon = document.getElementById('togglePasswordIcon');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+        (function() {
+            "use strict";
+
+            // ----- BACKGROUND IMAGES (high‑quality, free) -----
+            const BACKGROUNDS = {
+                morning:   'url("https://images.pexels.com/photos/531880/pexels-photo-531880.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2")',
+                midnoon:   'url("https://images.pexels.com/photos/807598/pexels-photo-807598.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2")',
+                evening:   'url("https://images.pexels.com/photos/1162251/pexels-photo-1162251.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2")',
+                night:     'url("https://images.pexels.com/photos/998641/pexels-photo-998641.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2")'
+            };
+
+            // ----- GET PERIOD from hour (24h) -----
+            function getTimePeriod() {
+                const h = new Date().getHours();
+                if (h >= 5 && h < 9) return 'morning';
+                if (h >= 9 && h < 17) return 'midnoon';
+                if (h >= 17 && h < 20) return 'evening';
+                return 'night';
             }
-        }
-        
-        // Auto-dismiss alerts after 5 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                alert.style.transition = 'opacity 0.5s ease';
-                alert.style.opacity = '0';
-                setTimeout(function() {
-                    alert.remove();
-                }, 500);
-            });
-        }, 5000);
+
+            // ----- UPDATE BACKGROUND & BADGE -----
+            function updateBackground() {
+                const period = getTimePeriod();
+                const body = document.getElementById('loginBody');
+                const badge = document.getElementById('timeBadge');
+
+                // apply background
+                body.style.backgroundImage = BACKGROUNDS[period];
+                body.style.backgroundSize = 'cover';
+                body.style.backgroundPosition = 'center';
+                body.style.backgroundRepeat = 'no-repeat';
+
+                // update badge
+                const icons = {
+                    morning: '🌅',
+                    midnoon: '☀️',
+                    evening: '🌇',
+                    night: '🌙'
+                };
+                if (badge) {
+                    badge.innerHTML = `${icons[period] || '🕒'} ${period}`;
+                }
+            }
+
+            // ----- TOGGLE PASSWORD VISIBILITY (global) -----
+            window.togglePassword = function() {
+                const pw = document.getElementById('password');
+                const icon = document.getElementById('togglePasswordIcon');
+                if (pw.type === 'password') {
+                    pw.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    pw.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            };
+
+            // ----- AUTO‑DISMISS ALERTS (like Django messages) -----
+            function dismissAlerts() {
+                document.querySelectorAll('.alert').forEach(function(alert) {
+                    setTimeout(function() {
+                        alert.style.transition = 'opacity 0.5s ease';
+                        alert.style.opacity = '0';
+                        setTimeout(function() {
+                            if (alert.parentNode) alert.remove();
+                        }, 500);
+                    }, 4500);
+                });
+            }
+
+            // ----- INIT -----
+            function init() {
+                updateBackground();
+
+                // update every minute (to catch hour changes)
+                setInterval(updateBackground, 60000);
+
+                // also update when tab becomes visible again
+                document.addEventListener('visibilitychange', function() {
+                    if (!document.hidden) updateBackground();
+                });
+
+                dismissAlerts();
+            }
+
+            // run when DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

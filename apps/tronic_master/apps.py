@@ -1,9 +1,9 @@
 # apps/tronic_master/apps.py
 from django.apps import AppConfig
+from django.db.models.signals import post_migrate
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class TechMasterConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
@@ -11,11 +11,12 @@ class TechMasterConfig(AppConfig):
     verbose_name = 'Tech Master'
 
     def ready(self):
-        """Auto-setup default roles when app starts"""
-        self.setup_default_roles()
+        """Connect signals when app is ready"""
+        # Connect the post_migrate signal
+        post_migrate.connect(self.setup_default_roles, sender=self)
         logger.info("Tech Master app ready!")
 
-    def setup_default_roles(self):
+    def setup_default_roles(self, **kwargs):
         """Create default roles if they don't exist"""
         try:
             from apps.shared.roles.models import ProjectRole
