@@ -920,7 +920,7 @@ def subscription_plans_list(request):
     """List all subscription plans - Super Admin only (CRUD operations)"""
     if not is_super_admin(request.user):
         messages.error(request, 'Access denied. Only Super Admins can manage subscription plans.')
-        return redirect('dashboard')
+        return redirect('portal:dashboard')
     
     # Get all plans ordered by price
     plans = SubscriptionPlan.objects.all().order_by('price_monthly')
@@ -934,19 +934,16 @@ def subscription_plans_list(request):
     total_tenants = Tenant.objects.count()
     active_tenants_count = Tenant.objects.filter(status='active').count()
     
-    # ✅ For each plan, calculate directly
+    # For each plan, calculate directly
     total_monthly_revenue = 0
     for plan in plans:
-        # Direct query for tenant count
         plan.tenant_count = Tenant.objects.filter(
             subscription_plan=plan.code,
             status='active'
         ).count()
         
-        # Calculate monthly revenue
         plan.monthly_revenue = plan.tenant_count * plan.price_monthly
         
-        # Add to total revenue if plan is active
         if plan.is_active:
             total_monthly_revenue += plan.monthly_revenue
     
@@ -965,8 +962,66 @@ def subscription_plans_list(request):
         'total_monthly_revenue': total_monthly_revenue,
         'is_super_admin': True,
     }
-    return render(request, 'shared/subscription_plans_list.html', context)
+    # ✅ Use the new template name
+    return render(request, 'shared/subscription_plans.html', context)
 
+
+@login_required
+def subscription_plans(request):
+    """Display all available subscription plans"""
+    
+    # Get all active plans
+    plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price_monthly')
+    
+    # Calculate statistics
+    total_plans = plans.count()
+    active_plans_count = plans.filter(is_active=True).count()
+    inactive_plans_count = plans.filter(is_active=False).count()
+    
+    # Get total tenants
+    total_tenants = Tenant.objects.count()
+    active_tenants_count = Tenant.objects.filter(status='active').count()
+    
+    # Calculate monthly revenue for each plan
+    total_monthly_revenue = 0
+    for plan in plans:
+        plan.tenant_count = Tenant.objects.filter(
+            subscription_plan=plan.code,
+            status='active'
+        ).count()
+        plan.monthly_revenue = plan.tenant_count * plan.price_monthly
+        if plan.is_active:
+            total_monthly_revenue += plan.monthly_revenue
+    
+    # ✅ Add pagination
+    paginator = Paginator(plans, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Get current plan for the user (if not super admin)
+    current_plan_code = None
+    is_super_admin = request.user.is_super_admin
+    
+    if not is_super_admin:
+        tenant = request.user.tenant
+        if tenant:
+            current_plan_code = tenant.subscription_plan
+    
+    # ✅ Pass ALL context variables
+    context = {
+        'plans': page_obj,  # ✅ Use paginated object
+        'total_plans': total_plans,
+        'active_plans_count': active_plans_count,
+        'inactive_plans_count': inactive_plans_count,
+        'total_tenants': total_tenants,
+        'active_tenants_count': active_tenants_count,
+        'total_monthly_revenue': total_monthly_revenue,
+        'current_plan_code': current_plan_code,
+        'is_super_admin': is_super_admin,
+        'active_tab': 'subscription',
+    }
+    
+    return render(request, 'shared/subscription_plans.html', context)
 
 @login_required
 def subscription_plan_create(request):
@@ -1089,43 +1144,25 @@ def subscription_plan_delete(request, pk):
 
 
 @login_required
-def subscription_plans(request):
-    """Display all available subscription plans"""
-    tenant = request.user.tenant
-    
-    if not tenant:
-        messages.error(request, 'No tenant assigned')
-        return redirect('dashboard')
-    
-    # Get all active plans
-    plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price_monthly')
-    
-    # Get current plan
-    current_plan_code = tenant.subscription_plan
-    
-    context = {
-        'tenant': tenant,
-        'plans': plans,
-        'current_plan_code': current_plan_code,
-        'active_tab': 'subscription',
-    }
-    return render(request, 'shared/subscription_plans.html', context)
-
-
-@login_required
 def upgrade_subscription(request):
     """Upgrade subscription page"""
+    
+    # ✅ Allow super admin to access without tenant
+    if request.user.is_super_admin:
+        messages.info(request, 'Super admin does not have a subscription to upgrade.')
+        return redirect('tenants:subscription_plans')
+    
+    # ✅ Regular user flow - check tenant
     tenant = request.user.tenant
 
     if not tenant:
         messages.error(request, 'No tenant assigned')
-        return redirect('dashboard')
+        return redirect('portal:dashboard')
 
     # Get current plan
     current_plan = tenant.subscription_plan or 'free'
     
     # Get all available plans
-    from apps.shared.tenants.models import SubscriptionPlan
     plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price_monthly')
     
     # Get the next plan (recommended upgrade)
@@ -1135,17 +1172,16 @@ def upgrade_subscription(request):
             new_plan = plan
             break
     
-    # If no plan found, use the first available
     if not new_plan and plans.exists():
         new_plan = plans.first()
 
-    # ✅ Get the upgrade intent from session
+    # Get upgrade intent from session
     upgrade_intent = request.session.get('upgrade_intent', {})
     action = upgrade_intent.get('action', '')
     current_count = upgrade_intent.get('current_count', 0)
     max_limit = upgrade_intent.get('max_limit', 0)
 
-    # ✅ Get limit type display name
+    # Get limit type display name
     limit_type_map = {
         'add_user': ('Users', 'users'),
         'add_product': ('Products', 'products'),
@@ -1164,7 +1200,7 @@ def upgrade_subscription(request):
             tenant.subscription_end = timezone.now() + timedelta(days=30)
             tenant.save()
             
-            # Clear the upgrade intent
+            # Clear upgrade intent
             if 'upgrade_intent' in request.session:
                 del request.session['upgrade_intent']
             
@@ -1175,7 +1211,6 @@ def upgrade_subscription(request):
                 f'and {new_plan.max_branches} branches.'
             )
             
-            # Redirect back to the original page if exists
             return_url = upgrade_intent.get('return_url', 'tronic_master:dashboard')
             return redirect(return_url)
         
@@ -1193,9 +1228,11 @@ def upgrade_subscription(request):
         'limit_key': limit_key,
         'current_count': current_count,
         'max_limit': max_limit,
+        'is_super_admin': False,
         'active_tab': 'subscription',
     }
     return render(request, 'shared/upgrade_subscription.html', context)
+
 
 
 # ============================================
