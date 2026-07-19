@@ -1,44 +1,145 @@
-<!-- templates/tronic_master/sales/my_sales.html -->
+<!-- templates/tronic_master/my_sales.html -->
 {% extends 'tronic_master/base_tronic.html' %}
+{% load static %}
 
-{% block title %}My Sales | {{ user.username }}{% endblock %}
+{% block title %}
+    {% if is_admin %}All Sales{% else %}My Sales{% endif %} | {{ user.username }}
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>
-            <i class="fas fa-chart-line text-primary me-2"></i>
-        </h2>
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <a href="#" class="btn btn-success">
-                <i class="fas fa-chart-line me-2"></i>Total Sales {{ total_count }}
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-chart-line text-primary me-2"></i>
+                {% if is_admin %}
+                    All Sales - System Wide
+                {% else %}
+                    My Sales
+                {% endif %}
+            </h4>
+            <p class="text-muted mb-0">
+                {% if is_admin %}
+                    <i class="fas fa-user-shield me-1 text-warning"></i>
+                    Admin View: Showing all sales across all branches and agents
+                {% else %}
+                    Showing sales made by <strong>{{ user.get_full_name|default:user.username }}</strong>
+                {% endif %}
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <!-- Stats Badges -->
+            <a href="#" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-chart-line me-1"></i>
+                Total: {{ total_count }}
             </a>
-            <a href="#" class="btn btn-success">
-                <i class="fas fa-pause-circle me-2"></i>Today Sales {{ today_count|default:0 }}
+            <a href="#" class="btn btn-outline-success btn-sm">
+                <i class="fas fa-calendar-day me-1"></i>
+                Today: {{ today_count|default:0 }}
             </a>
-            <a href="{% url 'tronic_master:agent_sale' %}" class="btn btn-success">
-                <i class="fas fa-plus-circle me-2"></i>New Sale
+            {% if is_admin %}
+            <a href="#" class="btn btn-outline-info btn-sm">
+                <i class="fas fa-users me-1"></i>
+                Agents: {{ agent_count|default:0 }}
             </a>
-            <a href="{% url 'tronic_master:my_stock' %}" class="btn btn-secondary">
-                <i class="fas fa-box me-2"></i>My Stock
+            <a href="#" class="btn btn-outline-warning btn-sm">
+                <i class="fas fa-money-bill-wave me-1"></i>
+                Total Revenue: KES {{ total_revenue|floatformat:0 }}
             </a>
+            {% endif %}
+            
+            <!-- Action Buttons -->
+            <a href="{% url 'tronic_master:agent_sale' %}" class="btn btn-success btn-sm">
+                <i class="fas fa-plus-circle me-1"></i>New Sale
+            </a>
+            <a href="{% url 'tronic_master:my_stock' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-box me-1"></i>My Stock
+            </a>
+            {% if is_admin %}
+            <a href="{% url 'tronic_master:receipt_search' %}" class="btn btn-info btn-sm">
+                <i class="fas fa-search me-1"></i>Search Receipts
+            </a>
+            {% endif %}
         </div>
     </div>
 
+    <!-- Admin Alert Banner -->
+    {% if is_admin %}
+    <div class="alert alert-info alert-dismissible fade show mb-4">
+        <i class="fas fa-user-shield me-2"></i>
+        <strong>Admin Mode:</strong> You are viewing all sales in the system across all branches and agents.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Search and Filter -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="q" class="form-control" 
+                               placeholder="Search by invoice, customer, or product..." 
+                               value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" name="date_from" class="form-control" 
+                           value="{{ date_from }}" placeholder="Date From">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" name="date_to" class="form-control" 
+                           value="{{ date_to }}" placeholder="Date To">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+                <div class="col-12">
+                    <a href="{% url 'tronic_master:my_sales' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-undo me-2"></i>Clear Filters
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Sales Table -->
-    <div class="card">
-        <div class="card-body">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold">
+                <i class="fas fa-list me-2"></i>
+                {% if is_admin %}All Sales{% else %}My Sales{% endif %}
+                <span class="badge bg-secondary ms-2">{{ sales.paginator.count }}</span>
+            </h6>
+            <div>
+                <span class="text-muted small">
+                    Total Value: <strong class="text-success">KES {{ total_value|floatformat:0 }}</strong>
+                </span>
+            </div>
+        </div>
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
                         <tr>
+                            <th>#</th>
                             <th>Invoice No</th>
                             <th>Customer</th>
+                            <th>Phone</th>
                             <th>Product</th>
                             <th>Amount</th>
+                            <th>Payment</th>
                             <th>Date</th>
+                            {% if is_admin %}
+                            <th>Agent</th>
+                            <th>Branch</th>
+                            {% endif %}
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -46,34 +147,98 @@
                     <tbody>
                         {% for sale in sales %}
                         <tr>
-                            <td><code>{{ sale.invoice_no }}</code></td>
-                            <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+                            <td>{{ forloop.counter0|add:sales.start_index }}</td>
                             <td>
-                                {% for item in sale.items.all %}
-                                {{ item.product.name }}{% if not forloop.last %}, {% endif %}
+                                <code class="fw-bold text-primary">{{ sale.invoice_no }}</code>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ sale.customer_name|default:"Walk-in" }}</div>
+                                {% if sale.customer %}
+                                <small class="text-muted">ID: {{ sale.customer.id }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ sale.customer_phone|default:"-" }}</td>
+                            <td>
+                                {% for item in sale.items.all|slice:":2" %}
+                                <span class="small">{{ item.product.name }}</span>{% if not forloop.last %}, {% endif %}
                                 {% empty %}
-                                -
+                                <span class="text-muted">-</span>
                                 {% endfor %}
-                            </td>
-                            <td><strong>KES {{ sale.total|floatformat:2 }}</strong></td>
-                            <td>{{ sale.created_at|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                <span class="badge bg-success">Completed</span>
+                                {% if sale.items.count > 2 %}
+                                <span class="badge bg-secondary">+{{ sale.items.count|add:"-2" }} more</span>
+                                {% endif %}
                             </td>
                             <td>
-                                <a href="{% url 'tronic_master:sale_detail' sale.id %}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{% url 'tronic_master:receipt' sale.id %}" class="btn btn-sm btn-secondary">
-                                    <i class="fas fa-receipt"></i>
-                                </a>
+                                <strong class="text-success">KES {{ sale.total|floatformat:2 }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ sale.get_payment_method_display }}</span>
+                            </td>
+                            <td>
+                                <div>{{ sale.created_at|date:"Y-m-d" }}</div>
+                                <small class="text-muted">{{ sale.created_at|time:"H:i" }}</small>
+                            </td>
+                            {% if is_admin %}
+                            <td>
+                                {% if sale.cashier %}
+                                <span class="badge bg-secondary">
+                                    {{ sale.cashier.get_full_name|default:sale.cashier.username }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ sale.branch.name|default:"Main" }}</span>
+                            </td>
+                            {% endif %}
+                            <td>
+                                <span class="badge 
+                                    {% if sale.status == 'completed' %}bg-success
+                                    {% elif sale.status == 'pending' %}bg-warning text-dark
+                                    {% elif sale.status == 'cancelled' %}bg-danger
+                                    {% elif sale.status == 'refunded' %}bg-secondary
+                                    {% else %}bg-light text-dark{% endif %}">
+                                    {{ sale.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'tronic_master:sale_detail' sale.id %}" 
+                                       class="btn btn-outline-info" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'tronic_master:receipt' sale.id %}" 
+                                       class="btn btn-outline-primary" title="View Receipt" target="_blank">
+                                        <i class="fas fa-receipt"></i>
+                                    </a>
+                                    {% if is_admin and sale.status == 'completed' %}
+                                    <a href="{% url 'tronic_master:refund_sale' sale.id %}" 
+                                       class="btn btn-outline-danger" title="Refund" onclick="return confirm('Are you sure you want to refund this sale?')">
+                                        <i class="fas fa-undo"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                No sales made yet
+                            <td colspan="{% if is_admin %}12{% else %}9{% endif %}" class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3 d-block opacity-50"></i>
+                                <p class="fw-bold">
+                                    {% if is_admin %}
+                                    No sales found in the system
+                                    {% else %}
+                                    No sales made yet
+                                    {% endif %}
+                                </p>
+                                <small class="text-muted">
+                                    {% if is_admin %}
+                                    Sales will appear here when agents complete transactions
+                                    {% else %}
+                                    Start selling by clicking <a href="{% url 'tronic_master:agent_sale' %}">New Sale</a>
+                                    {% endif %}
+                                </small>
                             </td>
                         </tr>
                         {% endfor %}
@@ -81,6 +246,196 @@
                 </table>
             </div>
         </div>
+        
+        <!-- Footer with Pagination -->
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <span class="text-muted small">
+                        Showing {{ sales.start_index }} to {{ sales.end_index }} of {{ sales.paginator.count }} sales
+                    </span>
+                </div>
+                {% if sales.paginator.num_pages > 1 %}
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if sales.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">
+                                <i class="fas fa-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ sales.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in sales.paginator.page_range %}
+                            {% if sales.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > sales.number|add:'-3' and num < sales.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if sales.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ sales.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ sales.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">
+                                <i class="fas fa-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
     </div>
+
+    <!-- Quick Stats Cards -->
+    {% if sales %}
+    <div class="row g-3 mt-2">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Sales</h6>
+                            <h5 class="fw-bold mb-0">{{ sales.paginator.count }}</h5>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded p-2">
+                            <i class="fas fa-chart-bar text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Revenue</h6>
+                            <h5 class="fw-bold text-success mb-0">KES {{ total_value|floatformat:0 }}</h5>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded p-2">
+                            <i class="fas fa-money-bill-wave text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Today's Sales</h6>
+                            <h5 class="fw-bold mb-0">{{ today_count|default:0 }}</h5>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded p-2">
+                            <i class="fas fa-calendar-day text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Avg. Sale Value</h6>
+                            <h5 class="fw-bold mb-0">KES {{ avg_value|floatformat:0|default:0 }}</h5>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded p-2">
+                            <i class="fas fa-calculator text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+    .table td {
+        vertical-align: middle;
+        font-size: 0.85rem;
+    }
+    .card {
+        border-radius: 12px;
+    }
+    .badge {
+        font-weight: 500;
+    }
+    code {
+        font-size: 0.8rem;
+    }
+    
+    @media (max-width: 768px) {
+        .table th, .table td {
+            font-size: 0.75rem;
+            padding: 0.5rem;
+        }
+        .btn-group .btn {
+            padding: 0.2rem 0.4rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit search on Enter key
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.closest('form').submit();
+            }
+        });
+    }
+    
+    // Date range validation
+    const dateFrom = document.querySelector('input[name="date_from"]');
+    const dateTo = document.querySelector('input[name="date_to"]');
+    
+    if (dateFrom && dateTo) {
+        dateFrom.addEventListener('change', function() {
+            if (this.value) {
+                dateTo.min = this.value;
+            }
+        });
+        
+        dateTo.addEventListener('change', function() {
+            if (this.value && dateFrom.value && this.value < dateFrom.value) {
+                alert('End date cannot be before start date');
+                this.value = '';
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

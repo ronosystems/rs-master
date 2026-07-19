@@ -62,7 +62,6 @@
                                     <th>Product Name</th>
                                     <th>Brand</th>
                                     <th>Model</th>
-                                    <th>Specifications</th>
                                     <th>Category</th>
                                     <th>Stock</th>
                                     <th>Product Type</th>
@@ -83,16 +82,6 @@
                                     </td>
                                     <td>{{ product.brand|default:"-" }}</td>
                                     <td>{{ product.model|default:"-" }}</td>
-                                    <td>
-                                        <!-- ✅ FIXED: Use display_primary_spec property -->
-                                        {% if product.display_primary_spec and product.display_primary_spec != "-" %}
-                                            <span class="badge bg-secondary">
-                                                <i class="fas fa-tag"></i> {{ product.display_primary_spec }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
                                     <td>{{ product.category.name|default:"Uncategorized" }}</td>
                                     <td>
                                         <small>Total: {{ product.total_quantity }}</small>

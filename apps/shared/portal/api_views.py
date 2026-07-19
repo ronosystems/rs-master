@@ -8,183 +8,230 @@ from django.db.models import Q
 from django.utils import timezone
 import json
 from decimal import Decimal
+import logging
 
-from apps.tronic_master.models import Product, ProductUnit
+from apps.tronic_master.models import Product, ProductUnit, Sale, SaleItem
 from apps.shared.customers.models import Customer
-from apps.tronic_master.models import Sale, SaleItem
+from .helpers import get_user_branch
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================
-# HELPER: Get user's branch
-# ============================================
-
-def get_user_branch(user):
-    """Get the branch assigned to a user"""
-    if hasattr(user, 'branch') and user.branch:
-        return user.branch
-    elif hasattr(user, 'tech_staff_profile') and user.tech_staff_profile:
-        return user.tech_staff_profile.branch
-    return None
-
-
-# ============================================
-# SEARCH PRODUCT
+# SEARCH PRODUCT - FIXED FOR YOUR MODELS
 # ============================================
 
 @login_required
 def search_product(request):
     """Search products by name, SKU, IMEI, or serial number"""
-    tenant = request.user.tenant
-    
-    if not tenant:
-        return JsonResponse({'error': 'No tenant assigned'}, status=400)
-    
-    # ✅ Get user's branch
-    user_branch = get_user_branch(request.user)
-    
-    query = request.GET.get('q', '').strip()
-    results = []
-    
-    # Search Products (only show products with stock > 0)
-    products = Product.objects.filter(
-        tenant=tenant,
-        is_active=True,
-        available_quantity__gt=0
-    )
-    
-    # ✅ Filter by user's branch
-    if user_branch:
-        products = products.filter(
-            Q(branch=user_branch) | Q(branch__isnull=True)
-        )
-    
-    if query:
-        products = products.filter(
-            Q(name__icontains=query) |
-            Q(brand__icontains=query) |
-            Q(model__icontains=query) |
-            Q(sku_code__icontains=query) |
-            Q(barcode__icontains=query)
-        )
-    
-    products = products[:20]
-    
-    for product in products:
-        is_single = product.category.is_single_item if product.category else False
+    try:
+        tenant = request.user.tenant
         
-        # ✅ Get available units for single items (filtered by branch)
-        units_count = 0
-        if is_single:
-            units_qs = ProductUnit.objects.filter(
-                product=product,
+        if not tenant:
+            return JsonResponse({'error': 'No tenant assigned'}, status=400)
+        
+        # Get user's branch
+        user_branch = get_user_branch(request.user)
+        
+        # Get query parameter
+        query = request.GET.get('q', '').strip()
+        
+        # Remove problematic characters
+        if query:
+            query = query.replace(':', '').replace(';', '').replace('(', '').replace(')', '')
+        
+        logger.info(f"Search products - Tenant: {tenant.id}, Query: '{query}', Branch: {user_branch}")
+        
+        results = []
+        
+        # Search Products
+        products = Product.objects.filter(
+            tenant=tenant,
+            is_active=True
+        ).select_related('category', 'branch')
+        
+        # Filter by branch if user has one
+        if user_branch:
+            products = products.filter(
+                Q(branch=user_branch) | Q(branch__isnull=True)
+            )
+        
+        # Apply search filter
+        if query:
+            products = products.filter(
+                Q(name__icontains=query) |
+                Q(brand__icontains=query) |
+                Q(model__icontains=query) |
+                Q(sku_code__icontains=query)
+            )
+        
+        # Limit results
+        products = products[:20]
+        
+        for product in products:
+            try:
+                # Check if category is single item type
+                is_single = product.category.is_single_item if product.category else False
+                
+                # Get available units for single items
+                units_count = 0
+                if is_single:
+                    units_qs = ProductUnit.objects.filter(
+                        product=product,
+                        tenant=tenant,
+                        status='available'
+                    )
+                    if user_branch:
+                        units_qs = units_qs.filter(branch=user_branch)
+                    units_count = units_qs.count()
+                
+                # For bulk items, use available_quantity
+                available_stock = units_count if is_single else product.available_quantity
+                
+                results.append({
+                    'id': product.id,
+                    'type': 'product',
+                    'name': product.name or f"{product.brand} {product.model}",
+                    'sku': product.sku_code,
+                    'barcode': '',  # Not in your Product model
+                    'price': float(product.default_selling_price),
+                    'buying_price': float(product.default_buying_price),
+                    'stock': available_stock,
+                    'identifier': product.sku_code,
+                    'has_stock': available_stock > 0,
+                    'is_single': is_single,
+                    'branch': product.branch.name if product.branch else None,
+                    'category': product.category.name if product.category else 'Uncategorized',
+                })
+            except Exception as e:
+                logger.error(f"Error processing product {product.id}: {e}")
+                continue
+        
+        # Search Product Units (IMEI/Serial)
+        if query and len(query) >= 3:
+            units = ProductUnit.objects.filter(
                 tenant=tenant,
                 status='available'
-            )
+            ).select_related('product', 'branch', 'product__category')
+            
+            # Filter by branch
             if user_branch:
-                units_qs = units_qs.filter(branch=user_branch)
-            units_count = units_qs.count()
+                units = units.filter(branch=user_branch)
+            
+            # Search by IMEI or Serial
+            units = units.filter(
+                Q(imei_number__icontains=query) |
+                Q(serial_number__icontains=query)
+            )
+            
+            units = units[:20]
+            
+            for unit in units:
+                try:
+                    price = unit.unit_selling_price or unit.product.default_selling_price
+                    results.append({
+                        'id': unit.id,
+                        'type': 'unit',
+                        'name': unit.product.name or f"{unit.product.brand} {unit.product.model}",
+                        'sku': unit.product.sku_code,
+                        'imei': unit.imei_number or '',
+                        'serial': unit.serial_number or '',
+                        'price': float(price),
+                        'buying_price': float(unit.unit_buying_price or unit.product.default_buying_price),
+                        'identifier': unit.imei_number or unit.serial_number or unit.product.sku_code,
+                        'product_id': unit.product.id,
+                        'stock': 1,
+                        'has_stock': True,
+                        'is_single': True,
+                        'branch': unit.branch.name if unit.branch else None,
+                        'category': unit.product.category.name if unit.product.category else 'Uncategorized',
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing unit {unit.id}: {e}")
+                    continue
         
-        # For bulk items, use available_quantity
-        available_stock = units_count if is_single else product.available_quantity
-        
-        results.append({
-            'id': product.id,
-            'type': 'product',
-            'name': product.name,
-            'sku': product.sku_code,
-            'barcode': product.barcode or '',
-            'price': float(product.selling_price),
-            'buying_price': float(product.buying_price),
-            'stock': available_stock,  # ✅ Show correct stock based on branch
-            'identifier': product.sku_code,
-            'has_stock': available_stock > 0,
-            'is_single': is_single,
-            'branch': product.branch.name if product.branch else None,
+        return JsonResponse({
+            'success': True,
+            'results': results,
+            'user_branch': user_branch.name if user_branch else None,
+            'query': query,
+            'count': len(results)
         })
-    
-    # Search Product Units (IMEI/Serial) - Single items only
-    if query and len(query) >= 3:
-        units = ProductUnit.objects.filter(
-            tenant=tenant,
-            status='available'
-        ).filter(
-            Q(imei_number__icontains=query) |
-            Q(serial_number__icontains=query)
-        ).select_related('product', 'product__category')
         
-        # ✅ Filter units by user's branch
-        if user_branch:
-            units = units.filter(branch=user_branch)
+    except Exception as e:
+        import traceback
+        error_msg = str(e)
+        traceback_str = traceback.format_exc()
+        logger.error(f"ERROR in search_product: {error_msg}")
+        logger.error(traceback_str)
         
-        units = units[:20]
-        
-        for unit in units:
-            price = unit.unit_selling_price or unit.product.selling_price
-            results.append({
-                'id': unit.id,
-                'type': 'unit',
-                'name': unit.product.name,
-                'sku': unit.product.sku_code,
-                'imei': unit.imei_number or '',
-                'serial': unit.serial_number or '',
-                'price': float(price),
-                'buying_price': float(unit.unit_buying_price or unit.product.buying_price),
-                'identifier': unit.imei_number or unit.serial_number,
-                'product_id': unit.product.id,
-                'stock': 1,
-                'has_stock': True,
-                'is_single': True,
-                'branch': unit.branch.name if unit.branch else None,
-            })
-    
-    return JsonResponse({
-        'results': results,
-        'user_branch': user_branch.name if user_branch else None,
-    })
+        return JsonResponse({
+            'success': False,
+            'error': error_msg,
+            'traceback': traceback_str
+        }, status=500)
 
+
+# ============================================
+# GET PRODUCT UNITS - FIXED
+# ============================================
 
 @login_required
 def get_product_units(request):
     """Get available units for a product (single items)"""
-    tenant = request.user.tenant
-    product_id = request.GET.get('product_id')
-    
-    if not tenant or not product_id:
-        return JsonResponse({'error': 'Invalid request'}, status=400)
-    
-    # ✅ Get user's branch
-    user_branch = get_user_branch(request.user)
-    
-    units = ProductUnit.objects.filter(
-        tenant=tenant,
-        product_id=product_id,
-        status='available'
-    ).select_related('product')
-    
-    # ✅ Filter units by user's branch
-    if user_branch:
-        units = units.filter(branch=user_branch)
-    
-    unit_list = []
-    for unit in units:
-        price = unit.unit_selling_price or unit.product.selling_price
-        unit_list.append({
-            'id': unit.id,
-            'identifier': unit.imei_number or unit.serial_number,
-            'price': float(price),
-            'condition': unit.get_condition_display(),
-            'branch': unit.branch.name if unit.branch else None,
+    try:
+        tenant = request.user.tenant
+        product_id = request.GET.get('product_id')
+        
+        if not tenant:
+            return JsonResponse({'error': 'No tenant assigned'}, status=400)
+        
+        if not product_id:
+            return JsonResponse({'error': 'Product ID required'}, status=400)
+        
+        # Get user's branch
+        user_branch = get_user_branch(request.user)
+        
+        units = ProductUnit.objects.filter(
+            tenant=tenant,
+            product_id=product_id,
+            status='available'
+        ).select_related('product', 'branch')
+        
+        # Filter units by user's branch
+        if user_branch:
+            units = units.filter(branch=user_branch)
+        
+        unit_list = []
+        for unit in units:
+            price = unit.unit_selling_price or unit.product.default_selling_price
+            unit_list.append({
+                'id': unit.id,
+                'identifier': unit.imei_number or unit.serial_number or unit.product.sku_code,
+                'price': float(price),
+                'condition': unit.get_condition_display() if hasattr(unit, 'get_condition_display') else 'New',
+                'branch': unit.branch.name if unit.branch else None,
+                'imei': unit.imei_number or '',
+                'serial': unit.serial_number or '',
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'units': unit_list,
+            'user_branch': user_branch.name if user_branch else None,
+            'count': len(unit_list)
         })
-    
-    return JsonResponse({
-        'units': unit_list,
-        'user_branch': user_branch.name if user_branch else None,
-        'count': len(unit_list)
-    })
+        
+    except Exception as e:
+        logger.error(f"Error in get_product_units: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 # ============================================
-# CART FUNCTIONS
+# CART FUNCTIONS - Keep these as they are
 # ============================================
 
 @login_required
@@ -214,35 +261,33 @@ def get_cart(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def add_to_cart(request):
-    """Add item to cart - Units go as separate rows, Bulk products accumulate"""
+    """Add item to cart"""
     try:
         data = json.loads(request.body)
         item_id = data.get('item_id')
         item_type = data.get('type', 'product')
         quantity = int(data.get('quantity', 1))
-    except:
-        return JsonResponse({'error': 'Invalid data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
     
     tenant = request.user.tenant
     
     if not tenant:
         return JsonResponse({'error': 'No tenant assigned'}, status=400)
     
-    # ✅ Get user's branch
     user_branch = get_user_branch(request.user)
-    
     cart = request.session.get('pos_cart', [])
     
-    # ✅ Check if item already in cart
+    # Check if item already in cart
     for item in cart:
         if item.get('id') == item_id and item.get('type') == item_type:
             is_single = item.get('is_single', False)
             
             if is_single:
-                # ✅ SINGLE ITEMS - Add as new row (don't accumulate)
+                # Single items don't accumulate
                 pass
             else:
-                # ✅ BULK ITEMS - Accumulate quantity
+                # Bulk items accumulate
                 new_quantity = item['quantity'] + quantity
                 max_stock = item.get('stock', 999)
                 
@@ -257,30 +302,25 @@ def add_to_cart(request):
                 request.session['pos_cart'] = cart
                 return get_cart(request)
     
-    # ✅ Get item details with stock validation
+    # Get item details
     item_data = None
-    is_single = False
     
     if item_type == 'product':
         product = Product.objects.filter(id=item_id, tenant=tenant).first()
         if product:
-            # ✅ Check if product is single or bulk
             is_single = product.category.is_single_item if product.category else False
             
-            # ✅ Check if product belongs to user's branch
             if user_branch and product.branch and product.branch.id != user_branch.id:
                 return JsonResponse({
                     'error': f'This product belongs to branch "{product.branch.name}". You are assigned to "{user_branch.name}".'
                 }, status=403)
             
-            # ✅ Validate stock for bulk items
             if not is_single and product.available_quantity < quantity:
                 return JsonResponse({
                     'error': f'Only {product.available_quantity} units available in stock.',
                     'available_stock': product.available_quantity
                 }, status=400)
             
-            # ✅ For single items, check available units in user's branch
             if is_single:
                 available_units = ProductUnit.objects.filter(
                     product=product,
@@ -293,19 +333,18 @@ def add_to_cart(request):
                 
                 if available_count < quantity:
                     return JsonResponse({
-                        'error': f'Only {available_count} units available in your branch ({user_branch.name if user_branch else "Main"}).',
+                        'error': f'Only {available_count} units available in your branch.',
                         'available_units': available_count
                     }, status=400)
                 
-                # For single items, we'll add each unit separately
                 quantity = 1
             
             item_data = {
                 'id': product.id,
                 'type': 'product',
-                'name': product.name,
+                'name': product.name or f"{product.brand} {product.model}",
                 'sku': product.sku_code,
-                'price': float(product.selling_price),
+                'price': float(product.default_selling_price),
                 'quantity': quantity,
                 'identifier': product.sku_code,
                 'stock': product.available_quantity,
@@ -318,33 +357,29 @@ def add_to_cart(request):
     elif item_type == 'unit':
         unit = ProductUnit.objects.filter(id=item_id, tenant=tenant, status='available').first()
         if unit:
-            # ✅ Check if unit belongs to user's branch
             if user_branch and unit.branch and unit.branch.id != user_branch.id:
                 return JsonResponse({
                     'error': f'This unit belongs to branch "{unit.branch.name}". You are assigned to "{user_branch.name}".'
                 }, status=403)
             
-            price = unit.unit_selling_price or unit.product.selling_price
-            is_single = True
+            price = unit.unit_selling_price or unit.product.default_selling_price
             
-            # ✅ Check if this exact unit is already in cart
             existing_unit = next((item for item in cart if item.get('id') == item_id and item.get('type') == 'unit'), None)
             if existing_unit:
                 return JsonResponse({
-                    'error': f'This unit ({unit.imei_number or unit.serial_number}) is already in the cart.',
-                    'unit_identifier': unit.imei_number or unit.serial_number
+                    'error': f'This unit ({unit.imei_number or unit.serial_number}) is already in the cart.'
                 }, status=400)
             
             item_data = {
                 'id': unit.id,
                 'type': 'unit',
-                'name': unit.product.name,
+                'name': unit.product.name or f"{unit.product.brand} {unit.product.model}",
                 'sku': unit.product.sku_code,
                 'imei': unit.imei_number or '',
                 'serial': unit.serial_number or '',
                 'price': float(price),
                 'quantity': 1,
-                'identifier': unit.imei_number or unit.serial_number,
+                'identifier': unit.imei_number or unit.serial_number or unit.product.sku_code,
                 'product_id': unit.product.id,
                 'stock': 1,
                 'has_stock': True,
@@ -360,7 +395,6 @@ def add_to_cart(request):
     request.session['pos_cart'] = cart
     
     return get_cart(request)
-
 
 @login_required
 @csrf_exempt
@@ -496,7 +530,6 @@ def search_customer(request):
             'success': True,
             'found': False,
         })
-    
 
 @login_required
 @csrf_exempt
@@ -546,6 +579,50 @@ def add_customer(request):
         }
     })
 
+
+# ============================================
+# SEARCH PAYMENTS
+# ============================================
+
+@login_required
+def search_payments(request):
+    """Search payments by transaction ID, phone, or date"""
+    tenant = request.user.tenant
+    
+    if not tenant:
+        return JsonResponse({'error': 'No tenant assigned'}, status=400)
+    
+    txn_id = request.GET.get('txn_id', '').strip()
+    phone = request.GET.get('phone', '').strip()
+    date = request.GET.get('date', '').strip()
+    
+    payments = Sale.objects.filter(tenant=tenant)
+    
+    if txn_id:
+        payments = payments.filter(invoice_no__icontains=txn_id)
+    if phone:
+        payments = payments.filter(customer_phone__icontains=phone)
+    if date:
+        payments = payments.filter(created_at__date=date)
+    
+    payments = payments.order_by('-created_at')[:20]
+    
+    results = []
+    for payment in payments:
+        results.append({
+            'txn_id': payment.invoice_no,
+            'amount': float(payment.total),
+            'phone': payment.customer_phone or '',
+            'status': 'completed' if payment.status == 'completed' else payment.status,
+            'date': payment.created_at.strftime('%Y-%m-%d %H:%M'),
+            'payment_method': payment.payment_method,
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'payments': results,
+        'count': len(results)
+    })
 
 # ============================================
 # PAYMENT PROCESSING

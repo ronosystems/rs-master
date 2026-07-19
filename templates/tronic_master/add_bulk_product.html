@@ -31,12 +31,22 @@
                                         </div>
                                         
                                         <div class="row">
-                                            <div class="col-md-12 mb-3">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="category_id" class="form-label">Category *</label>
+                                                <select class="form-control" id="category_id" name="category_id" required>
+                                                    <option value="">Select Category</option>
+                                                    {% for cat in categories %}
+                                                    <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.get_item_type_display }})</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
                                                 <label for="name" class="form-label">Product Name *</label>
                                                 <input type="text" class="form-control" id="name" name="name" required 
                                                        placeholder="e.g., USB-C Cable">
                                             </div>
                                         </div>
+                                        
                                         
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
@@ -51,16 +61,8 @@
                                             </div>
                                         </div>
                                         
+
                                         <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label for="category_id" class="form-label">Category *</label>
-                                                <select class="form-control" id="category_id" name="category_id" required>
-                                                    <option value="">Select Category</option>
-                                                    {% for cat in categories %}
-                                                    <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.get_item_type_display }})</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
                                             <div class="col-md-6 mb-3">
                                                 <label for="branch_id" class="form-label">Branch *</label>
                                                 <select class="form-control" id="branch_id" name="branch_id" required>
@@ -70,9 +72,6 @@
                                                     {% endfor %}
                                                 </select>
                                             </div>
-                                        </div>
-                                        
-                                        <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="supplier_id" class="form-label">Supplier</label>
                                                 <select class="form-control" id="supplier_id" name="supplier_id">
@@ -82,24 +81,21 @@
                                                     {% endfor %}
                                                 </select>
                                             </div>
+                                        </div>
+                                        
+
+                                        <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="sku_code" class="form-label">SKU Code</label>
                                                 <input type="text" class="form-control" id="sku_code" name="sku_code" 
                                                        placeholder="Auto-generated on save" readonly style="background-color: #e9ecef; cursor: not-allowed;">
-                                                <small class="text-muted">SKU will be auto-generated as 000001, 000002, 000003...</small>
+                                                <small class="text-muted">SKU will be auto-generated</small>
                                             </div>
-                                        </div>
-                                        
-                                        <div class="row">
+
                                             <div class="col-md-6 mb-3">
                                                 <label for="stock_quantity" class="form-label">Initial Stock Quantity *</label>
                                                 <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" 
                                                        required value="1" min="1">
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label for="description" class="form-label">Description</label>
-                                                <textarea class="form-control" id="description" name="description" rows="3" 
-                                                          placeholder="e.g., 1 meter length, Type-C connector, Fast charging support"></textarea>
                                             </div>
                                         </div>
                                     </div>

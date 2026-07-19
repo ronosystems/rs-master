@@ -62,9 +62,7 @@ class TechMasterConfig(AppConfig):
                 'Sales Agent': {
                     'description': 'Create sales',
                     'permissions': [
-                        'can_view_product',
-                        'can_view_stock',
-                        'can_view_sale', 'can_create_sale',
+                        'can_create_sale',
                     ],
                     'is_system_role': False
                 },

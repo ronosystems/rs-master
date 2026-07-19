@@ -1242,33 +1242,33 @@
                 {% endif %}
 
                 <!-- ============================================ -->
-                <!-- MY BUSINESS -->
+                <!-- LOAN SALES -->
                 <!-- ============================================ -->
                 {% if user|tronic_can_any:'can_view_my_stock,can_view_my_sales,can_view_agent_sale_form' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
-                        👤 MY BUSINESS
+                        👤 LOAN DEVICES
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
                         {% if user|tronic_can:'can_view_my_stock' %}
                         <a href="{% url 'tronic_master:my_stock' %}" class="menu-item">
                             <i class="fas fa-box"></i>
-                            <span>My Stock</span>
+                            <span>My Devices</span>
                         </a>
                         {% endif %}
 
                         {% if user|tronic_can:'can_view_my_sales' %}
                         <a href="{% url 'tronic_master:my_sales' %}" class="menu-item">
                             <i class="fas fa-chart-line"></i>
-                            <span>My Sales</span>
+                            <span>My loans</span>
                         </a>
                         {% endif %}
 
                         {% if user|tronic_can:'can_view_agent_sale_form' %}
                         <a href="{% url 'tronic_master:agent_sale' %}" class="menu-item">
                             <i class="fas fa-hand-holding-usd"></i>
-                            <span>New Sale</span>
+                            <span>New Loan</span>
                         </a>
                         {% endif %}
                     </div>

@@ -1,22 +1,54 @@
-<!-- templates/tronic_master/sales/agent_sale.html -->
+<!-- templates/tronic_master/agent_sale.html -->
 {% extends 'tronic_master/base_tronic.html' %}
 {% load static %}
 
-{% block title %}New Sale | Sales Agent{% endblock %}
+{% block title %}
+    {% if is_admin %}Admin Sale{% else %}New Sale{% endif %} | Sales Agent
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-lg-8 mx-auto">
             <div class="card border-0 shadow-sm">
-                <!-- ✅ Added a header -->
-                <div class="card-header bg-primary text-white py-3">
-                    <h5 class="mb-0">
-                        <i class="fas fa-shopping-cart me-2"></i>New Sale
-                    </h5>
-                    <small class="text-white-50">Register a new sale for customer</small>
+                <!-- Header -->
+                <div class="card-header {% if is_admin %}bg-warning text-dark{% else %}bg-primary text-white{% endif %} py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                {% if is_admin %}
+                                    <i class="fas fa-user-shield me-1"></i> Admin Sale
+                                {% else %}
+                                    New Sale
+                                {% endif %}
+                            </h5>
+                            <small class="{% if is_admin %}text-dark{% else %}text-white-50{% endif %}">
+                                {% if is_admin %}
+                                    Admin Mode: Sell any available unit
+                                {% else %}
+                                    Register a new sale for customer
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div>
+                            <span class="badge {% if is_admin %}bg-dark{% else %}bg-light text-dark{% endif %}">
+                                Available: {{ total_available }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
+                
                 <div class="card-body">
+                    <!-- Admin Alert Banner -->
+                    {% if is_admin %}
+                    <div class="alert alert-warning alert-dismissible fade show mb-4">
+                        <i class="fas fa-user-shield me-2"></i>
+                        <strong>Admin Mode:</strong> You are viewing all available stock across all branches.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endif %}
+
                     <form method="post" action="{% url 'tronic_master:agent_sale' %}">
                         {% csrf_token %}
                         
@@ -25,12 +57,12 @@
                             <h6><i class="fas fa-user-circle me-2"></i>Customer Details</h6>
                             <div class="row g-3">
                                 <div class="col-md-5">
-                                    <label class="form-label fw-semibold">Full Name *</label>
-                                    <input type="text" name="customer_name" id="customerName" class="form-control" required>
+                                    <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="customer_name" id="customerName" class="form-control" required placeholder="Enter customer full name">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Phone Number *</label>
-                                    <input type="tel" name="customer_phone" id="customerPhone" class="form-control" required>
+                                    <label class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+                                    <input type="tel" name="customer_phone" id="customerPhone" class="form-control" required placeholder="07XXXXXXXX">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-semibold">ID Number</label>
@@ -41,7 +73,7 @@
                         
                         <!-- Next of Kin Details Section -->
                         <div class="form-section">
-                            <h6><i class="fas fa-users me-2"></i>Next of Kin Details</h6>
+                            <h6><i class="fas fa-users me-2"></i>Next of Kin Details <small class="text-muted">(Optional)</small></h6>
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <label class="form-label fw-semibold">Full Name</label>
@@ -66,7 +98,7 @@
                                 <!-- IMEI Input -->
                                 <div class="col-md-8">
                                     <label class="form-label fw-semibold">
-                                        <i class="fas fa-barcode me-1"></i>IMEI / Serial Number *
+                                        <i class="fas fa-barcode me-1"></i>IMEI / Serial Number <span class="text-danger">*</span>
                                     </label>
                                     <div class="autocomplete-container">
                                         <input type="text" id="imeiInput" name="imei" class="form-control form-control-lg" 
@@ -74,16 +106,23 @@
                                                autocomplete="off" required>
                                         <div id="imeiSuggestions" class="autocomplete-suggestions"></div>
                                     </div>
+                                    <small class="text-muted">
+                                        {% if is_admin %}
+                                        Search any available product by IMEI or Serial
+                                        {% else %}
+                                        Search your assigned products by IMEI or Serial
+                                        {% endif %}
+                                    </small>
                                 </div>
                                 
                                 <!-- Price Field (Editable) -->
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">
-                                        <i class="fas fa-tag me-1"></i>Selling Price (KES) *
+                                        <i class="fas fa-tag me-1"></i>Selling Price (KES) <span class="text-danger">*</span>
                                     </label>
                                     <input type="number" name="selling_price" id="sellingPrice" class="form-control form-control-lg" 
                                            step="0.01" min="0" placeholder="0.00" required>
-                                    <small class="text-muted">Enter selling price</small>
+                                    <small class="text-muted" id="defaultPriceDisplay">Enter selling price</small>
                                 </div>
                             </div>
                             
@@ -98,6 +137,13 @@
                                                 <i class="fas fa-microchip me-1"></i>
                                                 Identifier: <code id="selectedProductImei"></code>
                                             </div>
+                                            <div class="small mt-1">
+                                                <span id="selectedProductBranch" class="badge bg-secondary">Branch: -</span>
+                                                {% if is_admin %}
+                                                <span id="selectedProductOwner" class="badge bg-info ms-1">Owner: -</span>
+                                                {% endif %}
+                                                <span id="selectedProductCondition" class="badge bg-primary ms-1">Condition: -</span>
+                                            </div>
                                         </div>
                                         <div class="text-end mt-2 mt-sm-0">
                                             <span class="fw-bold text-success fs-4" id="selectedProductPriceDisplay"></span>
@@ -109,13 +155,16 @@
                         
                         <!-- Sale Type Section and Actions -->
                         <div class="form-section">
-                            <h6><i class="fas fa-credit-card me-2"></i>Sale Type</h6>
+                            <h6><i class="fas fa-credit-card me-2"></i>Payment Method</h6>
                             <div class="row g-3 align-items-end">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Payment Method *</label>
+                                    <label class="form-label fw-semibold">Payment Method <span class="text-danger">*</span></label>
                                     <select name="payment_method" id="paymentMethod" class="form-select form-select-lg" required>
-                                        <option value="credit" selected>Credit</option>
                                         <option value="cash">Cash</option>
+                                        <option value="mpesa" selected>M-Pesa</option>
+                                        <option value="card">Card</option>
+                                        <option value="bank">Bank Transfer</option>
+                                        <option value="credit">Credit</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3">
@@ -145,7 +194,7 @@
         border-radius: 12px;
         padding: 20px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(15, 0, 0, 0.986);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
         border: 1px solid var(--sidebar-border, #e9ecef);
     }
     .form-section h6 {
@@ -171,7 +220,7 @@
         overflow-y: auto;
         z-index: 1000;
         display: none;
-        box-shadow: 0 4px 12px rgb(12, 0, 0);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     .autocomplete-suggestion {
         padding: 12px 15px;
@@ -197,9 +246,18 @@
         font-size: 0.7rem;
         font-family: Arial, sans-serif;
         margin-top: 4px;
+        color: var(--sidebar-text, #666);
     }
     .autocomplete-suggestion.selected .suggestion-details {
         color: rgba(255,255,255,0.8);
+    }
+    .autocomplete-suggestion .suggestion-owner {
+        font-size: 0.65rem;
+        color: #6c757d;
+        margin-top: 2px;
+    }
+    .autocomplete-suggestion.selected .suggestion-owner {
+        color: rgba(255,255,255,0.7);
     }
     
     .highlight-match {
@@ -231,10 +289,18 @@
     [data-bs-theme="dark"] .autocomplete-suggestion:hover {
         background-color: #2d2d44;
     }
+    [data-bs-theme="dark"] .autocomplete-suggestion .suggestion-details {
+        color: #aaa;
+    }
     
     .btn-lg {
         padding: 10px 16px;
         font-size: 1rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
     }
 </style>
 
@@ -245,10 +311,17 @@
         {
             id: {{ product.id }},
             name: "{{ product.name|escapejs }}",
+            brand: "{{ product.brand|escapejs }}",
             model: "{{ product.model|escapejs }}",
+            sku: "{{ product.sku|escapejs }}",
             imei: "{{ product.imei|escapejs }}",
             serial: "{{ product.serial|escapejs }}",
-            price: {{ product.default_selling_price }}
+            price: {{ product.selling_price }},
+            branch: "{{ product.branch|escapejs }}",
+            condition: "{{ product.condition|escapejs }}",
+            {% if is_admin %}
+            owner: "{{ product.owner|escapejs }}",
+            {% endif %}
         },
         {% endfor %}
     ];
@@ -263,7 +336,11 @@
     const selectedProductName = document.getElementById('selectedProductName');
     const selectedProductImei = document.getElementById('selectedProductImei');
     const selectedProductPriceDisplay = document.getElementById('selectedProductPriceDisplay');
+    const selectedProductBranch = document.getElementById('selectedProductBranch');
+    const selectedProductOwner = document.getElementById('selectedProductOwner');
+    const selectedProductCondition = document.getElementById('selectedProductCondition');
     const sellingPriceInput = document.getElementById('sellingPrice');
+    const defaultPriceDisplay = document.getElementById('defaultPriceDisplay');
     
     function filterProducts(searchTerm) {
         if (!searchTerm || searchTerm.length < 2) {
@@ -299,11 +376,17 @@
             const identifier = product.imei || product.serial;
             const highlightedIdentifier = highlightMatch(identifier, searchTerm);
             
+            let ownerHtml = '';
+            {% if is_admin %}
+            ownerHtml = `<div class="suggestion-owner">👤 Owner: ${escapeHtml(product.owner || 'Unassigned')}</div>`;
+            {% endif %}
+            
             div.innerHTML = `
                 <div class="suggestion-imei">${highlightedIdentifier}</div>
                 <div class="suggestion-details">
-                    ${escapeHtml(product.name)} | KES ${product.price.toFixed(2)}
+                    ${escapeHtml(product.name)} | KES ${product.price.toFixed(2)} | Branch: ${escapeHtml(product.branch)}
                 </div>
+                ${ownerHtml}
             `;
             div.addEventListener('click', () => selectProduct(product));
             div.addEventListener('mouseenter', () => {
@@ -334,13 +417,22 @@
         imeiInput.value = identifier;
         
         // Set the selling price
-        sellingPriceInput.value = product.price;
+        sellingPriceInput.value = product.price.toFixed(2);
+        defaultPriceDisplay.textContent = `Default: KES ${product.price.toFixed(2)}`;
         
-        selectedProductName.textContent = product.name;
+        // Update preview
+        selectedProductName.textContent = `${product.brand} ${product.model}`.trim() || product.name;
         selectedProductImei.textContent = identifier;
         selectedProductPriceDisplay.textContent = `KES ${product.price.toFixed(2)}`;
-        selectedProductInfo.style.display = 'block';
+        selectedProductBranch.textContent = `Branch: ${product.branch}`;
+        selectedProductCondition.textContent = `Condition: ${product.condition}`;
         
+        {% if is_admin %}
+        selectedProductOwner.textContent = `Owner: ${product.owner || 'Unassigned'}`;
+        selectedProductOwner.style.display = 'inline';
+        {% endif %}
+        
+        selectedProductInfo.style.display = 'block';
         suggestionsDiv.style.display = 'none';
         selectedIndex = -1;
     }
@@ -370,6 +462,7 @@
             selectedProductInfo.style.display = 'none';
             selectedProduct = null;
             sellingPriceInput.value = '';
+            defaultPriceDisplay.textContent = 'Enter selling price';
         }
     });
     
@@ -410,6 +503,14 @@
     
     document.addEventListener('DOMContentLoaded', function() {
         imeiInput.focus();
+        
+        // Phone number formatting - only digits
+        const phoneInputs = document.querySelectorAll('input[type="tel"]');
+        phoneInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '');
+            });
+        });
     });
     
     function escapeHtml(str) {
@@ -422,10 +523,26 @@
         });
     }
     
-    // ✅ Added form validation
+    // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {
         const imei = imeiInput.value.trim();
         const price = sellingPriceInput.value.trim();
+        const customerName = document.getElementById('customerName').value.trim();
+        const customerPhone = document.getElementById('customerPhone').value.trim();
+        
+        if (!customerName) {
+            e.preventDefault();
+            alert('Please enter the customer name');
+            document.getElementById('customerName').focus();
+            return false;
+        }
+        
+        if (!customerPhone || customerPhone.length < 10) {
+            e.preventDefault();
+            alert('Please enter a valid phone number (10+ digits)');
+            document.getElementById('customerPhone').focus();
+            return false;
+        }
         
         if (!imei) {
             e.preventDefault();
@@ -436,10 +553,15 @@
         
         if (!price || parseFloat(price) <= 0) {
             e.preventDefault();
-            alert('Please enter a valid selling price');
+            alert('Please enter a valid selling price greater than 0');
             sellingPriceInput.focus();
             return false;
         }
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+        return true;
     });
 </script>
 {% endblock %}

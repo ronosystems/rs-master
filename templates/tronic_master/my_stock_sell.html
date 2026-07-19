@@ -1,4 +1,4 @@
-<!-- templates/tronic_master/sales/my_stock_sell.html -->
+<!-- templates/tronic_master/my_stock_sell.html -->
 {% extends 'tronic_master/base_tronic.html' %}
 {% load static %}
 
@@ -77,12 +77,12 @@
                             <h6><i class="fas fa-user-circle me-2"></i>Customer Details</h6>
                             <div class="row g-3">
                                 <div class="col-md-5">
-                                    <label class="form-label fw-semibold">Full Name *</label>
-                                    <input type="text" name="customer_name" id="customerName" class="form-control" required>
+                                    <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="customer_name" id="customerName" class="form-control" required placeholder="Enter customer full name">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Phone Number *</label>
-                                    <input type="tel" name="customer_phone" id="customerPhone" class="form-control" required>
+                                    <label class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+                                    <input type="tel" name="customer_phone" id="customerPhone" class="form-control" required placeholder="07XXXXXXXX">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-semibold">ID Number</label>
@@ -93,7 +93,7 @@
                         
                         <!-- Next of Kin Details Section -->
                         <div class="form-section">
-                            <h6><i class="fas fa-users me-2"></i>Next of Kin Details</h6>
+                            <h6><i class="fas fa-users me-2"></i>Next of Kin Details <small class="text-muted">(Optional)</small></h6>
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <label class="form-label fw-semibold">Full Name</label>
@@ -129,10 +129,10 @@
                                 <!-- Price Field (Editable) -->
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">
-                                        <i class="fas fa-tag me-1"></i>Selling Price (KES) *
+                                        <i class="fas fa-tag me-1"></i>Selling Price (KES) <span class="text-danger">*</span>
                                     </label>
                                     <input type="number" name="selling_price" id="sellingPrice" class="form-control form-control-lg" 
-                                           value="{{ unit.unit_selling_price|default:unit.product.default_selling_price }}"
+                                           value="{{ unit.unit_selling_price|default:unit.product.default_selling_price|floatformat:2 }}"
                                            step="0.01" min="0" required>
                                     <small class="text-muted">Default: KES {{ unit.unit_selling_price|default:unit.product.default_selling_price|floatformat:2 }}</small>
                                 </div>
@@ -160,21 +160,21 @@
                         
                         <!-- Sale Type Section and Actions -->
                         <div class="form-section">
-                            <h6><i class="fas fa-credit-card me-2"></i>Sale Type</h6>
+                            <h6><i class="fas fa-credit-card me-2"></i>Payment Method</h6>
                             <div class="row g-3 align-items-end">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Payment Method *</label>
+                                    <label class="form-label fw-semibold">Payment Method <span class="text-danger">*</span></label>
                                     <select name="payment_method" id="paymentMethod" class="form-select form-select-lg" required>
-                                        <option value="credit" selected>Credit</option>
                                         <option value="cash">Cash</option>
-                                        <option value="mpesa">M-Pesa</option>
+                                        <option value="mpesa" selected>M-Pesa</option>
                                         <option value="card">Card</option>
                                         <option value="bank">Bank Transfer</option>
+                                        <option value="credit">Credit</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-semibold">&nbsp;</label>
-                                    <button type="submit" class="btn btn-success btn-lg w-100" id="submitBtn" onclick="return confirm('Confirm sale of this unit?')">
+                                    <button type="submit" class="btn btn-success btn-lg w-100" id="submitBtn">
                                         <i class="fas fa-check-circle me-2"></i>Complete Sale
                                     </button>
                                 </div>
@@ -199,7 +199,7 @@
         border-radius: 12px;
         padding: 20px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgb(0, 0, 0);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
         border: 1px solid var(--sidebar-border, #e9ecef);
     }
     .form-section h6 {
@@ -228,28 +228,86 @@
     .table-borderless td {
         padding: 4px 0;
     }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
 </style>
 
 <script>
-    // Update price display when selling price changes
-    const sellingPriceInput = document.getElementById('sellingPrice');
-    const priceDisplay = document.getElementById('selectedProductPriceDisplay');
-    
-    sellingPriceInput.addEventListener('input', function() {
-        const price = parseFloat(this.value) || 0;
-        priceDisplay.textContent = 'KES ' + price.toFixed(2);
-    });
-    
-    // Form validation
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const price = sellingPriceInput.value.trim();
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update price display when selling price changes
+        const sellingPriceInput = document.getElementById('sellingPrice');
+        const priceDisplay = document.getElementById('selectedProductPriceDisplay');
         
-        if (!price || parseFloat(price) <= 0) {
-            e.preventDefault();
-            alert('Please enter a valid selling price');
-            sellingPriceInput.focus();
-            return false;
+        if (sellingPriceInput && priceDisplay) {
+            sellingPriceInput.addEventListener('input', function() {
+                const price = parseFloat(this.value) || 0;
+                priceDisplay.textContent = 'KES ' + price.toFixed(2);
+            });
         }
+        
+        // Phone number formatting - only digits
+        const phoneInputs = document.querySelectorAll('input[type="tel"]');
+        phoneInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '');
+            });
+        });
+        
+        // Form submission handling
+        const form = document.querySelector('form');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        if (form && submitBtn) {
+            form.addEventListener('submit', function(e) {
+                // Validate customer name
+                const customerName = document.getElementById('customerName');
+                if (!customerName.value.trim()) {
+                    e.preventDefault();
+                    alert('Please enter the customer name');
+                    customerName.focus();
+                    return false;
+                }
+                
+                // Validate customer phone
+                const customerPhone = document.getElementById('customerPhone');
+                if (!customerPhone.value.trim() || customerPhone.value.trim().length < 10) {
+                    e.preventDefault();
+                    alert('Please enter a valid phone number (10+ digits)');
+                    customerPhone.focus();
+                    return false;
+                }
+                
+                // Validate selling price
+                const price = parseFloat(sellingPriceInput.value);
+                if (!price || price <= 0) {
+                    e.preventDefault();
+                    alert('Please enter a valid selling price greater than 0');
+                    sellingPriceInput.focus();
+                    return false;
+                }
+                
+                // Disable button and show loading
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+                return true;
+            });
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+Enter to submit form
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                if (form) form.submit();
+            }
+            // Escape to cancel
+            if (e.key === 'Escape') {
+                window.location.href = "{% url 'tronic_master:my_stock' %}";
+            }
+        });
     });
 </script>
 {% endblock %}

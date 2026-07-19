@@ -246,6 +246,7 @@
 // Global variable to track best price visibility
 let bestPriceVisible = false;
 let currentBestPrice = 0;
+let currentData = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('searchInput').addEventListener('keypress', function(e) {
@@ -283,10 +284,12 @@ function searchProduct() {
     fetch(`/tronic/api/price-check/?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(data => {
+            console.log('API Response:', data); // Debug logging
             document.getElementById('loadingResult').style.display = 'none';
             
             if (data.success && data.found) {
                 if (data.type === 'unit' || data.type === 'product') {
+                    currentData = data.data;
                     showSingleResult(data.data, data.type);
                 } else if (data.type === 'list') {
                     showListResult(data.data);
@@ -305,24 +308,34 @@ function searchProduct() {
 }
 
 function showSingleResult(data, type) {
+    console.log('Showing single result:', data); // Debug logging
+    
     document.getElementById('singleResult').style.display = 'block';
     document.getElementById('productType').textContent = type === 'unit' ? 'Individual Unit' : 'Product';
     document.getElementById('productType').className = `badge rounded-pill px-3 py-2 ${type === 'unit' ? 'bg-success' : 'bg-primary'}`;
     
-    // Basic info
-    document.getElementById('productName').textContent = data.name || '-';
+    // Basic info - Check both field name possibilities
+    document.getElementById('productName').textContent = data.name || data.product_name || '-';
     document.getElementById('productBrand').textContent = data.brand || '-';
     document.getElementById('productModel').textContent = data.model || '-';
-    document.getElementById('productSku').textContent = data.sku_code || '-';
+    document.getElementById('productSku').textContent = data.sku_code || data.sku || '-';
     document.getElementById('productCategory').textContent = data.category || '-';
-    document.getElementById('productIdentifier').textContent = data.imei || data.serial || '-';
+    document.getElementById('productIdentifier').textContent = data.imei || data.serial || data.identifier || '-';
     document.getElementById('productCondition').textContent = data.condition || 'N/A';
     document.getElementById('productBranch').textContent = data.branch || '-';
-    document.getElementById('sellingPrice').textContent = `KES ${(data.default_selling_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
-    // ✅ Status Badge
-    const statusCode = data.status_code || 'available';
-    const statusText = data.status || 'Available';
+    // ✅ FIX: Check both selling_price and default_selling_price
+    const sellingPrice = data.selling_price || data.default_selling_price || 0;
+    document.getElementById('sellingPrice').textContent = `KES ${Number(sellingPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    
+    // ✅ FIX: Check both best_price and default_best_price
+    const bestPrice = data.best_price || data.default_best_price || 0;
+    currentBestPrice = bestPrice;
+    document.getElementById('bestPriceValue').value = bestPrice;
+    
+    // Status Badge
+    const statusCode = data.status_code || data.status || 'available';
+    const statusText = data.status_display || data.status || 'Available';
     const statusBadge = document.getElementById('statusBadge');
     const statusTextEl = document.getElementById('statusText');
     
@@ -331,18 +344,16 @@ function showSingleResult(data, type) {
     statusBadge.classList.add(`status-${statusCode}`);
     statusTextEl.textContent = statusText;
     
-    // ✅ Quantity Display
-    const quantity = data.quantity || 1;
+    // Quantity Display
+    const quantity = data.quantity || data.available_quantity || 1;
     const totalQuantity = data.total_quantity || data.available_quantity || 1;
     document.getElementById('quantityCount').textContent = quantity;
     document.getElementById('totalQuantityCount').textContent = totalQuantity;
     
-    // ✅ Stock Level Progress Bar
+    // Stock Level Progress Bar
     updateStockLevel(data);
     
-    // Best Price
-    currentBestPrice = data.default_best_price || 0;
-    document.getElementById('bestPriceValue').value = currentBestPrice;
+    // Best Price Display - Always show obscured
     document.getElementById('bestPriceDisplay').textContent = '••••••••';
     document.getElementById('bestPriceDisplay').className = 'text-primary fw-bold best-price-hidden';
     
@@ -401,10 +412,8 @@ function showListResult(data) {
         };
         
         // Status badge for list
-        let statusBadge = '';
-        const statusCode = item.status_code || 'in_stock';
-        const statusText = item.status || 'In Stock';
         const qty = item.available_quantity || 0;
+        let statusBadge = '';
         
         if (qty === 0) {
             statusBadge = '<span class="badge bg-danger">Out of Stock</span>';
@@ -414,7 +423,9 @@ function showListResult(data) {
             statusBadge = `<span class="badge bg-success">In Stock (${qty})</span>`;
         }
         
-        const bestPriceValue = item.default_best_price || 0;
+        // ✅ FIX: Check both selling_price and default_selling_price
+        const sellingPrice = item.selling_price || item.default_selling_price || 0;
+        const bestPrice = item.best_price || item.default_best_price || 0;
         
         row.innerHTML = `
             <td><code>${item.sku_code || '-'}</code></td>
@@ -422,11 +433,11 @@ function showListResult(data) {
             <td>${item.brand || '-'}</td>
             <td>${statusBadge}</td>
             <td><span class="badge bg-info">${qty}</span></td>
-            <td class="text-end text-success fw-bold">KES ${(item.default_selling_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td class="text-end text-success fw-bold">KES ${Number(sellingPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             <td class="text-end">
                 <span class="best-price-hidden text-muted">••••••••</span>
                 <button class="btn btn-sm btn-outline-primary ms-1" 
-                        onclick="event.stopPropagation(); revealRowBestPrice(this, ${bestPriceValue})"
+                        onclick="event.stopPropagation(); revealRowBestPrice(this, ${bestPrice})"
                         style="font-size: 0.65rem;">
                     <i class="fas fa-eye"></i>
                 </button>
@@ -463,7 +474,7 @@ function revealRowBestPrice(btn, price) {
     if (hiddenSpan) {
         const displaySpan = document.createElement('span');
         displaySpan.className = 'best-price-visible text-primary fw-bold';
-        displaySpan.textContent = `KES ${price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        displaySpan.textContent = `KES ${Number(price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         parent.replaceChild(displaySpan, hiddenSpan);
         
         btn.innerHTML = '<i class="fas fa-eye-slash"></i>';

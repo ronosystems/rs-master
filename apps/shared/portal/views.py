@@ -20,6 +20,7 @@ from apps.shared.utils.project_helpers import (
     PROJECT_ROLE_MAPPINGS,
     PROJECT_DASHBOARDS,
 )
+from .helpers import has_pos_access, is_admin_user
 
 
 logger = logging.getLogger(__name__)
@@ -392,46 +393,51 @@ def tech_pos(request):
         messages.error(request, 'No tenant assigned')
         return redirect('portal:dashboard')
 
-    # ✅ Check if user has cashier project role
-    has_cashier_role = UserRoleAssignment.objects.filter(
-        user=request.user,
-        role__codename='cashier',
-        is_active=True
-    ).exists()
-
-    if not has_cashier_role:
-        messages.error(request, 'You do not have permission to access POS. Cashier role required.')
+    # ✅ Check if user has POS access (includes admin/superadmin)
+    if not has_pos_access(request.user):
+        messages.error(
+            request, 
+            'You do not have permission to access POS. Admin, Superadmin, or Cashier role required.'
+        )
         return redirect('tronic_master:dashboard')
 
-    # ✅ Check if PIN is set
-    if not request.user.pin_code:
-        messages.warning(request, 'Please set a PIN code in your profile settings before accessing POS.')
-        return redirect('settings:profile_settings')
+    # ✅ Check if user is admin (skip PIN for admin roles)
+    is_admin = is_admin_user(request.user)
 
-    # ✅ Check if PIN is verified in session
-    if not request.session.get('pos_pin_verified', False):
-        return redirect('tronic_master:verify_pin')
+    # ✅ PIN verification (only for non-admin users)
+    if not is_admin:
+        if not request.user.pin_code:
+            messages.warning(
+                request, 
+                'Please set a PIN code in your profile settings before accessing POS.'
+            )
+            return redirect('settings:profile_settings')
 
-    # ✅ Check if PIN verification expired (e.g., after 30 minutes)
-    verified_at = request.session.get('pos_pin_verified_at')
-    if verified_at:
-        from datetime import datetime, timedelta
-        try:
-            verified_time = datetime.fromisoformat(verified_at)
-            if timezone.now() - verified_time > timedelta(minutes=30):
-                # PIN expired, clear and redirect
-                del request.session['pos_pin_verified']
-                del request.session['pos_pin_verified_at']
-                messages.warning(request, 'PIN verification expired. Please verify again.')
-                return redirect('tronic_master:verify_pin')
-        except:
-            pass
+        if not request.session.get('pos_pin_verified', False):
+            return redirect('tronic_master:verify_pin')
+
+        # Check PIN verification expiration
+        verified_at = request.session.get('pos_pin_verified_at')
+        if verified_at:
+            from datetime import datetime, timedelta
+            try:
+                verified_time = datetime.fromisoformat(verified_at)
+                if timezone.now() - verified_time > timedelta(minutes=30):
+                    # PIN expired, clear session
+                    request.session.pop('pos_pin_verified', None)
+                    request.session.pop('pos_pin_verified_at', None)
+                    messages.warning(request, 'PIN verification expired. Please verify again.')
+                    return redirect('tronic_master:verify_pin')
+            except (ValueError, TypeError):
+                pass
 
     context = {
         'tenant': tenant,
         'active_tab': 'pos',
+        'is_admin': is_admin,
     }
     return render(request, 'tronic_master/pos.html', context)
+
 
 
 @login_required
@@ -1012,10 +1018,6 @@ def platform_settings(request):
     return render(request, 'shared/platform_settings.html', context)
 
 
-
-
-
-
 @login_required
 def platform_settings_stats(request):
     """API endpoint for stats refresh"""
@@ -1145,9 +1147,8 @@ def manager_dashboard(request):
     tenant = request.user.tenant
 
     # Get stats
-    from apps.tronic_master.models import Product, Category, Branch, Sale
+    from apps.tronic_master.models import Product, Category, Branch
     from apps.shared.customers.models import Customer
-    from django.db.models import Sum, F
     from django.utils import timezone
 
     context = {

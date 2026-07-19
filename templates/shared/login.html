@@ -1,10 +1,13 @@
 <!-- templates/shared/login.html -->
+{% load static %}
+{% load settings_tags %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login · POS Portal</title>
+    <title>Login · {% get_platform_name as platform_name %}{{ platform_name|default:'RS Master Platform' }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -47,16 +50,52 @@
         /* ----- HEADER ----- */
         .login-header { text-align: center; margin-bottom: 30px; }
         .login-header .logo {
-            width: 80px; height: 80px;
-            background: linear-gradient(135deg, #002fff, #0026ff);
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin: 0 auto 15px;
-            font-size: 35px; color: white;
+            font-size: 35px;
+            color: white;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #002fff, #0026ff);
         }
-        .login-header h3 { font-weight: 700; color: #1e293b; margin-bottom: 5px; }
-        .login-header p { color: #475569; font-size: 0.9rem; }
+        .login-header .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .login-header .logo .logo-fallback {
+            display: none;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-header .logo .logo-fallback i {
+            font-size: 35px;
+            color: white;
+        }
+        .login-header h3 {
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+        .login-header p {
+            color: #475569;
+            font-size: 0.9rem;
+        }
+        .login-header .platform-name {
+            font-weight: 600;
+            color: #0026ff;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
 
         /* ----- FORM ----- */
         .form-group { margin-bottom: 20px; }
@@ -134,6 +173,7 @@
             }
             .login-header h3 { color: #e2e8f0; }
             .login-header p { color: #a0aec0; }
+            .login-header .platform-name { color: #60a5fa; }
             .form-group label { color: #cbd5e1; }
             .form-group .input-group,
             .form-group .input-group-text,
@@ -179,11 +219,27 @@
     <div class="login-container">
         <div class="login-card">
 
-            <!-- HEADER -->
+            <!-- HEADER with Dynamic Logo -->
             <div class="login-header">
-                <div class="logo"><i class="fas fa-store"></i></div>
-                <h3>Welcome Back</h3>
-                <p>Sign in to your account</p>
+                <div class="logo" id="loginLogo">
+                    {% get_platform_logo as platform_logo %}
+                    {% get_platform_name as platform_name %}
+
+                    {% if platform_logo %}
+                        <img src="{{ MEDIA_URL }}{{ platform_logo }}"
+                             alt="{{ platform_name|default:'RS Master Platform' }}"
+                             onerror="this.style.display='none'; this.parentElement.querySelector('.logo-fallback').style.display='flex'">
+                        <div class="logo-fallback">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                    {% else %}
+                        <div class="logo-fallback" style="display: flex;">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <h3>Welcome</h3>
+                <p>Sign In To Manage Your Business</p>
             </div>
 
             <!-- DJANGO MESSAGES (auto-dismiss) -->
@@ -226,7 +282,6 @@
                         <input type="checkbox" name="remember" id="remember" class="form-check-input">
                         <label for="remember" class="form-check-label">Remember me</label>
                     </div>
-                    <a href="#">Forgot password?</a>
                 </div>
 
                 <button type="submit" class="btn-login">
@@ -235,7 +290,7 @@
             </form>
 
             <div class="login-footer">
-                &copy; {% now "Y" %} POS Portal. All rights reserved.
+                Copyright &copy; {% now "Y" %}.     All rights reserved.
             </div>
         </div>
     </div>
@@ -319,6 +374,26 @@
                 });
             }
 
+            // ----- LOGO FALLBACK HANDLER -----
+            function handleLogoError() {
+                const logo = document.getElementById('loginLogo');
+                if (logo) {
+                    const img = logo.querySelector('img');
+                    const fallback = logo.querySelector('.logo-fallback');
+                    if (img && img.style.display === 'none') {
+                        // Already handled by onerror
+                        return;
+                    }
+                    // Check if image failed silently
+                    if (img && img.complete && img.naturalHeight === 0) {
+                        img.style.display = 'none';
+                        if (fallback) {
+                            fallback.style.display = 'flex';
+                        }
+                    }
+                }
+            }
+
             // ----- INIT -----
             function init() {
                 updateBackground();
@@ -332,6 +407,9 @@
                 });
 
                 dismissAlerts();
+
+                // Check logo after load
+                setTimeout(handleLogoError, 500);
             }
 
             // run when DOM ready

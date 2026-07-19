@@ -31,7 +31,16 @@
                                         </div>
                                         
                                         <div class="row">
-                                            <div class="col-md-12 mb-3">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="category_id" class="form-label">Category</label>
+                                                <select class="form-control" id="category_id" name="category_id" required>
+                                                    <option value="">Select Category</option>
+                                                    {% for cat in categories %}
+                                                    <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.get_item_type_display }})</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
                                                 <label for="name" class="form-label">Product Name *</label>
                                                 <input type="text" class="form-control" id="name" name="name" required 
                                                        placeholder="e.g., Samsung Galaxy A07">
@@ -51,22 +60,6 @@
                                             </div>
                                         </div>
                                         
-                                        <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label for="color" class="form-label">Color</label>
-                                                <input type="text" class="form-control" id="color" name="color" 
-                                                       placeholder="e.g., Black, Blue, Silver">
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label for="category_id" class="form-label">Category</label>
-                                                <select class="form-control" id="category_id" name="category_id" required>
-                                                    <option value="">Select Category</option>
-                                                    {% for cat in categories %}
-                                                    <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.get_item_type_display }})</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </div>
                                         
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
@@ -87,12 +80,6 @@
                                                     {% endfor %}
                                                 </select>
                                             </div>
-                                        </div>
-                                        
-                                        <div class="mb-3">
-                                            <label for="specifications" class="form-label">Specifications</label>
-                                            <textarea class="form-control" id="specifications" name="specifications" rows="2" 
-                                                      placeholder="e.g., 4GB RAM, 64GB Storage, 6.5 inch display"></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -152,13 +139,7 @@
                                         
                                         <div class="mb-3">
                                             <label for="imei_textarea" class="form-label fw-bold">IMEI/Serial Numbers *</label>
-                                            <textarea class="form-control font-monospace" id="imei_textarea" name="imei_textarea" rows="15" 
-                                                      placeholder="356123456789001
-356123456789002
-356123456789003
-SN001
-SN002"
-                                                      required></textarea>
+                                            <textarea class="form-control font-monospace" id="imei_textarea" name="imei_textarea" rows="15" required></textarea>
                                             <small class="text-muted mt-2 d-block">
                                                 <i class="fas fa-info-circle"></i> 
                                                 Enter each IMEI or Serial number on a new line.

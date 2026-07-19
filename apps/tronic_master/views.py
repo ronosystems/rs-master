@@ -38,7 +38,8 @@ from apps.tronic_master.models import (
 from django.contrib.auth import get_user_model
 from apps.shared.permissions.models import  UserRoleAssignment
 from apps.shared.roles.models import ProjectRole
-
+from django.views.decorators.csrf import csrf_exempt
+from apps.shared.portal.helpers import is_admin_user
 
 
 
@@ -3867,12 +3868,12 @@ class InventorySyncViewSet(viewsets.ViewSet):
 
 
 # ============================================
-# SALES AGENT - SALE CREATION
+# SALES AGENT - LOAN CREATION
 # ============================================
 
 @login_required
 def agent_sale(request):
-    """Sales Agent - Create a new sale from assigned stock"""
+    """Sales Agent - Create a new sale from assigned stock (Admin sees all stock)"""
     tenant = request.user.tenant
     user = request.user
 
@@ -3880,12 +3881,31 @@ def agent_sale(request):
         messages.error(request, 'No tenant assigned')
         return redirect('dashboard')
 
-    # ✅ Get all available units assigned to this sales agent
-    products = ProductUnit.objects.filter(
-        tenant=tenant,
-        current_owner=user,
-        status='available'
-    ).select_related('product', 'branch')
+    # ✅ Check if user is admin or superadmin
+    from apps.shared.portal.helpers import is_admin_user
+    
+    is_admin = is_admin_user(user)
+
+    # ✅ Get available units based on user role
+    if is_admin:
+        # Admin/Superadmin - See ALL available units across all branches
+        products = ProductUnit.objects.filter(
+            tenant=tenant,
+            status='available'
+        ).select_related('product', 'branch', 'current_owner').order_by('product__name')
+        
+        # Get all available units for stats
+        total_available = products.count()
+    else:
+        # Regular Sales Agent - See only their assigned stock
+        products = ProductUnit.objects.filter(
+            tenant=tenant,
+            current_owner=user,
+            status='available'
+        ).select_related('product', 'branch').order_by('product__name')
+        
+        # Count statistics for sales agent
+        total_available = products.count()
 
     if request.method == 'POST':
         # Get customer details
@@ -3902,7 +3922,7 @@ def agent_sale(request):
 
         # Get selling price (editable)
         selling_price = request.POST.get('selling_price', '').strip()
-        payment_method = request.POST.get('payment_method', 'credit').strip()
+        payment_method = request.POST.get('payment_method', 'mpesa').strip()
 
         # Validate
         if not customer_name:
@@ -3930,22 +3950,33 @@ def agent_sale(request):
             messages.error(request, 'Invalid selling price')
             return redirect('tronic_master:agent_sale')
 
-        # ✅ Find the unit by IMEI or Serial
-        unit = ProductUnit.objects.filter(
-            tenant=tenant,
-            current_owner=user,
-            status='available'
-        ).filter(
-            Q(imei_number=imei) | Q(serial_number=imei)
-        ).first()
+        # ✅ Find the unit by IMEI or Serial with proper permissions
+        if is_admin:
+            # Admin can sell any available unit
+            unit = ProductUnit.objects.filter(
+                tenant=tenant,
+                status='available'
+            ).filter(
+                Q(imei_number=imei) | Q(serial_number=imei)
+            ).first()
+        else:
+            # Agent can only sell their assigned units
+            unit = ProductUnit.objects.filter(
+                tenant=tenant,
+                current_owner=user,
+                status='available'
+            ).filter(
+                Q(imei_number=imei) | Q(serial_number=imei)
+            ).first()
 
         if not unit:
-            messages.error(request, 'Product not found in your assigned stock')
+            messages.error(request, 'Product not found in available stock')
             return redirect('tronic_master:agent_sale')
 
-        # ✅ Check if unit is still available
+        # ✅ Check if unit is still available (double-check)
+        unit.refresh_from_db()
         if unit.status != 'available':
-            messages.error(request, f'Unit {imei} is no longer available (Status: {unit.status})')
+            messages.error(request, f'Unit {imei} is no longer available (Status: {unit.get_status_display()})')
             return redirect('tronic_master:agent_sale')
 
         # ✅ Create or get customer
@@ -3961,6 +3992,20 @@ def agent_sale(request):
                 'created_by': user
             }
         )
+
+        # ✅ Update customer if exists and fields are provided
+        if not created:
+            if customer_name and not customer.name:
+                customer.name = customer_name
+            if customer_id_number and not customer.id_number:
+                customer.id_number = customer_id_number
+            if next_of_kin_name and not customer.next_of_kin_name:
+                customer.next_of_kin_name = next_of_kin_name
+            if next_of_kin_phone and not customer.next_of_kin_phone:
+                customer.next_of_kin_phone = next_of_kin_phone
+            if next_of_kin_relationship and not customer.next_of_kin_relationship:
+                customer.next_of_kin_relationship = next_of_kin_relationship
+            customer.save()
 
         # ✅ Generate invoice number
         today = timezone.now()
@@ -4018,12 +4063,14 @@ def agent_sale(request):
         unit.product.update_quantities()
 
         # ✅ Update customer total spent
-        customer.total_spent = (customer.total_spent or 0) + selling_price
+        customer.total_spent = (customer.total_spent or Decimal('0')) + selling_price
         customer.save()
 
         # ✅ Queue sync if offline
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
+                from apps.shared.tenants.models import SyncQueue
+                
                 SyncQueue.objects.create(
                     tenant_id=tenant.id,
                     model_name='Sale',
@@ -4095,30 +4142,33 @@ def agent_sale(request):
         product_list.append({
             'id': unit.id,
             'name': unit.product.name,
+            'brand': unit.product.brand,
             'model': unit.product.model,
+            'sku': unit.product.sku_code,
             'imei': unit.imei_number or '',
             'serial': unit.serial_number or '',
             'selling_price': float(unit.unit_selling_price or unit.product.default_selling_price),
             'buying_price': float(unit.unit_buying_price or unit.product.default_buying_price),
-            'branch': unit.branch.name if unit.branch else 'Main Shop'
+            'branch': unit.branch.name if unit.branch else 'Main Shop',
+            'owner': unit.current_owner.get_full_name() or unit.current_owner.username if unit.current_owner else 'Unassigned' if is_admin else None,
+            'condition': unit.get_condition_display() if hasattr(unit, 'get_condition_display') else 'New',
         })
 
     context = {
         'tenant': tenant,
         'products': product_list,
-        'total_available': products.count(),
+        'total_available': total_available,
+        'is_admin': is_admin,  # ✅ Pass admin status to template
         'active_tab': 'sales',
     }
     return render(request, 'tronic_master/agent_sale.html', context)
 
-
 # ============================================
-# SALES AGENT - MY STOCK
+#  STOCK LOANS
 # ============================================
-
 @login_required
 def my_stock(request):
-    """Sales Agent - View their assigned stock (product units)"""
+    """View stock - Sales Agent sees assigned stock, Admin/Superadmin sees all stock"""
     tenant = request.user.tenant
     user = request.user
 
@@ -4126,58 +4176,88 @@ def my_stock(request):
         messages.error(request, 'No tenant assigned')
         return redirect('dashboard')
 
-    # ✅ Get all product units assigned to this sales agent
-    my_units = ProductUnit.objects.filter(
-        tenant=tenant,
-        current_owner=user,
-        status__in=['available', 'reserved']
-    ).select_related(
-        'product',
-        'product__category',
-        'branch'
-    ).order_by('-assigned_date', 'product__name')
+    # ✅ Check if user is admin or superadmin
+    from apps.shared.portal.helpers import is_admin_user
+    
+    is_admin = is_admin_user(user)
+    
+    # ✅ Get product units based on user role
+    if is_admin:
+        # Admin/Superadmin - See ALL product units (all branches)
+        my_units = ProductUnit.objects.filter(
+            tenant=tenant,
+            status__in=['available', 'reserved']
+        ).select_related(
+            'product',
+            'product__category',
+            'branch',
+            'current_owner'
+        ).order_by('-created_at', 'product__name')
+        
+        # Get all sold units for stats
+        sold_units = ProductUnit.objects.filter(
+            tenant=tenant,
+            status='sold'
+        ).count()
+        
+        # Get all units for stats
+        all_available_units = ProductUnit.objects.filter(
+            tenant=tenant,
+            status='available'
+        ).count()
+        all_reserved_units = ProductUnit.objects.filter(
+            tenant=tenant,
+            status='reserved'
+        ).count()
+        all_total_units = ProductUnit.objects.filter(
+            tenant=tenant,
+            status__in=['available', 'reserved']
+        ).count()
+        
+        # Get unique products
+        products = my_units.values('product').distinct()
+        total_products = products.count()
+        
+        # Calculate total value of all stock
+        total_value = 0
+        for unit in my_units:
+            price = unit.unit_selling_price or unit.product.default_selling_price
+            total_value += float(price)
+        
+    else:
+        # Regular Sales Agent - See only their assigned stock
+        my_units = ProductUnit.objects.filter(
+            tenant=tenant,
+            current_owner=user,
+            status__in=['available', 'reserved']
+        ).select_related(
+            'product',
+            'product__category',
+            'branch'
+        ).order_by('-assigned_date', 'product__name')
+        
+        # Count statistics for sales agent
+        all_available_units = my_units.filter(status='available').count()
+        all_reserved_units = my_units.filter(status='reserved').count()
+        all_total_units = my_units.count()
+        
+        sold_units = ProductUnit.objects.filter(
+            tenant=tenant,
+            current_owner=user,
+            status='sold'
+        ).count()
+        
+        # Get unique products
+        products = my_units.values('product').distinct()
+        total_products = products.count()
+        
+        # Calculate total value of assigned stock
+        total_value = 0
+        for unit in my_units:
+            price = unit.unit_selling_price or unit.product.default_selling_price
+            total_value += float(price)
 
-    # Count statistics
-    total_units = my_units.count()
-    available_units = my_units.filter(status='available').count()
-    reserved_units = my_units.filter(status='reserved').count()
-    sold_units = ProductUnit.objects.filter(
-        tenant=tenant,
-        current_owner=user,
-        status='sold'
-    ).count()
-
-    # Get unique products
-    products = my_units.values('product').distinct()
-    total_products = products.count()
-
-    # Calculate total value of assigned stock
-    total_value = 0
-    for unit in my_units:
-        price = unit.unit_selling_price or unit.product.default_selling_price
-        total_value += float(price)
-
-    # Group by product for better display
-    grouped_stock = {}
-    for unit in my_units:
-        product_name = unit.product.name
-        if product_name not in grouped_stock:
-            grouped_stock[product_name] = {
-                'product': unit.product,
-                'units': [],
-                'total_available': 0,
-                'total_reserved': 0,
-                'total_value': 0
-            }
-        grouped_stock[product_name]['units'].append(unit)
-        if unit.status == 'available':
-            grouped_stock[product_name]['total_available'] += 1
-        elif unit.status == 'reserved':
-            grouped_stock[product_name]['total_reserved'] += 1
-        price = unit.unit_selling_price or unit.product.default_selling_price
-        grouped_stock[product_name]['total_value'] += float(price)
-
-    # Filter by product or search
+    # ✅ Apply search filter
     search_query = request.GET.get('q', '')
     status_filter = request.GET.get('status', '')
 
@@ -4192,6 +4272,27 @@ def my_stock(request):
     if status_filter:
         my_units = my_units.filter(status=status_filter)
 
+    # ✅ Group by product for better display
+    grouped_stock = {}
+    for unit in my_units:
+        product_name = unit.product.name
+        if product_name not in grouped_stock:
+            grouped_stock[product_name] = {
+                'product': unit.product,
+                'units': [],
+                'total_available': 0,
+                'total_reserved': 0,
+                'total_value': 0,
+                'branch': unit.branch.name if unit.branch else 'Main Shop',
+            }
+        grouped_stock[product_name]['units'].append(unit)
+        if unit.status == 'available':
+            grouped_stock[product_name]['total_available'] += 1
+        elif unit.status == 'reserved':
+            grouped_stock[product_name]['total_reserved'] += 1
+        price = unit.unit_selling_price or unit.product.default_selling_price
+        grouped_stock[product_name]['total_value'] += float(price)
+
     # Pagination
     paginator = Paginator(my_units, 20)
     page_number = request.GET.get('page', 1)
@@ -4201,9 +4302,10 @@ def my_stock(request):
         'tenant': tenant,
         'user': user,
         'my_units': page_obj,
-        'total_units': total_units,
-        'available_units': available_units,
-        'reserved_units': reserved_units,
+        'is_admin': is_admin,  # ✅ Pass admin status to template
+        'total_units': all_total_units,
+        'available_units': all_available_units,
+        'reserved_units': all_reserved_units,
         'sold_units': sold_units,
         'total_products': total_products,
         'total_value': total_value,
@@ -4248,13 +4350,41 @@ def my_stock_sell(request, unit_id):
         messages.error(request, 'No tenant assigned')
         return redirect('dashboard')
 
-    unit = get_object_or_404(
-        ProductUnit,
-        id=unit_id,
-        tenant=tenant,
-        current_owner=user,
-        status='available'
-    )
+    # ✅ Check if user is admin
+    from apps.shared.portal.helpers import is_admin_user
+    is_admin = is_admin_user(user)
+
+    # ✅ Try to get the unit with proper permissions
+    try:
+        # First, check if the unit exists in the tenant
+        unit = ProductUnit.objects.filter(id=unit_id, tenant=tenant).select_related(
+            'product', 'branch', 'current_owner'
+        ).first()
+        
+        if not unit:
+            messages.error(request, f'Unit with ID {unit_id} not found.')
+            return redirect('tronic_master:my_stock')
+        
+        # ✅ Check if user has permission to sell this unit
+        if not is_admin and unit.current_owner != user:
+            messages.error(
+                request, 
+                f'You do not have permission to sell this unit. It is assigned to {unit.current_owner.get_full_name() or unit.current_owner.username if unit.current_owner else "another agent"}.'
+            )
+            return redirect('tronic_master:my_stock')
+        
+        # ✅ Check if unit is available for sale
+        if unit.status != 'available':
+            messages.error(
+                request, 
+                f'This unit is not available for sale. Current status: {unit.get_status_display()}'
+            )
+            return redirect('tronic_master:my_stock')
+            
+    except Exception as e:
+        logger.error(f"Error fetching unit {unit_id}: {str(e)}")
+        messages.error(request, 'An error occurred while processing your request.')
+        return redirect('tronic_master:my_stock')
 
     if request.method == 'POST':
         # ✅ Get all fields from the form
@@ -4267,7 +4397,7 @@ def my_stock_sell(request, unit_id):
         next_of_kin_relationship = request.POST.get('next_of_kin_relationship', '').strip()
 
         selling_price = request.POST.get('selling_price', '').strip()
-        payment_method = request.POST.get('payment_method', 'credit').strip()
+        payment_method = request.POST.get('payment_method', 'mpesa').strip()
 
         # ✅ Validate required fields
         if not customer_name:
@@ -4291,9 +4421,10 @@ def my_stock_sell(request, unit_id):
             messages.error(request, 'Invalid selling price')
             return redirect('tronic_master:my_stock_sell', unit_id=unit.id)
 
-        # ✅ Check if unit is still available
+        # ✅ Double-check if unit is still available (could have been sold in another tab)
+        unit.refresh_from_db()
         if unit.status != 'available':
-            messages.error(request, f'Unit is no longer available (Status: {unit.status})')
+            messages.error(request, f'Unit is no longer available (Status: {unit.get_status_display()})')
             return redirect('tronic_master:my_stock')
 
         # ✅ Create or get customer
@@ -4380,12 +4511,14 @@ def my_stock_sell(request, unit_id):
         unit.product.update_quantities()
 
         # ✅ Update customer total spent
-        customer.total_spent = (customer.total_spent or 0) + selling_price
+        customer.total_spent = (customer.total_spent or Decimal('0')) + selling_price
         customer.save()
 
         # ✅ Queue sync if offline
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
+                from apps.shared.tenants.models import SyncQueue
+                
                 SyncQueue.objects.create(
                     tenant_id=tenant.id,
                     model_name='Sale',
@@ -4454,9 +4587,11 @@ def my_stock_sell(request, unit_id):
     context = {
         'tenant': tenant,
         'unit': unit,
+        'is_admin': is_admin,
         'active_tab': 'my_stock',
     }
     return render(request, 'tronic_master/my_stock_sell.html', context)
+
 
 @login_required
 def stock_take(request):
@@ -4615,6 +4750,149 @@ def manage_stock(request):
     }
     return render(request, 'tronic_master/manage_stock.html', context)
 
+@login_required
+def stock_management(request):
+    """Stock management dashboard for admin/superadmin"""
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('dashboard')
+    
+    # Check if user is admin
+    from apps.shared.portal.helpers import is_admin_user
+    if not is_admin_user(request.user):
+        messages.error(request, 'You do not have permission to access stock management')
+        return redirect('tronic_master:dashboard')
+    
+    context = {
+        'tenant': tenant,
+        'active_tab': 'stock_management',
+    }
+    return render(request, 'tronic_master/stock_management.html', context)
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def transfer_unit(request):
+    """
+    Transfer a unit to a different agent (Admin only)
+    """
+    try:
+        data = json.loads(request.body)
+        unit_id = data.get('unit_id')
+        agent_id = data.get('agent_id')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    
+    tenant = request.user.tenant
+    
+    if not tenant:
+        return JsonResponse({'error': 'No tenant assigned'}, status=400)
+    
+    # Check if user is admin
+    if not is_admin_user(request.user):
+        return JsonResponse({'error': 'Permission denied. Admin access required.'}, status=403)
+    
+    # Get the unit
+    try:
+        unit = ProductUnit.objects.get(id=unit_id, tenant=tenant)
+    except ProductUnit.DoesNotExist:
+        return JsonResponse({'error': 'Unit not found'}, status=404)
+    
+    # Check if unit is available for transfer
+    if unit.status not in ['available', 'reserved']:
+        return JsonResponse({
+            'error': f'Cannot transfer unit with status "{unit.status}". Only available or reserved units can be transferred.'
+        }, status=400)
+    
+    # Get the agent
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    try:
+        agent = User.objects.get(id=agent_id, tenant=tenant, is_active=True)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Agent not found'}, status=404)
+    
+    # Transfer the unit
+    old_owner = unit.current_owner
+    unit.current_owner = agent
+    unit.assigned_date = timezone.now()
+    unit.assigned_by = request.user
+    unit.save()
+    
+    # Log the transfer
+    logger.info(
+        f"Unit {unit.id} ({unit.imei_number or unit.serial_number}) transferred "
+        f"from {old_owner.username if old_owner else 'Unassigned'} "
+        f"to {agent.username} by {request.user.username}"
+    )
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'Unit transferred successfully to {agent.get_full_name() or agent.username}',
+        'unit': {
+            'id': unit.id,
+            'identifier': unit.imei_number or unit.serial_number,
+            'product_name': unit.product.name,
+            'new_owner': agent.get_full_name() or agent.username,
+            'new_owner_id': agent.id,
+            'status': unit.status,
+        }
+    })
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def reserve_unit(request, unit_id):
+    """
+    Reserve a unit (Available -> Reserved)
+    """
+    tenant = request.user.tenant
+    
+    if not tenant:
+        return JsonResponse({'error': 'No tenant assigned'}, status=400)
+    
+    try:
+        unit = ProductUnit.objects.get(id=unit_id, tenant=tenant)
+    except ProductUnit.DoesNotExist:
+        return JsonResponse({'error': 'Unit not found'}, status=404)
+    
+    # Check if user owns this unit (or is admin)
+    if not is_admin_user(request.user) and unit.current_owner != request.user:
+        return JsonResponse({
+            'error': 'You do not have permission to reserve this unit'
+        }, status=403)
+    
+    # Check if unit is available
+    if unit.status != 'available':
+        return JsonResponse({
+            'error': f'Cannot reserve unit with status "{unit.status}". Only available units can be reserved.'
+        }, status=400)
+    
+    # Reserve the unit
+    unit.status = 'reserved'
+    unit.save()
+    
+    # Log the reservation
+    logger.info(
+        f"Unit {unit.id} ({unit.imei_number or unit.serial_number}) "
+        f"reserved by {request.user.username}"
+    )
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Unit reserved successfully',
+        'unit': {
+            'id': unit.id,
+            'identifier': unit.imei_number or unit.serial_number,
+            'product_name': unit.product.name,
+            'status': unit.status,
+        }
+    })
+
+
 
 # ============================================
 # SALES AGENT - MY SALES
@@ -4622,7 +4900,6 @@ def manage_stock(request):
 
 @login_required
 def my_sales(request):
-    """Sales Agent - View their own sales only"""
     tenant = request.user.tenant
     user = request.user
 
@@ -4630,42 +4907,162 @@ def my_sales(request):
         messages.error(request, 'No tenant assigned')
         return redirect('dashboard')
 
-    # ✅ Only show sales made by this sales agent (EXCLUDE REVERSED)
-    sales = Sale.objects.filter(
-        tenant=tenant,
-        cashier=user
-    ).exclude(
-        status='reversed'  # ✅ Exclude reversed sales
-    ).order_by('-created_at')
+    from apps.shared.portal.helpers import is_admin_user
+    is_admin = is_admin_user(user)
 
-    # Statistics (EXCLUDE REVERSED)
-    total_sales = sales.aggregate(total=Sum('total'))['total'] or Decimal('0')
+    # ✅ Get the POS branch (if you have a specific branch for POS)
+    from apps.tronic_master.models import Branch
+    pos_branch = Branch.objects.filter(tenant=tenant, name__icontains='POS').first()
+    
+    # ✅ Get POS cashiers (users who work at POS)
+    pos_cashiers = User.objects.filter(groups__name='pos_cashier')
+    
+    # ✅ Exclude POS sales
+    if is_admin:
+        sales = Sale.objects.filter(
+            tenant=tenant,
+            status='completed'
+        ).exclude(
+            branch=pos_branch
+        ).exclude(
+            cashier__in=pos_cashiers
+        ).select_related('customer', 'cashier', 'branch').prefetch_related('items').order_by('-created_at')
+    else:
+        sales = Sale.objects.filter(
+            tenant=tenant,
+            cashier=user,
+            status='completed'
+        ).exclude(
+            branch=pos_branch
+        ).exclude(
+            cashier__in=pos_cashiers
+        ).select_related('customer', 'branch').prefetch_related('items').order_by('-created_at')
+
+
+    # ✅ Apply search and filters
+    search_query = request.GET.get('q', '').strip()
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+
+    if search_query:
+        sales = sales.filter(
+            Q(invoice_no__icontains=search_query) |
+            Q(customer_name__icontains=search_query) |
+            Q(customer_phone__icontains=search_query) |
+            Q(items__product__name__icontains=search_query)
+        ).distinct()
+
+    if date_from:
+        sales = sales.filter(created_at__date__gte=date_from)
+
+    if date_to:
+        sales = sales.filter(created_at__date__lte=date_to)
+
+    # ✅ Calculate stats
     total_count = sales.count()
+    total_value = sales.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    today_count = sales.filter(created_at__date=timezone.now().date()).count()
+    
+    if is_admin:
+        agent_count = sales.values('cashier').distinct().count()
+    else:
+        agent_count = 0
 
-    # Today's sales (EXCLUDE REVERSED)
-    today = timezone.now().date()
-    today_sales = sales.filter(created_at__date=today)
-    today_count = today_sales.count()
-    today_total = today_sales.aggregate(total=Sum('total'))['total'] or Decimal('0')
-
-    # Pagination
+    # ✅ Pagination
     paginator = Paginator(sales, 20)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
     context = {
         'tenant': tenant,
+        'user': user,
         'sales': page_obj,
-        'total_sales': total_sales,
+        'is_admin': is_admin,
         'total_count': total_count,
-        'today': today,
+        'total_value': total_value,
         'today_count': today_count,
-        'today_total': today_total,
+        'agent_count': agent_count,
+        'search_query': search_query,
+        'date_from': date_from,
+        'date_to': date_to,
         'active_tab': 'my_sales',
     }
     return render(request, 'tronic_master/my_sales.html', context)
 
 
+# apps/tronic_master/views.py
+
+@login_required
+def refund_sale(request, sale_id):
+    """Admin/Superadmin - Refund a completed sale"""
+    tenant = request.user.tenant
+    user = request.user
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('dashboard')
+
+    # ✅ Check if user is admin
+    from apps.shared.portal.helpers import is_admin_user
+    if not is_admin_user(user):
+        messages.error(request, 'You do not have permission to refund sales')
+        return redirect('tronic_master:my_sales')
+
+    # Get the sale
+    sale = get_object_or_404(
+        Sale,
+        id=sale_id,
+        tenant=tenant,
+        status='completed'
+    )
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '').strip()
+        
+        if not reason:
+            messages.error(request, 'Please provide a reason for the refund')
+            return redirect('tronic_master:refund_sale', sale_id=sale.id)
+
+        # ✅ Process the refund
+        try:
+            # Mark sale as refunded
+            sale.status = 'refunded'
+            sale.save()
+
+            # Restore stock for each item
+            for item in sale.items.all():
+                if item.product_unit:
+                    unit = item.product_unit
+                    unit.status = 'available'
+                    unit.sold_at_price = None
+                    unit.sold_date = None
+                    unit.sold_by = None
+                    unit.save()
+                    unit.product.update_quantities()
+
+            # Create refund record (optional)
+            # You might want to create a Refund model here
+
+            messages.success(
+                request, 
+                f'Sale {sale.invoice_no} has been refunded successfully. '
+                f'Stock has been restored.'
+            )
+            return redirect('tronic_master:my_sales')
+
+        except Exception as e:
+            logger.error(f"Error processing refund for sale {sale.id}: {str(e)}")
+            messages.error(request, f'Error processing refund: {str(e)}')
+            return redirect('tronic_master:my_sales')
+
+    context = {
+        'tenant': tenant,
+        'sale': sale,
+        'active_tab': 'my_sales',
+    }
+    return render(request, 'tronic_master/refund_sale.html', context)
+
+    
 # ============================================
 # SALES SEARCH
 # ============================================
@@ -4968,7 +5365,8 @@ def receipt_search(request):
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
 
-    sales = Sale.objects.filter(tenant=tenant).order_by('-created_at')
+    # ✅ Use select_related and prefetch_related for better performance
+    sales = Sale.objects.filter(tenant=tenant).select_related('customer').prefetch_related('items').order_by('-created_at')
 
     if search_query:
         sales = sales.filter(
@@ -4983,15 +5381,18 @@ def receipt_search(request):
     if date_to:
         sales = sales.filter(created_at__date__lte=date_to)
 
-    # Calculate totals
+    # ✅ Calculate totals using the items_count property
+    from django.db.models import Sum
+    
     total_sales = sales.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    
+    # ✅ Calculate total items by iterating through sales
+    # This avoids the N+1 query problem by using prefetched items
     total_items = 0
-    unique_customers = sales.values('customer_id').distinct().count()
-
-    # Count items for each sale
     for sale in sales:
-        sale.items_count = sale.items.count()
-        total_items += sale.items_count
+        total_items += sale.items.count()  # This uses the prefetched items
+    
+    unique_customers = sales.values('customer_id').distinct().count()
 
     # Pagination
     paginator = Paginator(sales, 20)

@@ -5,17 +5,19 @@
 {% block title %}Point of Sale - Tech Master{% endblock %}
 
 {% block content %}
+
+
 <style>
     /* ============================================
        POS LAYOUT - 3 COLUMN DESIGN
-       REDUCED HEIGHT FOR FOOTER VISIBILITY
+       REDUCED HEIGHT BY 20%
     ============================================ */
     .pos-container {
-        height: calc(100vh - 170px);
+        height: calc((100vh - 170px) * 0.8);
         overflow: hidden;
         display: flex;
-        gap: 12px;
-        padding: 8px 0;
+        gap: 10px;
+        padding: 6px 0;
     }
     
     /* ============================================
@@ -27,39 +29,39 @@
         display: flex;
         flex-direction: column;
         background: var(--card-bg, #ffffff);
-        border-radius: 12px;
-        padding: 12px;
+        border-radius: 10px;
+        padding: 8px 10px;
         overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 10px rgb(0, 0, 0);
         border: 1px solid var(--sidebar-border, #e9ecef);
         height: 100%;
     }
     
     .pos-left .search-section {
         flex-shrink: 0;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
     
     .pos-left .search-section .input-group {
-        height: 34px;
+        height: 30px;
     }
     
     .pos-left .search-section .input-group .form-control {
-        font-size: 0.8rem;
-        padding: 4px 10px;
-        height: 34px;
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        height: 30px;
     }
     
     .pos-left .search-section .input-group .btn {
-        font-size: 0.75rem;
-        padding: 4px 12px;
-        height: 34px;
+        font-size: 0.7rem;
+        padding: 3px 10px;
+        height: 30px;
     }
     
     .pos-left .search-section .input-group .input-group-text {
-        font-size: 0.75rem;
-        padding: 0 10px;
-        height: 34px;
+        font-size: 0.7rem;
+        padding: 0 8px;
+        height: 30px;
     }
     
     .pos-left .products-grid-container {
@@ -79,33 +81,33 @@
     .product-card {
         background: var(--card-bg, #ffffff);
         border: 1px solid var(--sidebar-border, #e9ecef);
-        border-radius: 8px;
-        padding: 8px;
+        border-radius: 6px;
+        padding: 6px;
         cursor: pointer;
         transition: all 0.2s;
         text-align: center;
         position: relative;
     }
     .product-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         border-color: #0d6efd;
         background: #f0f7ff;
     }
     .product-card .product-name {
         font-weight: 600;
-        font-size: 0.75rem;
-        margin-bottom: 3px;
+        font-size: 0.7rem;
+        margin-bottom: 2px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         color: var(--sidebar-text, #333);
     }
     .product-card .product-identifier {
-        font-size: 0.55rem;
+        font-size: 0.5rem;
         color: #6c757d;
         background: #f1f3f5;
-        padding: 1px 5px;
+        padding: 1px 4px;
         border-radius: 4px;
         display: inline-block;
         font-family: monospace;
@@ -115,36 +117,36 @@
         white-space: nowrap;
     }
     .product-card .product-price {
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         font-weight: bold;
         color: #28a745;
-        margin-top: 3px;
+        margin-top: 2px;
     }
     .product-card .stock-badge {
         position: absolute;
-        top: 4px;
-        right: 4px;
-        font-size: 0.45rem;
-        padding: 1px 5px;
-        border-radius: 8px;
+        top: 3px;
+        right: 3px;
+        font-size: 0.4rem;
+        padding: 1px 4px;
+        border-radius: 6px;
     }
     .product-card .single-badge {
         position: absolute;
-        top: 4px;
-        left: 4px;
-        font-size: 0.45rem;
-        padding: 1px 5px;
-        border-radius: 8px;
+        top: 3px;
+        left: 3px;
+        font-size: 0.4rem;
+        padding: 1px 4px;
+        border-radius: 6px;
         background: #6f42c1;
         color: white;
     }
     .products-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
-        gap: 6px;
+        grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+        gap: 5px;
     }
-    .badge-imei { font-size: 0.45rem; background: #0d6efd; color: white; padding: 1px 4px; border-radius: 8px; }
-    .badge-barcode { font-size: 0.45rem; background: #28a745; color: white; padding: 1px 4px; border-radius: 8px; }
+    .badge-imei { font-size: 0.4rem; background: #0d6efd; color: white; padding: 1px 3px; border-radius: 6px; }
+    .badge-barcode { font-size: 0.4rem; background: #28a745; color: white; padding: 1px 3px; border-radius: 6px; }
     
     /* ============================================
        MIDDLE COLUMN - 50% (Cart)
@@ -155,8 +157,8 @@
         display: flex;
         flex-direction: column;
         background: var(--card-bg, #ffffff);
-        border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(19, 0, 0, 0.987);
         border: 1px solid var(--sidebar-border, #e9ecef);
         overflow: hidden;
         height: 100%;
@@ -164,31 +166,31 @@
     
     .pos-middle .cart-header {
         flex-shrink: 0;
-        padding: 8px 14px;
+        padding: 6px 12px;
         border-bottom: 1px solid var(--sidebar-border, #e9ecef);
         background: var(--sidebar-active, #f8f9fa);
     }
     
     .pos-middle .cart-header h6 {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: var(--sidebar-text, #333);
         margin: 0;
     }
     
     .pos-middle .cart-header .badge {
-        font-size: 0.6rem;
-        padding: 2px 8px;
+        font-size: 0.55rem;
+        padding: 1px 6px;
     }
     
     .pos-middle .cart-header .btn {
-        font-size: 0.65rem;
-        padding: 2px 6px;
+        font-size: 0.6rem;
+        padding: 1px 5px;
     }
     
     .pos-middle .cart-items-container {
         flex: 1;
         overflow-y: auto;
-        padding: 6px 12px;
+        padding: 4px 10px;
     }
     
     .pos-middle .cart-items-container::-webkit-scrollbar {
@@ -205,14 +207,14 @@
     .cart-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.7rem;
+        font-size: 0.65rem;
     }
     .cart-table th {
         background: var(--sidebar-active, #f1f3f5);
-        padding: 4px 5px;
+        padding: 3px 4px;
         text-align: left;
         font-weight: 600;
-        font-size: 0.6rem;
+        font-size: 0.55rem;
         text-transform: uppercase;
         color: var(--sidebar-text, #333);
         border-bottom: 2px solid var(--sidebar-border, #dee2e6);
@@ -222,36 +224,36 @@
         white-space: nowrap;
     }
     .cart-table td {
-        padding: 4px 5px;
+        padding: 3px 4px;
         vertical-align: middle;
         border-bottom: 1px solid var(--sidebar-border, #e9ecef);
     }
     .cart-table tr:hover td {
         background: var(--sidebar-hover, #f8f9fa);
     }
-    .cart-table .col-id { width: 6%; text-align: center; }
-    .cart-table .col-qty { width: 10%; text-align: center; }
-    .cart-table .col-description { width: 28%; }
-    .cart-table .col-custom-price { width: 16%; }
-    .cart-table .col-price { width: 15%; }
-    .cart-table .col-total { width: 15%; font-weight: bold; }
-    .cart-table .col-actions { width: 5%; text-align: center; }
+    .cart-table .col-id { width: 5%; text-align: center; }
+    .cart-table .col-qty { width: 9%; text-align: center; }
+    .cart-table .col-description { width: 29%; }
+    .cart-table .col-custom-price { width: 15%; }
+    .cart-table .col-price { width: 14%; }
+    .cart-table .col-total { width: 14%; font-weight: bold; }
+    .cart-table .col-actions { width: 4%; text-align: center; }
     
     .cart-table .qty-control {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 3px;
+        gap: 2px;
     }
     .cart-table .qty-control .qty-btn {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         border: none;
         background: var(--sidebar-border, #e9ecef);
         border-radius: 3px;
         cursor: pointer;
         font-weight: bold;
-        font-size: 10px;
+        font-size: 9px;
         transition: all 0.2s;
         display: flex;
         align-items: center;
@@ -264,17 +266,17 @@
     }
     .cart-table .qty-control .qty-number {
         font-weight: 600;
-        min-width: 16px;
+        min-width: 14px;
         text-align: center;
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         color: var(--sidebar-text, #333);
     }
     .cart-table .custom-price-input {
-        width: 65px;
+        width: 60px;
         padding: 1px 3px;
         border: 1px solid var(--sidebar-border, #dee2e6);
         border-radius: 3px;
-        font-size: 0.65rem;
+        font-size: 0.6rem;
         text-align: right;
         background: var(--card-bg, #ffffff);
         color: var(--sidebar-text, #333);
@@ -289,14 +291,14 @@
         border: none;
         color: #dc3545;
         cursor: pointer;
-        font-size: 0.7rem;
-        padding: 2px 4px;
+        font-size: 0.65rem;
+        padding: 1px 3px;
         transition: all 0.2s;
     }
     .cart-table .remove-btn:hover {
         background: #dee2e6;
         color: #a71d2a;
-        transform: scale(1.2);
+        transform: scale(1.1);
     }
     
     /* ============================================
@@ -304,7 +306,7 @@
     ============================================ */
     .cart-footer {
         flex-shrink: 0;
-        padding: 8px 14px;
+        padding: 6px 12px;
         border-top: 2px solid var(--sidebar-border, #dee2e6);
         background: var(--card-bg, #ffffff);
     }
@@ -312,110 +314,111 @@
     .summary-row {
         display: flex;
         justify-content: space-between;
-        padding: 2px 0;
-        font-size: 0.8rem;
+        padding: 1px 0;
+        font-size: 0.75rem;
         color: var(--sidebar-text, #333);
     }
     .summary-row.total {
         border-top: 2px solid var(--sidebar-border, #dee2e6);
-        margin-top: 3px;
-        padding-top: 5px;
+        margin-top: 2px;
+        padding-top: 3px;
         font-weight: bold;
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
     .price-inclusive {
-        font-size: 0.5rem;
+        font-size: 0.45rem;
         color: #28a745;
         background: #d4edda;
-        padding: 1px 6px;
-        border-radius: 8px;
+        padding: 1px 5px;
+        border-radius: 6px;
         display: inline-block;
     }
     
     /* ============================================
        RIGHT COLUMN - 20% (Payment + Customer)
-       WITH PAYMENT CARDS
+       ULTRA COMPACT - PREVENT CUTOFF
     ============================================ */
     .pos-right {
         width: 20%;
-        min-width: 20%;
+        min-width: 18%;
+        max-width: 22%;
         display: flex;
         flex-direction: column;
         background: var(--card-bg, #ffffff);
-        border-radius: 12px;
+        border-radius: 10px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.979);
         border: 1px solid var(--sidebar-border, #e9ecef);
-        padding: 30px;
+        padding: 8px 6px;
         overflow: hidden;
         height: 100%;
+        gap: 3px;
     }
     
+    /* Customer Section */
     .pos-right .customer-section {
         flex-shrink: 0;
-        margin-bottom: 8px;
+        margin-bottom: 2px;
     }
     .pos-right .customer-section label {
-        font-size: 0.65rem;
+        font-size: 0.5rem;
         font-weight: 600;
         color: var(--sidebar-text, #495057);
-        margin-bottom: 2px;
+        margin-bottom: 0px;
         display: block;
     }
     
     .pos-right .customer-section .input-group {
-        height: 30px;
+        height: 20px;
     }
     
     .pos-right .customer-section .input-group .form-control {
-        font-size: 0.65rem;
-        padding: 2px 6px;
-        height: 30px;
+        font-size: 0.5rem;
+        padding: 0px 3px;
+        height: 20px;
     }
     
     .pos-right .customer-section .input-group .btn {
-        font-size: 0.6rem;
-        padding: 2px 6px;
-        height: 30px;
+        font-size: 0.45rem;
+        padding: 0px 3px;
+        height: 20px;
     }
     
     .pos-right .customer-section #customerInfo .alert {
-        font-size: 0.6rem;
-        padding: 2px 8px;
-        margin-top: 2px;
+        font-size: 0.45rem;
+        padding: 0px 3px;
+        margin-top: 1px;
     }
     
-    /* ============================================
-       PAYMENT METHOD CARDS
-    ============================================ */
+    /* Payment Methods */
     .payment-methods {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 4px;
-        margin-bottom: 8px;
+        gap: 2px;
+        margin-bottom: 2px;
     }
     
     .payment-card {
         background: var(--sidebar-active, #f8f9fa);
-        border: 2px solid var(--sidebar-border, #e9ecef);
-        border-radius: 8px;
-        padding: 6px 4px;
+        border: 1px solid var(--sidebar-border, #e9ecef);
+        border-radius: 3px;
+        padding: 2px 1px;
         text-align: center;
         cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 0.6rem;
+        transition: all 0.2s ease;
+        font-size: 0.45rem;
         font-weight: 500;
         color: var(--sidebar-text, #495057);
     }
     
     .payment-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .payment-card .payment-icon {
-        font-size: 1.2rem;
+        font-size: 0.7rem;
         display: block;
-        margin-bottom: 2px;
+        margin-bottom: 0px;
     }
     
     .payment-card.active {
@@ -428,132 +431,62 @@
         color: #28a745;
     }
     
-    [data-bs-theme="dark"] .payment-card {
-        background: #2d2d44;
-        border-color: #3d3d54;
-        color: #e0e0e0;
-    }
-    [data-bs-theme="dark"] .payment-card.active {
-        background: #1a3a2a;
-        border-color: #28a745;
-        color: #a8e6cf;
-    }
-    
+    /* Payment Section */
     .pos-right .payment-section label {
-        font-size: 0.65rem;
+        font-size: 0.5rem;
         font-weight: 600;
         color: var(--sidebar-text, #495057);
-        margin-bottom: 2px;
+        margin-bottom: 0px;
         display: block;
     }
     
     .pos-right .payment-section .form-control {
-        font-size: 0.65rem;
-        padding: 2px 6px;
-        height: 30px;
+        font-size: 0.5rem;
+        padding: 0px 3px;
+        height: 20px;
         background: var(--card-bg, #ffffff);
         color: var(--sidebar-text, #333);
         border-color: var(--sidebar-border, #dee2e6);
     }
     
     .pos-right .payment-section #changeDue .alert {
-        font-size: 0.6rem;
-        padding: 2px 8px;
-        margin-top: 3px;
+        font-size: 0.45rem;
+        padding: 0px 3px;
+        margin-top: 1px;
     }
     
-    /* ============================================
-       EXTRA BUTTONS - STYLES
-    ============================================ */
+    /* Extra Buttons */
     .pos-right .extra-buttons {
         display: flex;
-        gap: 4px;
-        margin-top: 6px;
-        margin-bottom: 6px;
+        gap: 2px;
+        margin-top: 2px;
+        margin-bottom: 2px;
     }
     
     .pos-right .extra-buttons .btn {
-        font-size: 0.55rem;
-        padding: 4px 6px;
-        border-radius: 4px;
+        font-size: 0.45rem;
+        padding: 1px 3px;
+        border-radius: 3px;
         flex: 1;
         white-space: nowrap;
     }
     
     .pos-right .extra-buttons .btn i {
-        margin-right: 2px;
+        margin-right: 0px;
     }
     
+    /* Submit Button */
     .pos-right .submit-section {
         flex-shrink: 0;
         margin-top: auto;
-        padding-top: 8px;
+        padding-top: 2px;
     }
     
     .pos-right .submit-section .btn {
-        font-size: 0.75rem;
-        padding: 6px 8px;
+        font-size: 0.55rem;
+        padding: 3px 4px;
         font-weight: 600;
-        border-radius: 6px;
-    }
-    
-    /* ============================================
-       MODAL STYLES
-    ============================================ */
-    .modal-content {
-        border-radius: 12px;
-        border: none;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    }
-    .modal-header {
-        border-radius: 12px 12px 0 0;
-        padding: 12px 20px;
-    }
-    .modal-footer {
-        border-radius: 0 0 12px 12px;
-        padding: 10px 20px;
-    }
-    .modal-body {
-        padding: 20px;
-    }
-    .stk-amount-display {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #28a745;
-        text-align: center;
-        padding: 10px 0;
-    }
-    
-    /* ============================================
-       SINGLE ITEM SELECTION MODAL
-    ============================================ */
-    .imei-list-container {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    .imei-item {
-        padding: 10px 15px;
-        border-bottom: 1px solid #e9ecef;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .imei-item:hover {
-        background-color: #e3f2fd;
-    }
-    .imei-item.selected {
-        background-color: #cfe2ff;
-        border-left: 3px solid #0d6efd;
-    }
-    .imei-item .imei-number {
-        font-family: monospace;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-    .imei-item .imei-status {
-        font-size: 0.7rem;
+        border-radius: 3px;
     }
     
     /* ============================================
@@ -616,6 +549,16 @@
         color: #e0e0e0;
         border-color: #3d3d54;
     }
+    [data-bs-theme="dark"] .payment-card {
+        background: #2d2d44;
+        border-color: #3d3d54;
+        color: #e0e0e0;
+    }
+    [data-bs-theme="dark"] .payment-card.active {
+        background: #1a3a2a;
+        border-color: #28a745;
+        color: #a8e6cf;
+    }
     [data-bs-theme="dark"] .imei-item {
         border-color: #2d2d44;
         color: #e0e0e0;
@@ -625,6 +568,65 @@
     }
     [data-bs-theme="dark"] .imei-item.selected {
         background-color: #1a2a4e;
+    }
+    
+    /* ============================================
+       MODAL STYLES
+    ============================================ */
+    .modal-content {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+        border-radius: 12px 12px 0 0;
+        padding: 12px 20px;
+    }
+    .modal-footer {
+        border-radius: 0 0 12px 12px;
+        padding: 10px 20px;
+    }
+    .modal-body {
+        padding: 20px;
+    }
+    .stk-amount-display {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #28a745;
+        text-align: center;
+        padding: 10px 0;
+    }
+    
+    /* ============================================
+       SINGLE ITEM SELECTION MODAL
+    ============================================ */
+    .imei-list-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .imei-item {
+        padding: 10px 15px;
+        border-bottom: 1px solid #e9ecef;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .imei-item:hover {
+        background-color: #e3f2fd;
+    }
+    .imei-item.selected {
+        background-color: #cfe2ff;
+        border-left: 3px solid #0d6efd;
+    }
+    .imei-item .imei-number {
+        font-family: monospace;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .imei-item .imei-status {
+        font-size: 0.7rem;
     }
     
     /* ============================================
@@ -643,6 +645,7 @@
         }
         .pos-right {
             max-height: 200px;
+            padding: 12px;
         }
         .cart-table {
             font-size: 0.65rem;
@@ -653,6 +656,13 @@
         .payment-methods {
             grid-template-columns: 1fr 1fr 1fr;
         }
+        .payment-card {
+            font-size: 0.55rem;
+            padding: 4px 2px;
+        }
+        .payment-card .payment-icon {
+            font-size: 0.9rem;
+        }
     }
     
     @media (max-width: 768px) {
@@ -660,7 +670,11 @@
             height: auto;
         }
         .pos-left, .pos-middle, .pos-right {
-            max-height: 100px;
+            max-height: 150px;
+        }
+        .pos-right {
+            max-height: 150px;
+            padding: 10px;
         }
         .products-grid {
             grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -669,11 +683,32 @@
             grid-template-columns: 1fr 1fr;
         }
         .payment-card {
-            font-size: 0.5rem;
-            padding: 4px 2px;
+            font-size: 0.45rem;
+            padding: 3px 2px;
         }
         .payment-card .payment-icon {
-            font-size: 1rem;
+            font-size: 0.7rem;
+        }
+        .pos-right .customer-section .input-group {
+            height: 26px;
+        }
+        .pos-right .customer-section .input-group .form-control {
+            height: 26px;
+            font-size: 0.55rem;
+        }
+        .pos-right .customer-section .input-group .btn {
+            height: 26px;
+            font-size: 0.5rem;
+        }
+        .pos-right .payment-section .form-control {
+            height: 26px;
+            font-size: 0.55rem;
+        }
+        .pos-right .extra-buttons .btn {
+            font-size: 0.5rem;
+        }
+        .pos-right .submit-section .btn {
+            font-size: 0.6rem;
         }
     }
     
@@ -695,6 +730,7 @@
         background: #aaa;
     }
 </style>
+
 
 <div class="container-fluid">
     <div class="pos-container">

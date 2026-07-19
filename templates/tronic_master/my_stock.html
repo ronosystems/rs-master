@@ -2,47 +2,105 @@
 {% extends 'tronic_master/base_tronic.html' %}
 {% load static %}
 
-{% block title %}My Stock | {{ user.username }}{% endblock %}
+{% block title %}
+    {% if is_admin %}All Stock{% else %}My Stock{% endif %} | {{ user.username }}
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
     <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-boxes text-primary me-2"></i>
+                {% if is_admin %}
+                    All Stock - System Wide
+                {% else %}
+                    My Assigned Stock
+                {% endif %}
+            </h4>
             <p class="text-muted mb-0">
+                {% if is_admin %}
+                    <i class="fas fa-user-shield me-1 text-warning"></i>
+                    Admin View: Showing all stock across all branches
+                {% else %}
+                    Showing stock assigned to <strong>{{ user.get_full_name|default:user.username }}</strong>
+                {% endif %}
             </p>
         </div>
-        <div class="mt-2 mt-md-0">
-            <a href="#" class="btn btn-warning me-2">
-                <i class="fas fa-boxes me-2"></i>{{ total_units }}
-                <small>Units Assigned</small>
+        <div class="mt-2 mt-md-0 d-flex flex-wrap gap-2">
+            <!-- Stats Badges -->
+            <a href="#" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-boxes me-1"></i>
+                {{ total_units }} <small>Total</small>
             </a>
-            <a href="#" class="btn btn-warning me-2">
-                <i class="fas fa-boxes me-2"></i>{{ available_units }}
-                <small>Available Units</small>
+            <a href="#" class="btn btn-outline-success btn-sm">
+                <i class="fas fa-check-circle me-1"></i>
+                {{ available_units }} <small>Available</small>
             </a>
-            <a href="#" class="btn btn-secondary me-2">
-                <i class="fas fa-pause-circle me-2"></i>{{ reserved_units }}
-                <small>Reserved Units</small>
+            <a href="#" class="btn btn-outline-warning btn-sm">
+                <i class="fas fa-clock me-1"></i>
+                {{ reserved_units }} <small>Reserved</small>
             </a>
-
-            <a href="{% url 'tronic_master:agent_sale' %}" class="btn btn-success">
-                <i class="fas fa-plus-circle me-2"></i>Add New Sale
+            <a href="#" class="btn btn-outline-info btn-sm">
+                <i class="fas fa-shopping-cart me-1"></i>
+                {{ sold_units }} <small>Sold</small>
             </a>
+            
+            <!-- Admin Extra Stats -->
+            {% if is_admin %}
+            <a href="#" class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                {{ damaged_units|default:0 }} <small>Damaged</small>
+            </a>
+            {% endif %}
+            
+            <!-- Action Buttons -->
+            <a href="{% url 'tronic_master:agent_sale' %}" class="btn btn-success btn-sm">
+                <i class="fas fa-plus-circle me-1"></i>New Sale
+            </a>
+            {% if is_admin %}
+            <a href="{% url 'tronic_master:stock_management' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-cog me-1"></i>Manage Stock
+            </a>
+            {% endif %}
         </div>
     </div>
 
+    <!-- Admin Alert Banner -->
+    {% if is_admin %}
+    <div class="alert alert-info alert-dismissible fade show mb-4">
+        <i class="fas fa-user-shield me-2"></i>
+        <strong>Admin Mode:</strong> You are viewing all stock in the system across all branches and agents.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
 
     <!-- Products Table -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-0 pt-3">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <h5 class="mb-0">
-                    <i class="fas fa-list me-2"></i> My Assigned Products
+                    <i class="fas fa-list me-2"></i>
+                    {% if is_admin %}All Products{% else %}My Assigned Products{% endif %}
                     <span class="badge bg-secondary ms-2">{{ total_units }} units</span>
                 </h5>
-                <div class="mt-2 mt-sm-0">
-                    <div class="input-group input-group-sm" style="width: 300px;">
+                <div class="mt-2 mt-sm-0 d-flex gap-2">
+                    <!-- Status Filter -->
+                    <select id="statusFilter" class="form-select form-select-sm" style="width: 150px;" onchange="filterTable()">
+                        <option value="">All Status</option>
+                        <option value="available">Available</option>
+                        <option value="reserved">Reserved</option>
+                        <option value="sold">Sold</option>
+                        {% if is_admin %}
+                        <option value="damaged">Damaged</option>
+                        <option value="stolen">Stolen</option>
+                        <option value="lost">Lost</option>
+                        {% endif %}
+                    </select>
+                    
+                    <!-- Search Input -->
+                    <div class="input-group input-group-sm" style="width: 250px;">
                         <input type="text" id="searchInput" class="form-control" placeholder="Search by name, IMEI, or brand..." onkeyup="filterTable()">
                         <span class="input-group-text bg-white">
                             <i class="fas fa-search text-muted"></i>
@@ -56,28 +114,36 @@
                 <table class="table table-hover align-middle mb-0" id="stockTable">
                     <thead class="bg-light">
                         <tr>
+                            <th>#</th>
                             <th>PRODUCT NAME</th>
                             <th>BRAND / MODEL</th>
                             <th>IDENTIFIER (IMEI/SERIAL)</th>
                             <th>STATUS</th>
                             <th>SELLING PRICE</th>
+                            <th>BRANCH</th>
+                            {% if is_admin %}
+                            <th>OWNER</th>
+                            {% endif %}
                             <th>ASSIGNED DATE</th>
                             <th class="text-center">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for unit in my_units %}
-                        <tr>
+                        <tr data-status="{{ unit.status }}">
+                            <td>{{ forloop.counter0|add:my_units.start_index }}</td>
                             <td class="fw-semibold">
                                 <i class="fas fa-mobile-alt text-primary me-2"></i>
                                 <strong>{{ unit.product.name }}</strong>
+                                <br>
+                                <small class="text-muted">SKU: {{ unit.product.sku_code }}</small>
                             </td>
                             <td>
                                 {{ unit.product.brand|default:"—" }} / {{ unit.product.model|default:"—" }}
                             </td>
                             <td>
                                 {% if unit.imei_number %}
-                                <code class="bg-light px-2 py-1 rounded" style="font-size: 1.1rem;">
+                                <code class="bg-light px-2 py-1 rounded" style="font-size: 0.9rem;">
                                     {{ unit.imei_number }}
                                 </code>
                                 {% elif unit.serial_number %}
@@ -95,6 +161,12 @@
                                 <span class="badge bg-warning text-dark">Reserved</span>
                                 {% elif unit.status == 'sold' %}
                                 <span class="badge bg-danger">Sold</span>
+                                {% elif unit.status == 'damaged' %}
+                                <span class="badge bg-danger">Damaged</span>
+                                {% elif unit.status == 'stolen' %}
+                                <span class="badge bg-dark">Stolen</span>
+                                {% elif unit.status == 'lost' %}
+                                <span class="badge bg-secondary">Lost</span>
                                 {% else %}
                                 <span class="badge bg-secondary">{{ unit.status }}</span>
                                 {% endif %}
@@ -102,6 +174,21 @@
                             <td class="text-success fw-bold">
                                 KES {{ unit.unit_selling_price|default:unit.product.default_selling_price|floatformat:2 }}
                             </td>
+                            <td>
+                                <span class="badge bg-info">{{ unit.branch.name|default:"Main Shop" }}</span>
+                            </td>
+                            {% if is_admin %}
+                            <td>
+                                {% if unit.current_owner %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-user me-1"></i>
+                                    {{ unit.current_owner.get_full_name|default:unit.current_owner.username }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
                             <td>
                                 {% if unit.assigned_date %}
                                     <span class="badge bg-info">
@@ -120,16 +207,36 @@
                                     <a href="{% url 'tronic_master:my_stock_sell' unit.id %}" class="btn btn-success" title="Sell This Product">
                                         <i class="fas fa-shopping-cart"></i>
                                     </a>
+                                    <button onclick="reserveUnit({{ unit.id }})" class="btn btn-warning" title="Reserve">
+                                        <i class="fas fa-clock"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if is_admin and unit.status != 'sold' %}
+                                    <button onclick="transferUnit({{ unit.id }})" class="btn btn-secondary" title="Transfer">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </button>
                                     {% endif %}
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+                            <td colspan="{% if is_admin %}10{% else %}9{% endif %}" class="text-center py-5">
                                 <i class="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
-                                <p>No products assigned to you yet</p>
-                                <small class="text-muted">Contact your manager to get products assigned</small>
+                                <p class="fw-bold">
+                                    {% if is_admin %}
+                                    No stock available in the system
+                                    {% else %}
+                                    No products assigned to you yet
+                                    {% endif %}
+                                </p>
+                                <small class="text-muted">
+                                    {% if is_admin %}
+                                    Stock will appear here when products are added to the system
+                                    {% else %}
+                                    Contact your manager to get products assigned
+                                    {% endif %}
+                                </small>
                             </td>
                         </tr>
                         {% endfor %}
@@ -143,7 +250,7 @@
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="bg-success bg-opacity-50 p-3 rounded-circle">
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle">
                             <i class="fas fa-chart-line text-success fs-4"></i>
                         </div>
                         <div>
@@ -158,22 +265,79 @@
                     </div>
                 </div>
                 <div class="col-md-6 text-end">
-                    <a href="{% url 'tronic_master:agent_sale' %}" class="btn btn-primary px-4 py-2">
-                        <i class="fas fa-plus-circle me-2"></i> Create New Sale
-                    </a>
+                    <div class="d-flex justify-content-end gap-2">
+                        <span class="badge bg-success p-2">
+                            <i class="fas fa-check-circle me-1"></i>
+                            Available: {{ available_units }}
+                        </span>
+                        <span class="badge bg-warning p-2">
+                            <i class="fas fa-clock me-1"></i>
+                            Reserved: {{ reserved_units }}
+                        </span>
+                        <span class="badge bg-info p-2">
+                            <i class="fas fa-shopping-cart me-1"></i>
+                            Sold: {{ sold_units }}
+                        </span>
+                        {% if is_admin %}
+                        <span class="badge bg-danger p-2">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Damaged: {{ damaged_units|default:0 }}
+                        </span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Pagination -->
+{% if my_units.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination pagination-sm">
+            {% if my_units.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                    <i class="fas fa-chevron-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ my_units.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">{{ my_units.number }}</span>
+            </li>
+
+            {% if my_units.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ my_units.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ my_units.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                    <i class="fas fa-chevron-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
 <style>
     .table th {
         background-color: #f8f9fa;
         font-weight: 600;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        white-space: nowrap;
     }
     .table td {
         vertical-align: middle;
@@ -193,38 +357,172 @@
         font-size: 0.7rem;
         padding: 4px 8px;
     }
+    code {
+        font-size: 0.8rem;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .table th, .table td {
+            font-size: 0.75rem;
+            padding: 0.5rem;
+        }
+        .btn-group .btn {
+            padding: 0.2rem 0.4rem;
+        }
+        .container-fluid {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+        .d-flex.flex-wrap.gap-2 {
+            gap: 4px !important;
+        }
+        .btn-sm {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+        }
+    }
 </style>
 
 <script>
-    // Search functionality
+    // Search and filter functionality
     function filterTable() {
         const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('statusFilter')?.value || '';
         const rows = document.querySelectorAll('#stockTable tbody tr');
         let visibleCount = 0;
         
         rows.forEach(row => {
-            if (row.cells.length > 1) {
-                const text = row.textContent.toLowerCase();
-                const matches = searchTerm === '' || text.includes(searchTerm);
-                row.style.display = matches ? '' : 'none';
-                if (matches) visibleCount++;
-            }
+            // Skip empty rows (no results row)
+            if (!row.querySelector('td')) return;
+            
+            const text = row.textContent.toLowerCase();
+            const rowStatus = row.getAttribute('data-status') || '';
+            
+            const matchesSearch = searchTerm === '' || text.includes(searchTerm);
+            const matchesStatus = statusFilter === '' || rowStatus === statusFilter;
+            
+            const matches = matchesSearch && matchesStatus;
+            row.style.display = matches ? '' : 'none';
+            if (matches) visibleCount++;
         });
         
         // Show/hide no results message
         let noResults = document.getElementById('noResultsRow');
-        if (visibleCount === 0 && rows.length > 0) {
-            if (!noResults) {
-                const tbody = document.querySelector('#stockTable tbody');
+        const tbody = document.querySelector('#stockTable tbody');
+        
+        // Remove existing no results row if it exists
+        if (noResults) {
+            noResults.remove();
+        }
+        
+        if (visibleCount === 0) {
+            const rowsCount = document.querySelectorAll('#stockTable tbody tr:not(.no-results)').length;
+            if (rowsCount > 0) {
                 noResults = document.createElement('tr');
                 noResults.id = 'noResultsRow';
-                noResults.innerHTML = '<td colspan="7" class="text-center py-5"><i class="fas fa-search fa-2x text-muted mb-2 d-block"></i><p class="text-muted">No matching products found</p></td>';
+                noResults.className = 'no-results';
+                const colCount = document.querySelector('#stockTable thead tr').cells.length;
+                noResults.innerHTML = `
+                    <td colspan="${colCount}" class="text-center py-5">
+                        <i class="fas fa-search fa-2x text-muted mb-2 d-block"></i>
+                        <p class="text-muted">No matching products found</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="clearFilters()">
+                            <i class="fas fa-undo me-1"></i> Clear Filters
+                        </button>
+                    </td>
+                `;
                 tbody.appendChild(noResults);
             }
-            noResults.style.display = '';
-        } else if (noResults) {
-            noResults.style.display = 'none';
         }
     }
+    
+    function clearFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('statusFilter').value = '';
+        filterTable();
+    }
+    
+    // Reserve unit function
+    function reserveUnit(unitId) {
+        if (confirm('Are you sure you want to reserve this unit?')) {
+            fetch(`/tronic/api/reserve-unit/${unitId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error || 'Failed to reserve unit');
+                }
+            })
+            .catch(error => {
+                alert('Error reserving unit');
+                console.error(error);
+            });
+        }
+    }
+    
+    // Transfer unit function (admin only)
+    function transferUnit(unitId) {
+        // Open a modal or prompt for transfer
+        const agentId = prompt('Enter the ID of the agent to transfer this unit to:');
+        if (agentId) {
+            fetch(`/tronic/api/transfer-unit/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    unit_id: unitId,
+                    agent_id: parseInt(agentId)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error || 'Failed to transfer unit');
+                }
+            })
+            .catch(error => {
+                alert('Error transferring unit');
+                console.error(error);
+            });
+        }
+    }
+    
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+               document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1];
+    }
+    
+    // Auto-filter on status change
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusFilter = document.getElementById('statusFilter');
+        if (statusFilter) {
+            statusFilter.addEventListener('change', filterTable);
+        }
+        
+        // Enter key triggers search
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    filterTable();
+                }
+            });
+        }
+    });
 </script>
 {% endblock %}

@@ -115,6 +115,14 @@ urlpatterns = [
     path('stock/manage/', inventory_views.manage_stock, name='manage_stock'),
     path('stock/take/', inventory_views.stock_take, name='stock_take'),  
     path('stock/adjust/<int:product_id>/', inventory_views.stock_adjustment, name='stock_adjustment'),
+
+    # Stock Management
+    path('stock-management/', views.stock_management, name='stock_management'),
+    
+    # API Endpoints
+    path('api/transfer-unit/', views.transfer_unit, name='transfer_unit_api'),
+    path('api/reserve-unit/<int:unit_id>/', views.reserve_unit, name='reserve_unit_api'),
+
     
     # ============================================
     # SALES
@@ -151,6 +159,9 @@ urlpatterns = [
     # Returns
     path('returns/', sales_views.return_list, name='return_list'),
     path('returns/<int:return_id>/', sales_views.return_detail, name='return_detail'),
+
+    # Refund
+    path('refund/<int:sale_id>/', views.refund_sale, name='refund_sale'),
 
     # ============================================
     # EXPENSES
