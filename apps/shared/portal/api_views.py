@@ -12,6 +12,7 @@ import logging
 
 from apps.tronic_master.models import Product, ProductUnit, Sale, SaleItem
 from apps.shared.customers.models import Customer
+from config import settings
 from .helpers import get_user_branch
 
 logger = logging.getLogger(__name__)
@@ -624,32 +625,60 @@ def search_payments(request):
         'count': len(results)
     })
 
-# ============================================
-# PAYMENT PROCESSING
-# ============================================
+# apps/shared/portal/api_views.py
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.db.models import Q
+from django.utils import timezone
+import json
+from decimal import Decimal
+import logging
+
+from apps.tronic_master.models import Product, ProductUnit, Sale, SaleItem
+from apps.shared.customers.models import Customer
+from apps.shared.tenants.models import SyncQueue
+from apps.tronic_master.utils import generate_invoice_number
+from .helpers import get_user_branch
+
+logger = logging.getLogger(__name__)
+
 
 @login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def process_payment(request):
     """Process payment and create sale with stock validation"""
+    logger.info("===== PROCESS PAYMENT STARTED =====")
+    logger.info(f"User: {request.user.username}")
+    
     tenant = request.user.tenant
     
     if not tenant:
+        logger.error("No tenant assigned")
         return JsonResponse({'error': 'No tenant assigned'}, status=400)
     
     try:
         data = json.loads(request.body)
+        logger.info(f"Parsed data: {data}")
         payment_method = data.get('payment_method', 'cash')
         amount_paid = float(data.get('amount_paid', 0))
         customer_id = data.get('customer_id')
-    except:
-        return JsonResponse({'error': 'Invalid data'}, status=400)
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON Decode Error: {e}")
+        return JsonResponse({'error': f'Invalid JSON: {str(e)}'}, status=400)
+    except Exception as e:
+        logger.error(f"Error parsing request: {e}")
+        return JsonResponse({'error': 'Invalid request data'}, status=400)
     
-    # ✅ Get user's branch
+    # Get user's branch
     user_branch = get_user_branch(request.user)
+    logger.info(f"User branch: {user_branch}")
     
     cart = request.session.get('pos_cart', [])
+    logger.info(f"Cart items: {len(cart)}")
     
     if not cart:
         return JsonResponse({'error': 'Cart is empty'}, status=400)
@@ -660,20 +689,28 @@ def process_payment(request):
         is_single = item.get('is_single', False)
         
         if item.get('type') == 'product' and not is_single:
-            product = Product.objects.filter(id=item.get('id'), tenant=tenant).first()
-            if not product:
-                stock_errors.append(f"Product '{item.get('name')}' not found")
-            elif product.available_quantity < item.get('quantity'):
-                stock_errors.append(
-                    f"Not enough stock for '{product.name}'. "
-                    f"Available: {product.available_quantity}, Requested: {item.get('quantity')}"
-                )
+            try:
+                product = Product.objects.filter(id=item.get('id'), tenant=tenant).first()
+                if not product:
+                    stock_errors.append(f"Product '{item.get('name')}' not found")
+                elif product.available_quantity < item.get('quantity'):
+                    stock_errors.append(
+                        f"Not enough stock for '{product.name}'. "
+                        f"Available: {product.available_quantity}, Requested: {item.get('quantity')}"
+                    )
+            except Exception as e:
+                logger.error(f"Error validating product {item.get('id')}: {e}")
+                stock_errors.append(f"Error validating product '{item.get('name')}'")
         elif item.get('type') == 'unit' or is_single:
-            unit = ProductUnit.objects.filter(id=item.get('id'), tenant=tenant).first()
-            if not unit:
-                stock_errors.append(f"Unit '{item.get('identifier')}' is no longer available")
-            elif unit.status != 'available':
-                stock_errors.append(f"Unit '{item.get('identifier')}' is no longer available (Status: {unit.status})")
+            try:
+                unit = ProductUnit.objects.filter(id=item.get('id'), tenant=tenant).first()
+                if not unit:
+                    stock_errors.append(f"Unit '{item.get('identifier')}' is no longer available")
+                elif unit.status != 'available':
+                    stock_errors.append(f"Unit '{item.get('identifier')}' is no longer available (Status: {unit.status})")
+            except Exception as e:
+                logger.error(f"Error validating unit {item.get('id')}: {e}")
+                stock_errors.append(f"Error validating unit '{item.get('identifier')}'")
     
     if stock_errors:
         return JsonResponse({
@@ -681,91 +718,197 @@ def process_payment(request):
             'details': stock_errors[:5]
         }, status=400)
     
-    # Calculate total
+    # ✅ Calculate total
     total = 0
     for item in cart:
-        total += float(item.get('price', 0)) * int(item.get('quantity', 0))
+        try:
+            total += float(item.get('price', 0)) * int(item.get('quantity', 0))
+        except Exception as e:
+            logger.error(f"Error calculating total for item {item}: {e}")
+            return JsonResponse({'error': 'Error calculating cart total'}, status=400)
+    
+    logger.info(f"Cart total: {total}, Amount paid: {amount_paid}")
     
     if amount_paid < total:
-        return JsonResponse({'error': f'Insufficient payment. Total: {total}, Paid: {amount_paid}'}, status=400)
+        return JsonResponse({
+            'error': f'Insufficient payment. Total: {total}, Paid: {amount_paid}'
+        }, status=400)
     
-    # Get customer
+    # ✅ Get customer
     customer = None
     if customer_id:
-        customer = Customer.objects.filter(id=customer_id, tenant=tenant).first()
+        try:
+            customer = Customer.objects.filter(id=customer_id, tenant=tenant).first()
+            logger.info(f"Customer found: {customer}")
+        except Exception as e:
+            logger.error(f"Error finding customer: {e}")
     
-    # ✅ Create sale with user's branch
-    sale = Sale.objects.create(
-        tenant=tenant,
-        customer=customer,
-        customer_name=customer.name if customer else 'Walk-in',
-        customer_phone=customer.phone if customer else '',
-        cashier=request.user,
-        subtotal=total,
-        total=total,
-        payment_method=payment_method,
-        status='completed',
-        tax_inclusive=True,
-        branch=user_branch,  # ✅ Set branch from user
-        invoice_no=f"INV-{timezone.now().strftime('%Y%m%d')}-{Sale.objects.filter(tenant=tenant).count() + 1:04d}"
-    )
+    # ✅ Generate unique invoice number for this tenant
+    try:
+        invoice_no = generate_invoice_number(tenant, prefix="POS")
+    except Exception as e:
+        logger.error(f"Error generating invoice number for tenant {tenant.id}: {e}")
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+        invoice_no = f"POS-{timestamp}"
+    
+    # ✅ Create sale
+    try:
+        sale = Sale.objects.create(
+            tenant=tenant,
+            customer=customer,
+            customer_name=customer.name if customer else 'Walk-in',
+            customer_phone=customer.phone if customer else '',
+            cashier=request.user,
+            subtotal=total,
+            total=total,
+            payment_method=payment_method,
+            status='completed',
+            tax_inclusive=True,
+            branch=user_branch,
+            invoice_no=invoice_no,
+            source='pos'  # Mark as POS sale
+        )
+        logger.info(f"Sale created: {sale.invoice_no}")
+    except Exception as e:
+        logger.error(f"Error creating sale: {e}")
+        return JsonResponse({
+            'error': f'Error creating sale: {str(e)}'
+        }, status=500)
     
     # ✅ Create sale items and update stock
     sold_items = []
-    for item in cart:
-        product = None
-        product_unit = None
-        is_single = item.get('is_single', False)
-        
-        if item.get('type') == 'product' and not is_single:
-            product = Product.objects.filter(id=item.get('id'), tenant=tenant).first()
+    try:
+        for item in cart:
+            product = None
+            product_unit = None
+            is_single = item.get('is_single', False)
+            
+            if item.get('type') == 'product' and not is_single:
+                try:
+                    product = Product.objects.filter(id=item.get('id'), tenant=tenant).first()
+                    if product:
+                        product.available_quantity -= item.get('quantity')
+                        product.save()
+                        logger.info(f"Updated product {product.id} stock to {product.available_quantity}")
+                except Exception as e:
+                    logger.error(f"Error updating product {item.get('id')}: {e}")
+                    
+            elif item.get('type') == 'unit' or is_single:
+                try:
+                    product_unit = ProductUnit.objects.filter(id=item.get('id'), tenant=tenant).first()
+                    if product_unit:
+                        product = product_unit.product
+                        product_unit.status = 'sold'
+                        product_unit.sold_at_price = float(item.get('price'))
+                        product_unit.sold_date = timezone.now()
+                        product_unit.sold_by = request.user
+                        product_unit.save()
+                        product.update_quantities()
+                        logger.info(f"Unit {product_unit.id} marked as sold")
+                except Exception as e:
+                    logger.error(f"Error updating unit {item.get('id')}: {e}")
+            
             if product:
-                product.available_quantity -= item.get('quantity')
-                product.save()
-                
-        elif item.get('type') == 'unit' or is_single:
-            product_unit = ProductUnit.objects.filter(id=item.get('id'), tenant=tenant).first()
-            if product_unit:
-                product = product_unit.product
-                product_unit.status = 'sold'
-                product_unit.sold_at_price = float(item.get('price'))
-                product_unit.sold_date = timezone.now()
-                product_unit.sold_by = request.user
-                product_unit.save()
-                product.update_quantities()
+                try:
+                    SaleItem.objects.create(
+                        sale=sale,
+                        product=product,
+                        product_unit=product_unit,
+                        quantity=int(item.get('quantity', 1)),
+                        price=float(item.get('price', 0)),
+                        subtotal=float(item.get('price', 0)) * int(item.get('quantity', 1))
+                    )
+                    sold_items.append({
+                        'name': product.name,
+                        'identifier': item.get('identifier', product.sku_code),
+                        'quantity': item.get('quantity'),
+                        'price': float(item.get('price', 0)),
+                        'is_single': is_single,
+                    })
+                except Exception as e:
+                    logger.error(f"Error creating sale item: {e}")
         
-        if product:
-            SaleItem.objects.create(
-                sale=sale,
-                product=product,
-                product_unit=product_unit,
-                quantity=int(item.get('quantity', 1)),
-                price=float(item.get('price', 0)),
-                subtotal=float(item.get('price', 0)) * int(item.get('quantity', 1))
-            )
-            sold_items.append({
-                'name': product.name,
-                'identifier': item.get('identifier', product.sku_code),
-                'quantity': item.get('quantity'),
-                'price': float(item.get('price', 0)),
-                'is_single': is_single,
-            })
-    
-    # Update customer total spent
-    if customer:
-        customer.total_spent = (customer.total_spent or Decimal('0')) + Decimal(str(total))
-        customer.save()
-    
-    # Clear cart
-    request.session['pos_cart'] = []
-    
-    return JsonResponse({
-        'success': True,
-        'sale_id': sale.id,
-        'receipt_number': sale.invoice_no,
-        'total': total,
-        'amount_paid': amount_paid,
-        'change': amount_paid - total,
-        'items_sold': sold_items,
-        'branch': user_branch.name if user_branch else None,
-    })
+        # ✅ Update customer total spent
+        if customer:
+            try:
+                customer.total_spent = (customer.total_spent or Decimal('0')) + Decimal(str(total))
+                customer.save()
+                logger.info(f"Updated customer {customer.id} total spent to {customer.total_spent}")
+            except Exception as e:
+                logger.error(f"Error updating customer total spent: {e}")
+        
+        # ✅ Queue sync if offline
+        if getattr(settings, 'OFFLINE_MODE', False):
+            try:
+                SyncQueue.objects.create(
+                    tenant_id=tenant.id,
+                    model_name='Sale',
+                    object_id=str(sale.id),
+                    operation='CREATE',
+                    data={
+                        'id': sale.id,
+                        'invoice_no': sale.invoice_no,
+                        'customer_id': customer.id if customer else None,
+                        'customer_name': customer.name if customer else 'Walk-in',
+                        'customer_phone': customer.phone if customer else '',
+                        'branch_id': user_branch.id if user_branch else None,
+                        'subtotal': str(sale.subtotal),
+                        'total': str(sale.total),
+                        'payment_method': payment_method,
+                        'status': 'completed',
+                        'cashier_id': request.user.id,
+                        'tenant_id': tenant.id,
+                        'created_at': sale.created_at.isoformat(),
+                    },
+                    priority=8
+                )
+                
+                for item in sold_items:
+                    SyncQueue.objects.create(
+                        tenant_id=tenant.id,
+                        model_name='SaleItem',
+                        object_id=str(sale.id),
+                        operation='CREATE',
+                        data={
+                            'sale_id': sale.id,
+                            'product_name': item['name'],
+                            'identifier': item['identifier'],
+                            'quantity': item['quantity'],
+                            'price': item['price'],
+                            'tenant_id': tenant.id,
+                        },
+                        priority=8
+                    )
+                logger.debug(f"✅ Queued Sale sync: {sale.invoice_no}")
+            except Exception as e:
+                logger.error(f"Failed to queue Sale sync: {e}")
+        
+        # ✅ Clear cart
+        request.session['pos_cart'] = []
+        logger.info("Cart cleared")
+        
+        return JsonResponse({
+            'success': True,
+            'sale_id': sale.id,
+            'receipt_number': sale.invoice_no,
+            'total': total,
+            'amount_paid': amount_paid,
+            'change': amount_paid - total,
+            'items_sold': sold_items,
+            'branch': user_branch.name if user_branch else None,
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing payment items: {e}")
+        # If there's an error, mark the sale as cancelled
+        try:
+            sale.status = 'cancelled'
+            sale.save()
+            logger.info(f"Sale {sale.invoice_no} marked as cancelled")
+        except:
+            pass
+        return JsonResponse({
+            'error': f'Error processing sale items: {str(e)}'
+        }, status=500)
+

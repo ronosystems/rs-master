@@ -198,11 +198,6 @@ def exit_preview(request):
 
 
 
-
-
-
-
-
 # ============================================
 # PROJECT TOGGLE VIEWS
 # ============================================
@@ -1093,7 +1088,114 @@ def subscription_plan_delete(request, pk):
     return render(request, 'shared/subscription_plan_confirm_delete.html', context)
 
 
+@login_required
+def subscription_plans(request):
+    """Display all available subscription plans"""
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('dashboard')
+    
+    # Get all active plans
+    plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price_monthly')
+    
+    # Get current plan
+    current_plan_code = tenant.subscription_plan
+    
+    context = {
+        'tenant': tenant,
+        'plans': plans,
+        'current_plan_code': current_plan_code,
+        'active_tab': 'subscription',
+    }
+    return render(request, 'shared/subscription_plans.html', context)
 
+
+@login_required
+def upgrade_subscription(request):
+    """Upgrade subscription page"""
+    tenant = request.user.tenant
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('dashboard')
+
+    # Get current plan
+    current_plan = tenant.subscription_plan or 'free'
+    
+    # Get all available plans
+    from apps.shared.tenants.models import SubscriptionPlan
+    plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price_monthly')
+    
+    # Get the next plan (recommended upgrade)
+    new_plan = None
+    for plan in plans:
+        if plan.code != current_plan:
+            new_plan = plan
+            break
+    
+    # If no plan found, use the first available
+    if not new_plan and plans.exists():
+        new_plan = plans.first()
+
+    # ✅ Get the upgrade intent from session
+    upgrade_intent = request.session.get('upgrade_intent', {})
+    action = upgrade_intent.get('action', '')
+    current_count = upgrade_intent.get('current_count', 0)
+    max_limit = upgrade_intent.get('max_limit', 0)
+
+    # ✅ Get limit type display name
+    limit_type_map = {
+        'add_user': ('Users', 'users'),
+        'add_product': ('Products', 'products'),
+        'add_branch': ('Branches', 'branches'),
+    }
+    limit_display, limit_key = limit_type_map.get(action, ('Items', 'items'))
+
+    if request.method == 'POST':
+        payment_method = request.POST.get('payment_method')
+        
+        # Process upgrade
+        if new_plan:
+            # Update tenant subscription
+            tenant.subscription_plan = new_plan.code
+            tenant.subscription_start = timezone.now()
+            tenant.subscription_end = timezone.now() + timedelta(days=30)
+            tenant.save()
+            
+            # Clear the upgrade intent
+            if 'upgrade_intent' in request.session:
+                del request.session['upgrade_intent']
+            
+            messages.success(
+                request, 
+                f'🎉 Subscription upgraded to <strong>{new_plan.name}</strong> successfully! '
+                f'You can now have up to {new_plan.max_users} users, {new_plan.max_products} products, '
+                f'and {new_plan.max_branches} branches.'
+            )
+            
+            # Redirect back to the original page if exists
+            return_url = upgrade_intent.get('return_url', 'tronic_master:dashboard')
+            return redirect(return_url)
+        
+        messages.error(request, 'No upgrade plan available.')
+        return redirect('tenants:upgrade_subscription')
+
+    context = {
+        'tenant': tenant,
+        'current_plan': current_plan,
+        'new_plan': new_plan,
+        'plans': plans,
+        'upgrade_intent': upgrade_intent,
+        'action': action,
+        'limit_display': limit_display,
+        'limit_key': limit_key,
+        'current_count': current_count,
+        'max_limit': max_limit,
+        'active_tab': 'subscription',
+    }
+    return render(request, 'shared/upgrade_subscription.html', context)
 
 
 # ============================================

@@ -2200,7 +2200,6 @@ class StockAlert(models.Model):
         self.save()
 
 
-
 # ============================================
 # INVOICE COUNTER - For sequential numbering
 # ============================================
@@ -2227,11 +2226,19 @@ class InvoiceCounter(models.Model):
 
     @classmethod
     def get_next_number(cls, tenant):
-        """Get the next invoice number for a tenant"""
-        counter, created = cls.objects.get_or_create(tenant=tenant)
-        counter.last_number += 1
-        counter.save()
-        return counter.last_number
+        """
+        Get the next invoice number for a tenant.
+        Uses select_for_update() to prevent race conditions.
+        Each tenant has their own sequential counter.
+        """
+        from django.db import transaction
+        
+        with transaction.atomic():
+            # Lock the row for this tenant to prevent concurrent increments
+            counter, created = cls.objects.select_for_update().get_or_create(tenant=tenant)
+            counter.last_number += 1
+            counter.save()
+            return counter.last_number
 
     @classmethod
     def reset_counter(cls, tenant, start_from=0):
@@ -2314,6 +2321,15 @@ class Sale(models.Model):
         ('reversed', 'Reversed'),
     ]
 
+    # ✅ Add SALE SOURCE CHOICES
+    SALE_SOURCE_CHOICES = [
+        ('pos', 'Point of Sale'),
+        ('agent', 'Sales Agent'),
+        ('admin', 'Admin'),
+        ('online', 'Online'),
+        ('bulk', 'Bulk Sale'),
+    ]
+
     objects = SaleManager()
 
     # Tenant & Branch
@@ -2358,6 +2374,14 @@ class Sale(models.Model):
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 
+    # ✅ Source field - where the sale came from
+    source = models.CharField(
+        max_length=20,
+        choices=SALE_SOURCE_CHOICES,
+        default='agent',
+        help_text="Source of the sale (POS, Agent, Admin, etc.)"
+    )
+
     # Audit
     cashier = models.ForeignKey(
         User,
@@ -2375,6 +2399,7 @@ class Sale(models.Model):
             models.Index(fields=['tenant', 'invoice_no']),
             models.Index(fields=['tenant', 'status']),
             models.Index(fields=['tenant', 'created_at']),
+            models.Index(fields=['tenant', 'source']),  # ✅ Add index for source
         ]
 
     def __str__(self):
@@ -2433,6 +2458,7 @@ class Sale(models.Model):
                         'payment_status': self.payment_status,
                         'tax_inclusive': self.tax_inclusive,
                         'status': self.status,
+                        'source': self.source,  # ✅ Include source in sync
                         'cashier_id': self.cashier_id if self.cashier_id else None,
                         'tenant_id': tenant_id,
                         'created_at': self.created_at.isoformat() if self.created_at else None,
@@ -2441,76 +2467,6 @@ class Sale(models.Model):
                 logger.debug(f"✅ Queued Sale sync: {self.invoice_no}")
             except Exception as e:
                 logger.error(f"Failed to queue Sale sync: {e}")
-
-    def delete(self, *args, **kwargs):
-        """Queue deletion for sync, then delete the object"""
-        if getattr(settings, 'OFFLINE_MODE', False):
-            try:
-                SyncQueue.objects.create(
-                    tenant_id=self.tenant_id,
-                    model_name='Sale',
-                    object_id=str(self.id),
-                    operation='DELETE',
-                    data={
-                        'id': self.id,
-                        'invoice_no': self.invoice_no,
-                        'tenant_id': self.tenant_id,
-                    }
-                )
-                logger.debug(f"✅ Queued Sale deletion sync: {self.invoice_no}")
-            except Exception as e:
-                logger.error(f"Failed to queue Sale deletion sync: {e}")
-
-        return super().delete(*args, **kwargs)
-
-    def complete(self, cashier=None):
-        """Mark sale as completed"""
-        if cashier:
-            self.cashier = cashier
-        self.status = 'completed'
-        self.payment_status = 'paid'
-        self.save()
-
-        # Update stock quantities
-        for item in self.items.all():
-            if item.product_unit:
-                item.product_unit.status = 'sold'
-                item.product_unit.sold_date = timezone.now()
-                item.product_unit.sold_by = cashier
-                item.product_unit.sold_at_price = item.price
-                item.product_unit.save()
-                item.product_unit.product.update_quantities()
-
-    def cancel(self):
-        """Cancel the sale"""
-        self.status = 'cancelled'
-        self.save()
-
-        # Restore stock
-        for item in self.items.all():
-            if item.product_unit:
-                item.product_unit.status = 'available'
-                item.product_unit.sold_date = None
-                item.product_unit.sold_by = None
-                item.product_unit.sold_at_price = None
-                item.product_unit.save()
-                item.product_unit.product.update_quantities()
-
-    def refund(self):
-        """Refund the sale"""
-        self.status = 'refunded'
-        self.save()
-
-        # Restore stock
-        for item in self.items.all():
-            if item.product_unit:
-                item.product_unit.status = 'available'
-                item.product_unit.sold_date = None
-                item.product_unit.sold_by = None
-                item.product_unit.sold_at_price = None
-                item.product_unit.save()
-                item.product_unit.product.update_quantities()
-
 
 # ============================================
 # SALE ITEM MODEL

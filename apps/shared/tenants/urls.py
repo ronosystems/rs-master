@@ -37,6 +37,8 @@ urlpatterns = [
     # ============================================
     # SUBSCRIPTION PLANS
     # ============================================
+    path('upgrade-subscription/', views.upgrade_subscription, name='upgrade_subscription'),
+    path('subscription-plans/', views.subscription_plans, name='subscription_plans'),
     path('subscription-plans/', views.subscription_plans_list, name='subscription_plans_list'),
     path('subscription-plans/create/', views.subscription_plan_create, name='subscription_plan_create'),
     path('subscription-plans/<int:pk>/edit/', views.subscription_plan_edit, name='subscription_plan_edit'),

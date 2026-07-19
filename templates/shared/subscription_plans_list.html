@@ -80,8 +80,8 @@
                                         <i class="fas {{ plan.icon }} ms-1"></i>
                                     </td>
                                     <td><code>{{ plan.code }}</code></td>
-                                    <td>${{ plan.price_monthly|floatformat:2 }}</td>
-                                    <td>${{ plan.price_yearly|floatformat:2 }}</td>
+                                    <td>KES {{ plan.price_monthly|floatformat:2 }}</td>
+                                    <td>KES {{ plan.price_yearly|floatformat:2 }}</td>
                                     <td>{{ plan.max_users }}</td>
                                     <td>{{ plan.max_products }}</td>
                                     <td>{{ plan.max_branches }}</td>
@@ -93,11 +93,11 @@
                                     <td class="text-center">
                                         {% if plan.tenant_count > 0 %}
                                             <span class="badge bg-success rounded-pill px-3 py-2">
-                                                ${{ plan.monthly_revenue|floatformat:2 }}
+                                                KES {{ plan.monthly_revenue|floatformat:2 }}
                                             </span>
                                         {% else %}
                                             <span class="badge bg-secondary rounded-pill px-3 py-2">
-                                                $0.00
+                                                KES 0.00
                                             </span>
                                         {% endif %}
                                     </td>

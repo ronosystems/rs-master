@@ -25,7 +25,7 @@ from rest_framework.permissions import IsAuthenticated
 from apps.shared.powersync.sync_manager import SyncManager
 from apps.shared.tenants.models import Tenant, SyncQueue
 from apps.shared.users.models import User
-from apps.shared.tenants.decorators import check_product_limit, check_branch_limit
+from apps.shared.tenants.decorators import check_product_limit, check_branch_limit, check_user_limit
 from apps.shared.customers.models import Customer
 from apps.shared.expenses.models import Expense, ExpenseCategory
 
@@ -37,6 +37,7 @@ from apps.tronic_master.models import (
 )
 from django.contrib.auth import get_user_model
 from apps.shared.permissions.models import  UserRoleAssignment
+from apps.tronic_master.utils import generate_invoice_number
 from apps.shared.roles.models import ProjectRole
 from django.views.decorators.csrf import csrf_exempt
 from apps.shared.portal.helpers import is_admin_user
@@ -4163,12 +4164,16 @@ def agent_sale(request):
     }
     return render(request, 'tronic_master/agent_sale.html', context)
 
+
 # ============================================
-#  STOCK LOANS
+# MY STOCK - LIST VIEW
 # ============================================
+
 @login_required
 def my_stock(request):
-    """View stock - Sales Agent sees assigned stock, Admin/Superadmin sees all stock"""
+    """
+    View stock - Sales Agent sees assigned stock, Admin/Superadmin sees all stock
+    """
     tenant = request.user.tenant
     user = request.user
 
@@ -4177,9 +4182,11 @@ def my_stock(request):
         return redirect('dashboard')
 
     # ✅ Check if user is admin or superadmin
-    from apps.shared.portal.helpers import is_admin_user
-    
     is_admin = is_admin_user(user)
+    
+    # ✅ DEBUG: Log the admin status
+    logger.info(f"my_stock - User: {user.username}, Is Admin: {is_admin}")
+    logger.info(f"my_stock - User role: {user.role if hasattr(user, 'role') else 'No role'}")
     
     # ✅ Get product units based on user role
     if is_admin:
@@ -4193,6 +4200,8 @@ def my_stock(request):
             'branch',
             'current_owner'
         ).order_by('-created_at', 'product__name')
+        
+        logger.info(f"Admin view: Found {my_units.count()} units")
         
         # Get all sold units for stats
         sold_units = ProductUnit.objects.filter(
@@ -4212,6 +4221,12 @@ def my_stock(request):
         all_total_units = ProductUnit.objects.filter(
             tenant=tenant,
             status__in=['available', 'reserved']
+        ).count()
+        
+        # Get damaged units for stats
+        damaged_units = ProductUnit.objects.filter(
+            tenant=tenant,
+            status__in=['damaged', 'stolen', 'lost', 'writeoff']
         ).count()
         
         # Get unique products
@@ -4236,6 +4251,8 @@ def my_stock(request):
             'branch'
         ).order_by('-assigned_date', 'product__name')
         
+        logger.info(f"Regular user view: Found {my_units.count()} units for user {user.username}")
+        
         # Count statistics for sales agent
         all_available_units = my_units.filter(status='available').count()
         all_reserved_units = my_units.filter(status='reserved').count()
@@ -4245,6 +4262,12 @@ def my_stock(request):
             tenant=tenant,
             current_owner=user,
             status='sold'
+        ).count()
+        
+        damaged_units = ProductUnit.objects.filter(
+            tenant=tenant,
+            current_owner=user,
+            status__in=['damaged', 'stolen', 'lost', 'writeoff']
         ).count()
         
         # Get unique products
@@ -4258,13 +4281,15 @@ def my_stock(request):
             total_value += float(price)
 
     # ✅ Apply search filter
-    search_query = request.GET.get('q', '')
+    search_query = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', '')
 
     if search_query:
         my_units = my_units.filter(
             Q(product__name__icontains=search_query) |
             Q(product__sku_code__icontains=search_query) |
+            Q(product__brand__icontains=search_query) |
+            Q(product__model__icontains=search_query) |
             Q(imei_number__icontains=search_query) |
             Q(serial_number__icontains=search_query)
         )
@@ -4302,11 +4327,12 @@ def my_stock(request):
         'tenant': tenant,
         'user': user,
         'my_units': page_obj,
-        'is_admin': is_admin,  # ✅ Pass admin status to template
+        'is_admin': is_admin,
         'total_units': all_total_units,
         'available_units': all_available_units,
         'reserved_units': all_reserved_units,
         'sold_units': sold_units,
+        'damaged_units': damaged_units,
         'total_products': total_products,
         'total_value': total_value,
         'grouped_stock': grouped_stock,
@@ -4316,9 +4342,16 @@ def my_stock(request):
     }
     return render(request, 'tronic_master/my_stock.html', context)
 
+
+# ============================================
+# MY STOCK - DETAIL VIEW
+# ============================================
+
 @login_required
 def my_stock_detail(request, unit_id):
-    """Sales Agent - View details of a specific stock unit"""
+    """
+    Sales Agent - View details of a specific stock unit
+    """
     tenant = request.user.tenant
     user = request.user
 
@@ -4326,23 +4359,50 @@ def my_stock_detail(request, unit_id):
         messages.error(request, 'No tenant assigned')
         return redirect('dashboard')
 
-    unit = get_object_or_404(
-        ProductUnit,
-        id=unit_id,
-        tenant=tenant,
-        current_owner=user
-    )
+    # Check if user is admin
+    is_admin = is_admin_user(user)
+
+    # Get the unit
+    if is_admin:
+        # Admin can view any unit
+        unit = get_object_or_404(
+            ProductUnit,
+            id=unit_id,
+            tenant=tenant
+        )
+    else:
+        # Regular user can only view their assigned units
+        unit = get_object_or_404(
+            ProductUnit,
+            id=unit_id,
+            tenant=tenant,
+            current_owner=user
+        )
+
+    # Get sale history for this unit
+    sale_items = SaleItem.objects.filter(
+        product_unit=unit
+    ).select_related('sale').order_by('-sale__created_at')
 
     context = {
         'tenant': tenant,
         'unit': unit,
+        'sale_items': sale_items,
+        'is_admin': is_admin,
         'active_tab': 'my_stock',
     }
     return render(request, 'tronic_master/my_stock_detail.html', context)
 
+
+# ============================================
+# MY STOCK - SELL VIEW
+# ============================================
+
 @login_required
 def my_stock_sell(request, unit_id):
-    """Sales Agent - Sell a unit from their stock"""
+    """
+    Sales Agent - Sell a unit from their stock
+    """
     tenant = request.user.tenant
     user = request.user
 
@@ -4350,34 +4410,34 @@ def my_stock_sell(request, unit_id):
         messages.error(request, 'No tenant assigned')
         return redirect('dashboard')
 
-    # ✅ Check if user is admin
-    from apps.shared.portal.helpers import is_admin_user
+    # Check if user is admin
     is_admin = is_admin_user(user)
 
-    # ✅ Try to get the unit with proper permissions
+    # Get the unit with proper permissions
     try:
-        # First, check if the unit exists in the tenant
-        unit = ProductUnit.objects.filter(id=unit_id, tenant=tenant).select_related(
-            'product', 'branch', 'current_owner'
-        ).first()
+        if is_admin:
+            unit = ProductUnit.objects.filter(
+                id=unit_id,
+                tenant=tenant,
+                status='available'
+            ).select_related('product', 'branch', 'current_owner').first()
+        else:
+            unit = ProductUnit.objects.filter(
+                id=unit_id,
+                tenant=tenant,
+                current_owner=user,
+                status='available'
+            ).select_related('product', 'branch', 'current_owner').first()
         
         if not unit:
-            messages.error(request, f'Unit with ID {unit_id} not found.')
+            messages.error(request, f'Unit with ID {unit_id} not found or not available.')
             return redirect('tronic_master:my_stock')
         
-        # ✅ Check if user has permission to sell this unit
+        # Check if user has permission to sell this unit (for admin, they can sell any)
         if not is_admin and unit.current_owner != user:
             messages.error(
                 request, 
                 f'You do not have permission to sell this unit. It is assigned to {unit.current_owner.get_full_name() or unit.current_owner.username if unit.current_owner else "another agent"}.'
-            )
-            return redirect('tronic_master:my_stock')
-        
-        # ✅ Check if unit is available for sale
-        if unit.status != 'available':
-            messages.error(
-                request, 
-                f'This unit is not available for sale. Current status: {unit.get_status_display()}'
             )
             return redirect('tronic_master:my_stock')
             
@@ -4387,19 +4447,17 @@ def my_stock_sell(request, unit_id):
         return redirect('tronic_master:my_stock')
 
     if request.method == 'POST':
-        # ✅ Get all fields from the form
+        # Get all fields from the form
         customer_name = request.POST.get('customer_name', '').strip()
         customer_phone = request.POST.get('customer_phone', '').strip()
         customer_id_number = request.POST.get('customer_id_number', '').strip()
-
         next_of_kin_name = request.POST.get('next_of_kin_name', '').strip()
         next_of_kin_phone = request.POST.get('next_of_kin_phone', '').strip()
         next_of_kin_relationship = request.POST.get('next_of_kin_relationship', '').strip()
-
         selling_price = request.POST.get('selling_price', '').strip()
         payment_method = request.POST.get('payment_method', 'mpesa').strip()
 
-        # ✅ Validate required fields
+        # Validate required fields
         if not customer_name:
             messages.error(request, 'Customer name is required')
             return redirect('tronic_master:my_stock_sell', unit_id=unit.id)
@@ -4421,13 +4479,13 @@ def my_stock_sell(request, unit_id):
             messages.error(request, 'Invalid selling price')
             return redirect('tronic_master:my_stock_sell', unit_id=unit.id)
 
-        # ✅ Double-check if unit is still available (could have been sold in another tab)
+        # Double-check if unit is still available (could have been sold in another tab)
         unit.refresh_from_db()
         if unit.status != 'available':
             messages.error(request, f'Unit is no longer available (Status: {unit.get_status_display()})')
             return redirect('tronic_master:my_stock')
 
-        # ✅ Create or get customer
+        # Create or get customer
         customer, created = Customer.objects.get_or_create(
             tenant=tenant,
             phone=customer_phone,
@@ -4441,7 +4499,7 @@ def my_stock_sell(request, unit_id):
             }
         )
 
-        # ✅ Update customer if exists and fields are provided
+        # Update customer if exists and fields are provided
         if not created:
             if customer_name and not customer.name:
                 customer.name = customer_name
@@ -4455,26 +4513,16 @@ def my_stock_sell(request, unit_id):
                 customer.next_of_kin_relationship = next_of_kin_relationship
             customer.save()
 
-        # ✅ Generate invoice number
-        today = timezone.now()
-        invoice_prefix = f"SALE-{today.strftime('%Y%m%d')}"
-        last_sale = Sale.objects.filter(
-            tenant=tenant,
-            invoice_no__startswith=invoice_prefix
-        ).order_by('-invoice_no').first()
+        # Generate unique invoice number for this tenant
+        try:
+            invoice_no = generate_invoice_number(tenant, prefix="SALE")
+        except Exception as e:
+            logger.error(f"Error generating invoice number for tenant {tenant.id}: {e}")
+            from datetime import datetime
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+            invoice_no = f"SALE-{timestamp}"
 
-        if last_sale:
-            try:
-                last_number = int(last_sale.invoice_no.split('-')[-1])
-                new_number = last_number + 1
-            except (ValueError, IndexError):
-                new_number = 1
-        else:
-            new_number = 1
-
-        invoice_no = f"{invoice_prefix}-{new_number:04d}"
-
-        # ✅ Create sale
+        # Create sale
         sale = Sale.objects.create(
             tenant=tenant,
             customer=customer,
@@ -4487,10 +4535,11 @@ def my_stock_sell(request, unit_id):
             payment_method=payment_method,
             status='completed',
             tax_inclusive=True,
-            branch=unit.branch
+            branch=unit.branch,
+            source='agent'
         )
 
-        # ✅ Create sale item
+        # Create sale item
         sale_item = SaleItem.objects.create(
             sale=sale,
             product=unit.product,
@@ -4500,25 +4549,23 @@ def my_stock_sell(request, unit_id):
             subtotal=selling_price
         )
 
-        # ✅ Mark unit as sold
+        # Mark unit as sold
         unit.status = 'sold'
         unit.sold_at_price = selling_price
         unit.sold_date = timezone.now()
         unit.sold_by = user
         unit.save()
 
-        # ✅ Update product quantities
+        # Update product quantities
         unit.product.update_quantities()
 
-        # ✅ Update customer total spent
+        # Update customer total spent
         customer.total_spent = (customer.total_spent or Decimal('0')) + selling_price
         customer.save()
 
-        # ✅ Queue sync if offline
+        # Queue sync if offline
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
-                from apps.shared.tenants.models import SyncQueue
-                
                 SyncQueue.objects.create(
                     tenant_id=tenant.id,
                     model_name='Sale',
@@ -4580,8 +4627,8 @@ def my_stock_sell(request, unit_id):
                 logger.error(f"Failed to queue Sale sync: {e}")
 
         messages.success(request, f'Sale completed successfully! {unit.product.name} sold for KES {selling_price:.2f}')
-
-        # ✅ REDIRECT TO RECEIPT PAGE
+        
+        # Redirect to receipt page
         return redirect('tronic_master:receipt', sale_id=sale.id)
 
     context = {
@@ -4591,6 +4638,172 @@ def my_stock_sell(request, unit_id):
         'active_tab': 'my_stock',
     }
     return render(request, 'tronic_master/my_stock_sell.html', context)
+
+
+# ============================================
+# MY STOCK - RESERVE VIEW
+# ============================================
+
+@login_required
+def my_stock_reserve(request, unit_id):
+    """
+    Sales Agent - Reserve a unit from their stock
+    """
+    tenant = request.user.tenant
+    user = request.user
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('dashboard')
+
+    # Check if user is admin
+    is_admin = is_admin_user(user)
+
+    # Get the unit
+    if is_admin:
+        unit = get_object_or_404(
+            ProductUnit,
+            id=unit_id,
+            tenant=tenant,
+            status='available'
+        )
+    else:
+        unit = get_object_or_404(
+            ProductUnit,
+            id=unit_id,
+            tenant=tenant,
+            current_owner=user,
+            status='available'
+        )
+
+    # Reserve the unit
+    unit.status = 'reserved'
+    unit.save()
+
+    messages.success(request, f'Unit {unit.imei_number or unit.serial_number or unit.id} reserved successfully!')
+    return redirect('tronic_master:my_stock')
+
+
+# ============================================
+# MY STOCK - UNRESERVE VIEW
+# ============================================
+
+@login_required
+def my_stock_unreserve(request, unit_id):
+    """
+    Sales Agent - Unreserve a unit (Reserved -> Available)
+    """
+    tenant = request.user.tenant
+    user = request.user
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('dashboard')
+
+    # Check if user is admin
+    is_admin = is_admin_user(user)
+
+    # Get the unit
+    if is_admin:
+        unit = get_object_or_404(
+            ProductUnit,
+            id=unit_id,
+            tenant=tenant,
+            status='reserved'
+        )
+    else:
+        unit = get_object_or_404(
+            ProductUnit,
+            id=unit_id,
+            tenant=tenant,
+            current_owner=user,
+            status='reserved'
+        )
+
+    # Unreserve the unit
+    unit.status = 'available'
+    unit.save()
+
+    messages.success(request, f'Unit {unit.imei_number or unit.serial_number or unit.id} is now available again.')
+    return redirect('tronic_master:my_stock')
+
+
+# ============================================
+# MY STOCK - TRANSFER VIEW (Admin only)
+# ============================================
+
+@login_required
+def my_stock_transfer(request, unit_id):
+    """
+    Admin - Transfer a unit to another agent
+    """
+    tenant = request.user.tenant
+    user = request.user
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('dashboard')
+
+    # Check if user is admin
+    is_admin = is_admin_user(user)
+    
+    if not is_admin:
+        messages.error(request, 'You do not have permission to transfer units.')
+        return redirect('tronic_master:my_stock')
+
+    # Get the unit
+    unit = get_object_or_404(
+        ProductUnit,
+        id=unit_id,
+        tenant=tenant,
+        status__in=['available', 'reserved']
+    )
+
+    if request.method == 'POST':
+        agent_id = request.POST.get('agent_id')
+        
+        if not agent_id:
+            messages.error(request, 'Please select an agent to transfer to.')
+            return redirect('tronic_master:my_stock_transfer', unit_id=unit.id)
+        
+        try:
+            agent = User.objects.get(id=agent_id, tenant=tenant, is_active=True)
+        except User.DoesNotExist:
+            messages.error(request, 'Agent not found.')
+            return redirect('tronic_master:my_stock_transfer', unit_id=unit.id)
+        
+        # Transfer the unit
+        old_owner = unit.current_owner
+        unit.current_owner = agent
+        unit.assigned_date = timezone.now()
+        unit.assigned_by = user
+        unit.save()
+        
+        messages.success(
+            request, 
+            f'Unit {unit.imei_number or unit.serial_number or unit.id} transferred to {agent.get_full_name() or agent.username} successfully!'
+        )
+        return redirect('tronic_master:my_stock')
+
+    # Get all active agents for the dropdown
+    agents = User.objects.filter(
+        tenant=tenant,
+        is_active=True
+    ).exclude(
+        id=user.id
+    ).exclude(
+        role='super_admin'
+    ).order_by('first_name', 'last_name')
+
+    context = {
+        'tenant': tenant,
+        'unit': unit,
+        'agents': agents,
+        'active_tab': 'my_stock',
+    }
+    return render(request, 'tronic_master/my_stock_transfer.html', context)
+
+
 
 
 @login_required
@@ -4900,6 +5113,7 @@ def reserve_unit(request, unit_id):
 
 @login_required
 def my_sales(request):
+    """View sales - Regular users see only their sales, Admins see all sales"""
     tenant = request.user.tenant
     user = request.user
 
@@ -4910,34 +5124,28 @@ def my_sales(request):
     from apps.shared.portal.helpers import is_admin_user
     is_admin = is_admin_user(user)
 
-    # ✅ Get the POS branch (if you have a specific branch for POS)
-    from apps.tronic_master.models import Branch
-    pos_branch = Branch.objects.filter(tenant=tenant, name__icontains='POS').first()
-    
-    # ✅ Get POS cashiers (users who work at POS)
-    pos_cashiers = User.objects.filter(groups__name='pos_cashier')
-    
-    # ✅ Exclude POS sales
+    # ✅ Base query - exclude POS sales
     if is_admin:
+        # ✅ Admin/Superadmin sees ALL sales (except POS) across all users
         sales = Sale.objects.filter(
             tenant=tenant,
             status='completed'
         ).exclude(
-            branch=pos_branch
-        ).exclude(
-            cashier__in=pos_cashiers
-        ).select_related('customer', 'cashier', 'branch').prefetch_related('items').order_by('-created_at')
+            source='pos'  # Exclude POS sales
+        ).select_related(
+            'customer', 'cashier', 'branch'
+        ).prefetch_related('items').order_by('-created_at')
     else:
+        # ✅ Regular user sees ONLY their own sales (except POS)
         sales = Sale.objects.filter(
             tenant=tenant,
-            cashier=user,
+            cashier=user,  # Only this user's sales
             status='completed'
         ).exclude(
-            branch=pos_branch
-        ).exclude(
-            cashier__in=pos_cashiers
-        ).select_related('customer', 'branch').prefetch_related('items').order_by('-created_at')
-
+            source='pos'  # Exclude POS sales
+        ).select_related(
+            'customer', 'branch'
+        ).prefetch_related('items').order_by('-created_at')
 
     # ✅ Apply search and filters
     search_query = request.GET.get('q', '').strip()
@@ -4963,6 +5171,7 @@ def my_sales(request):
     total_value = sales.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
     today_count = sales.filter(created_at__date=timezone.now().date()).count()
     
+    # ✅ For admin, count unique agents
     if is_admin:
         agent_count = sales.values('cashier').distinct().count()
     else:
@@ -4989,8 +5198,6 @@ def my_sales(request):
     }
     return render(request, 'tronic_master/my_sales.html', context)
 
-
-# apps/tronic_master/views.py
 
 @login_required
 def refund_sale(request, sale_id):
@@ -8063,6 +8270,7 @@ def staff_list(request):
 # ============================================
 
 @login_required
+@check_user_limit
 def staff_create(request):
     """Create a new staff user with system and custom roles"""
     tenant = request.user.tenant

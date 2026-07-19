@@ -783,27 +783,27 @@
                 <!-- ============================================ -->
                 <!-- DASHBOARD -->
                 <!-- ============================================ -->
+                {% if user|tronic_can:'can_create_sale' or user|tronic_can:'can_process_payment' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
-                        📊 DASHBOARD
+                        📊 DASHBOARD 
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
-                        {% if user.is_super_admin or user.is_tenant_admin %}
                             <a href="{% url 'tronic_master:dashboard' %}" class="menu-item">
                                 <i class="fas fa-tachometer-alt"></i>
                                 <span>Overview</span>
                             </a>
-                        {% endif %}
-
-                        {% if user|tronic_can:'can_create_sale' or user|tronic_can:'can_process_payment' %}
+                        
+                            {% if user|tronic_can:'can_create_sale' or user|tronic_can:'can_process_payment' %}
                             <a href="{% url 'tronic_master:pos' %}" class="menu-item">
                                 <i class="fas fa-shopping-cart"></i>
                                 <span>Point of Sale</span>
                             </a>
-                        {% endif %}
+                            {% endif %}
                     </div>
                 </div>
+                {% endif %}
 
                 <!-- ============================================ -->
                 <!-- COMPANY - ADMIN ONLY -->
@@ -836,7 +836,7 @@
                 {% if user|tronic_can_any:'can_view_staff,can_add_staff,can_manage_staff' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
-                        👥 MEMBERS
+                        👥 MEMBERS 
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
@@ -907,7 +907,7 @@
                 {% if user|tronic_can_any:'can_view_branch,can_add_branch,can_manage_branch' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
-                        📍 BRANCHES
+                        📍 BRANCHES 
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
@@ -955,7 +955,7 @@
                 {% if user|tronic_can_any:'can_view_category,can_view_product,can_manage_stock,can_view_stock' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
-                        📦 INVENTORY
+                        📦 INVENTORY 
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
@@ -1065,20 +1065,13 @@
                 <!-- ============================================ -->
                 <!-- SALES & RETURNS -->
                 <!-- ============================================ -->
-                {% if user|tronic_can_any:'can_view_sale, can_view_receipt' %}
+                {% if user|tronic_can_any:'can_view_sale' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
-                        💰 SALES
+                        💰 SALES 
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
-                        {% if user|tronic_can:'can_view_agent_sale' %}
-                        <a href="{% url 'tronic_master:agent_sale' %}" class="menu-item">
-                            <i class="fas fa-hand-holding-usd"></i>
-                            <span>Agent Sale</span>
-                        </a>
-                        {% endif %}
-
                         {% if user|tronic_can:'can_view_sale' %}
                         <a href="{% url 'tronic_master:sales_history' %}" class="menu-item">
                             <i class="fas fa-history"></i>
@@ -1089,21 +1082,14 @@
                         {% if user|tronic_can:'can_search_sales' %}
                         <a href="{% url 'tronic_master:sales_search' %}" class="menu-item">
                             <i class="fas fa-search"></i>
-                            <span>Search Sales</span>
+                            <span> Sales  Search</span>
                         </a>
                         {% endif %}
 
                         {% if user|tronic_can:'can_view_returns' %}
                         <a href="{% url 'tronic_master:return_list' %}" class="menu-item">
                             <i class="fas fa-undo-alt"></i>
-                            <span>Returns</span>
-                        </a>
-                        {% endif %}
-
-                        {% if user|tronic_can:'can_view_receipt' or user|tronic_can:'can_view_receipt_search' %}
-                        <a href="{% url 'tronic_master:receipt_search' %}" class="menu-item">
-                            <i class="fas fa-file-invoice"></i>
-                            <span>Receipt Lookup</span>
+                            <span>Sales Returns</span>
                         </a>
                         {% endif %}
                     </div>
@@ -1116,7 +1102,7 @@
                 {% if user|tronic_can_any:'can_view_supplier,can_add_supplier,can_edit_supplier' %}
                 <div class="menu-group">
                     <div class="menu-title" onclick="toggleSubMenu(this)">
-                        🏭 SUPPLIERS
+                        🏭 SUPPLIERS 
                         <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                     </div>
                     <div class="sub-menu">
@@ -1171,7 +1157,7 @@
                         {% if user|tronic_can:'can_view_expenses' %}
                         <a href="{% url 'tronic_master:expense_list' %}" class="menu-item">
                             <i class="fas fa-receipt"></i>
-                            <span>Expenses</span>
+                            <span>Expenses List</span>
                         </a>
                         {% endif %}
 
@@ -1298,6 +1284,15 @@
                             <span>Product Search</span>
                         </a>
                         {% endif %}
+
+
+                        {% if user|tronic_can:'can_view_receipt' or user|tronic_can:'can_view_receipt_search' %}
+                        <a href="{% url 'tronic_master:receipt_search' %}" class="menu-item">
+                            <i class="fas fa-file-invoice"></i>
+                            <span>Receipt Lookup</span>
+                        </a>
+                        {% endif %}
+
                     </div>
                 </div>
                 {% endif %}

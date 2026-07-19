@@ -1,4 +1,4 @@
-{% extends "shared/base_main.html" %}
+{% extends "shared/base_shared.html" %}
 {% load static %}
 
 {% block title %}Upgrade Subscription - {{ tenant.company_name }}{% endblock %}
@@ -16,16 +16,34 @@
                 </div>
                 <div class="card-body p-4">
                     
+                    <!-- Reason for Upgrade -->
+                    {% if upgrade_intent.action %}
+                    <div class="alert alert-danger mb-4">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>{{ limit_display }} Limit Reached!</h5>
+                        <p class="mb-0">
+                            You tried to add a new {{ limit_display|lower|cut:"s" }} but your current plan only allows 
+                            <strong>{{ max_limit }}</strong> {{ limit_key|lower }}. 
+                            You currently have <strong>{{ current_count }}</strong> {{ limit_key|lower }}.
+                        </p>
+                    </div>
+                    {% endif %}
+                    
                     <!-- Current Plan Info -->
                     <div class="alert alert-info mb-4">
                         <div class="row">
                             <div class="col-md-6">
                                 <strong>Current Plan:</strong>
-                                <h4 class="mb-0">{{ tenant.get_subscription_plan_display }}</h4>
+                                <h4 class="mb-0">{{ current_plan|title }}</h4>
                             </div>
                             <div class="col-md-6">
                                 <strong>Expires:</strong>
-                                <h4 class="mb-0">{{ tenant.subscription_end|date:"F d, Y" }}</h4>
+                                <h4 class="mb-0">
+                                    {% if tenant.subscription_end %}
+                                        {{ tenant.subscription_end|date:"F d, Y" }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </h4>
                             </div>
                         </div>
                     </div>
@@ -90,7 +108,7 @@
                                     <p class="mb-0 fw-bold">Amount to Pay:</p>
                                 </div>
                                 <div class="col-6 text-end">
-                                    <p class="mb-1">$0 (Expired/Pro-rated)</p>
+                                    <p class="mb-1">$0</p>
                                     <p class="mb-1">${{ new_plan.price_monthly }}</p>
                                     <p class="mb-1 text-success">+${{ new_plan.price_monthly }}</p>
                                     <hr>
@@ -119,7 +137,7 @@
                         </div>
                         
                         <div class="d-flex gap-3 justify-content-end mt-4">
-                            <a href="{% url 'tenants:tenant_subscription' %}" class="btn btn-secondary">
+                            <a href="{% url 'tronic_master:staff_list' %}" class="btn btn-secondary">
                                 <i class="fas fa-times me-2"></i>Cancel
                             </a>
                             <button type="submit" class="btn btn-success">

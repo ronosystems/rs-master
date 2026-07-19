@@ -1,3 +1,5 @@
+# apps/shared/tenants/decorators.py
+
 from django.contrib import messages
 from django.shortcuts import redirect
 from functools import wraps
@@ -15,12 +17,22 @@ def check_product_limit(view_func):
         if tenant:
             service = TenantLimitService(tenant)
             if service.is_product_limit_reached():
+                # ✅ Store intent in session
+                request.session['upgrade_intent'] = {
+                    'action': 'add_product',
+                    'current_count': service.get_product_count(),
+                    'max_limit': service.get_product_limit(),
+                    'return_url': request.path
+                }
+                
                 messages.error(
                     request,
-                    f'Product limit reached! You can only have {service.get_product_limit()} products. '
-                    'Please upgrade your plan.'
+                    f'<strong>⚠️ Product Limit Reached!</strong><br>'
+                    f'Your current plan allows a maximum of <strong>{service.get_product_limit()}</strong> products. '
+                    f'You currently have <strong>{service.get_product_count()}</strong> products.<br><br>'
+                    f'Please upgrade your subscription to add more products.'
                 )
-                return redirect('product_list')
+                return redirect('tenants:upgrade_subscription')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -36,12 +48,22 @@ def check_branch_limit(view_func):
         if tenant:
             service = TenantLimitService(tenant)
             if service.is_branch_limit_reached():
+                # ✅ Store intent in session
+                request.session['upgrade_intent'] = {
+                    'action': 'add_branch',
+                    'current_count': service.get_branch_count(),
+                    'max_limit': service.get_branch_limit(),
+                    'return_url': request.path
+                }
+                
                 messages.error(
                     request,
-                    f'Branch limit reached! You can only have {service.get_branch_limit()} branches. '
-                    'Please upgrade your plan.'
+                    f'<strong>⚠️ Branch Limit Reached!</strong><br>'
+                    f'Your current plan allows a maximum of <strong>{service.get_branch_limit()}</strong> branches. '
+                    f'You currently have <strong>{service.get_branch_count()}</strong> branches.<br><br>'
+                    f'Please upgrade your subscription to add more branches.'
                 )
-                return redirect('branch_list')
+                return redirect('tenants:upgrade_subscription')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -57,11 +79,21 @@ def check_user_limit(view_func):
         if tenant:
             service = TenantLimitService(tenant)
             if service.is_user_limit_reached():
+                # ✅ Store intent in session
+                request.session['upgrade_intent'] = {
+                    'action': 'add_user',
+                    'current_count': service.get_user_count(),
+                    'max_limit': service.get_user_limit(),
+                    'return_url': request.path
+                }
+                
                 messages.error(
                     request,
-                    f'User limit reached! You can only have {service.get_user_limit()} users. '
-                    'Please upgrade your plan.'
+                    f'<strong>⚠️ User Limit Reached!</strong><br>'
+                    f'Your current plan allows a maximum of <strong>{service.get_user_limit()}</strong> users. '
+                    f'You currently have <strong>{service.get_user_count()}</strong> users.<br><br>'
+                    f'Please upgrade your subscription to add more users.'
                 )
-                return redirect('user_list')
+                return redirect('tenants:upgrade_subscription')
         return view_func(request, *args, **kwargs)
     return wrapper
