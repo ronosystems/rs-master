@@ -484,7 +484,19 @@ class Product(models.Model):
         db_index=True,
         verbose_name="Model"
     )
-    
+
+    # ============================================
+    # BARCODE (Optional)
+    # ============================================
+    barcode = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        db_index=True,
+        verbose_name="Barcode",
+        help_text="Optional barcode for scanning at POS"
+    )
+
     # ============================================
     # CATEGORY & SUPPLIER
     # ============================================
@@ -829,10 +841,6 @@ class Product(models.Model):
 
     def __str__(self):
         return self.display_name
-
-
-
-
 
 
 # ====================================

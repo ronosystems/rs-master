@@ -47,7 +47,6 @@
                                             </div>
                                         </div>
                                         
-                                        
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="brand" class="form-label">Brand</label>
@@ -61,7 +60,6 @@
                                             </div>
                                         </div>
                                         
-
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="branch_id" class="form-label">Branch *</label>
@@ -83,7 +81,6 @@
                                             </div>
                                         </div>
                                         
-
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="sku_code" class="form-label">SKU Code</label>
@@ -91,12 +88,31 @@
                                                        placeholder="Auto-generated on save" readonly style="background-color: #e9ecef; cursor: not-allowed;">
                                                 <small class="text-muted">SKU will be auto-generated</small>
                                             </div>
-
+                                            <div class="col-md-6 mb-3">
+                                                <label for="barcode" class="form-label">Barcode (Optional)</label>
+                                                <input type="text" class="form-control" id="barcode" name="barcode" 
+                                                       placeholder="Enter barcode (optional)">
+                                                <small class="text-muted">Optional barcode for POS scanning</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="stock_quantity" class="form-label">Initial Stock Quantity *</label>
                                                 <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" 
                                                        required value="1" min="1">
                                             </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="color" class="form-label">Color</label>
+                                                <input type="text" class="form-control" id="color" name="color" 
+                                                       placeholder="e.g., Black, White, Red">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="description" class="form-label">Description</label>
+                                            <textarea class="form-control" id="description" name="description" rows="2" 
+                                                      placeholder="Product description (optional)"></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -166,13 +182,13 @@
                                         <hr>
                                         <div class="row">
                                             <div class="col-md-4">
-                                                <small><strong>Buying:</strong> <span id="summaryBuying">0</span></small>
+                                                <small><strong>Buying:</strong> <span id="summaryBuying">0.00</span></small>
                                             </div>
                                             <div class="col-md-4">
-                                                <small><strong>Selling:</strong> <span id="summarySelling">0</span></small>
+                                                <small><strong>Selling:</strong> <span id="summarySelling">0.00</span></small>
                                             </div>
                                             <div class="col-md-4">
-                                                <small><strong>Profit/Unit:</strong> <span id="summaryProfit" class="text-success">0</span></small>
+                                                <small><strong>Profit/Unit:</strong> <span id="summaryProfit" class="text-success">0.00</span></small>
                                             </div>
                                         </div>
                                     </div>
@@ -183,6 +199,7 @@
                                     <strong>Note:</strong> 
                                     <ul class="mb-0 mt-2">
                                         <li><strong>SKU</strong> is auto-generated automatically when you save</li>
+                                        <li><strong>Barcode</strong> is optional - can be added later</li>
                                         <li>Bulk products are tracked by quantity only</li>
                                         <li>You can add more stock later using the "Restock" option</li>
                                     </ul>
@@ -221,10 +238,24 @@
         document.getElementById('summaryProfit').innerHTML = `${profitPerUnit.toFixed(2)}`;
     }
     
+    // Auto-calculate best price when selling price changes
+    document.getElementById('selling_price').addEventListener('change', function() {
+        var bestPriceField = document.getElementById('best_price');
+        if (!bestPriceField.value) {
+            var sellingPrice = parseFloat(this.value);
+            if (!isNaN(sellingPrice)) {
+                var bestPrice = sellingPrice * 1.1;
+                bestPriceField.value = bestPrice.toFixed(2);
+            }
+        }
+        updateSummary();
+    });
+    
     document.getElementById('stock_quantity').addEventListener('input', updateSummary);
     document.getElementById('buying_price').addEventListener('input', updateSummary);
     document.getElementById('selling_price').addEventListener('input', updateSummary);
     
+    // Initialize summary
     updateSummary();
 </script>
 {% endblock %}

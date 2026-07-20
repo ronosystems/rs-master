@@ -25,13 +25,25 @@
                                         <h5 class="mb-0"><i class="fas fa-info-circle"></i> Product Information</h5>
                                     </div>
                                     <div class="card-body">
-                                        <div class="alert alert-info">
-                                            <i class="fas fa-info-circle"></i>
-                                            <strong>SKU Code:</strong> {{ product.sku_code }} (Auto-generated, cannot be changed)
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-lock"></i>
+                                            <strong>SKU Code:</strong> {{ product.sku_code }} 
+                                            <span class="badge bg-danger">Cannot be changed</span>
                                         </div>
                                         
                                         <div class="row">
-                                            <div class="col-md-12 mb-3">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="category_id" class="form-label">Category *</label>
+                                                <select class="form-control" id="category_id" name="category_id" required>
+                                                    <option value="">Select Category</option>
+                                                    {% for cat in categories %}
+                                                    <option value="{{ cat.id }}" {% if product.category.id == cat.id %}selected{% endif %}>
+                                                        {{ cat.name }} ({{ cat.get_item_type_display }})
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
                                                 <label for="name" class="form-label">Product Name *</label>
                                                 <input type="text" class="form-control" id="name" name="name" required 
                                                        value="{{ product.name }}">
@@ -48,25 +60,6 @@
                                                 <label for="model" class="form-label">Model</label>
                                                 <input type="text" class="form-control" id="model" name="model" 
                                                        value="{{ product.model|default:'' }}">
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label for="color" class="form-label">Color</label>
-                                                <input type="text" class="form-control" id="color" name="color" 
-                                                       value="{% if product.display_specs.color %}{{ product.display_specs.color }}{% endif %}">
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label for="category_id" class="form-label">Category</label>
-                                                <select class="form-control" id="category_id" name="category_id" required>
-                                                    <option value="">Select Category</option>
-                                                    {% for cat in categories %}
-                                                    <option value="{{ cat.id }}" {% if product.category.id == cat.id %}selected{% endif %}>
-                                                        {{ cat.name }} ({{ cat.get_item_type_display }})
-                                                    </option>
-                                                    {% endfor %}
-                                                </select>
                                             </div>
                                         </div>
                                         
@@ -97,32 +90,52 @@
                                         
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
-                                                <label for="barcode" class="form-label">Barcode</label>
-                                                <input type="text" class="form-control" id="barcode" name="barcode" 
-                                                       value="{{ product.barcode|default:'' }}">
-                                                <small class="text-muted">Product barcode for scanning</small>
+                                                <label for="sku_code" class="form-label">SKU Code</label>
+                                                <input type="text" class="form-control" id="sku_code" name="sku_code" 
+                                                       value="{{ product.sku_code }}" readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                                                <small class="text-muted text-danger">SKU cannot be changed</small>
                                             </div>
                                             <div class="col-md-6 mb-3">
-                                                <label class="form-label">Current Stock</label>
-                                                <input type="text" class="form-control" value="{{ product.bulk_quantity }} units" readonly disabled>
+                                                <label for="barcode" class="form-label">Barcode (Optional)</label>
+                                                <input type="text" class="form-control" id="barcode" name="barcode" 
+                                                       value="{{ product.barcode|default:'' }}" placeholder="Enter barcode (optional)">
+                                                <small class="text-muted">Optional barcode for POS scanning</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="stock_quantity" class="form-label">Current Stock</label>
+                                                <input type="text" class="form-control" id="stock_quantity" name="stock_quantity" 
+                                                       value="{{ product.available_quantity }}" readonly style="background-color: #e9ecef; cursor: not-allowed;">
                                                 <small class="text-muted">Use "Restock" to add more stock</small>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="color" class="form-label">Color</label>
+                                                <input type="text" class="form-control" id="color" name="color" 
+                                                       value="{% if product.display_specs.color %}{{ product.display_specs.color }}{% endif %}" placeholder="e.g., Black, White, Red">
                                             </div>
                                         </div>
                                         
                                         <div class="mb-3">
-                                            <label for="specifications" class="form-label">Specifications</label>
-                                            <textarea class="form-control" id="specifications" name="specifications" rows="3" 
-                                                      placeholder="e.g., 1 meter length, Type-C connector">{% if product.display_specs.description %}{{ product.display_specs.description }}{% endif %}</textarea>
-                                        </div>
-
-                                        <div class="form-check mb-3">
-                                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {% if product.is_active %}checked{% endif %}>
-                                            <label class="form-check-label" for="is_active">Active</label>
+                                            <label for="description" class="form-label">Description</label>
+                                            <textarea class="form-control" id="description" name="description" rows="2" 
+                                                      placeholder="Product description">{{ product.description|default:'' }}</textarea>
                                         </div>
                                         
-                                        <div class="form-check mb-3">
-                                            <input type="checkbox" class="form-check-input" id="is_discontinued" name="is_discontinued" {% if product.is_discontinued %}checked{% endif %}>
-                                            <label class="form-check-label" for="is_discontinued">Discontinued</label>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-check mb-3">
+                                                    <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {% if product.is_active %}checked{% endif %}>
+                                                    <label class="form-check-label" for="is_active">Active</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check mb-3">
+                                                    <input type="checkbox" class="form-check-input" id="is_discontinued" name="is_discontinued" {% if product.is_discontinued %}checked{% endif %}>
+                                                    <label class="form-check-label" for="is_discontinued">Discontinued</label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -168,36 +181,38 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Stock Summary Card -->
-                                <div class="card border-info mb-3">
+                                <!-- Summary Card -->
+                                <div class="card border-info">
                                     <div class="card-header bg-info text-white">
-                                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Stock Summary</h5>
+                                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Product Summary</h5>
                                     </div>
                                     <div class="card-body">
                                         <div class="row text-center">
                                             <div class="col-md-4">
                                                 <h6>SKU:</h6>
                                                 <h5 class="text-primary">{{ product.sku_code }}</h5>
+                                                <small class="text-muted">Cannot be changed</small>
                                             </div>
                                             <div class="col-md-4">
-                                                <h6>Current Stock:</h6>
-                                                <h2 class="text-success">{{ product.bulk_quantity }}</h2>
+                                                <h6>Stock:</h6>
+                                                <h2 id="stockQty" class="text-success">{{ product.available_quantity }}</h2>
+                                                <small>Available units</small>
                                             </div>
                                             <div class="col-md-4">
                                                 <h6>Total Value:</h6>
-                                                <h2 class="text-primary">KES {{ product.stock_value|floatformat:2 }}</h2>
+                                                <h2 id="totalValue" class="text-primary">KES {{ product.stock_value|floatformat:2 }}</h2>
                                             </div>
                                         </div>
                                         <hr>
                                         <div class="row">
                                             <div class="col-md-4">
-                                                <small><strong>Buying:</strong> KES {{ product.default_buying_price|floatformat:2 }}</small>
+                                                <small><strong>Buying:</strong> <span id="summaryBuying">{{ product.default_buying_price|floatformat:2 }}</span></small>
                                             </div>
                                             <div class="col-md-4">
-                                                <small><strong>Selling:</strong> KES {{ product.default_selling_price|floatformat:2 }}</small>
+                                                <small><strong>Selling:</strong> <span id="summarySelling">{{ product.default_selling_price|floatformat:2 }}</span></small>
                                             </div>
                                             <div class="col-md-4">
-                                                <small><strong>Profit/Unit:</strong> <span class="text-success">KES {{ product.profit_margin|floatformat:2 }}</span></small>
+                                                <small><strong>Profit/Unit:</strong> <span id="summaryProfit" class="text-success">{{ product.profit_margin|floatformat:2 }}</span></small>
                                             </div>
                                         </div>
                                     </div>
@@ -205,12 +220,12 @@
                                 
                                 <div class="alert alert-warning mt-3">
                                     <i class="fas fa-exclamation-triangle"></i>
-                                    <strong>Note:</strong> 
+                                    <strong>Important Notes:</strong> 
                                     <ul class="mb-0 mt-2">
-                                        <li><strong>SKU</strong> is auto-generated and cannot be changed</li>
-                                        <li><strong>Barcode</strong> can be updated for scanning at POS</li>
-                                        <li>Use the <strong>"Restock"</strong> button on product detail page to add more stock</li>
-                                        <li>Stock quantity cannot be edited here - use Restock or Stock Adjustment</li>
+                                        <li><strong>SKU</strong> is permanent and <span class="text-danger">cannot be changed</span></li>
+                                        <li><strong>Barcode</strong> is optional - can be updated anytime</li>
+                                        <li>Stock quantity cannot be edited here - use <strong>"Restock"</strong> on product detail page</li>
+                                        <li>Use <strong>"Stock Adjustment"</strong> for stock corrections</li>
                                     </ul>
                                 </div>
 
@@ -232,6 +247,23 @@
 </div>
 
 <script>
+    function updateSummary() {
+        const stockQty = parseInt('{{ product.available_quantity }}') || 0;
+        const buyingPrice = parseFloat(document.getElementById('buying_price').value) || 0;
+        const sellingPrice = parseFloat(document.getElementById('selling_price').value) || 0;
+        
+        const totalValue = stockQty * sellingPrice;
+        const profitPerUnit = sellingPrice - buyingPrice;
+        
+        document.getElementById('totalValue').innerHTML = `KES ${totalValue.toFixed(2)}`;
+        document.getElementById('summaryBuying').innerText = buyingPrice.toFixed(2);
+        document.getElementById('summarySelling').innerText = sellingPrice.toFixed(2);
+        document.getElementById('summaryProfit').innerHTML = `${profitPerUnit.toFixed(2)}`;
+    }
+    
+    document.getElementById('buying_price').addEventListener('input', updateSummary);
+    document.getElementById('selling_price').addEventListener('input', updateSummary);
+    
     // Auto-calculate best price when selling price changes
     document.getElementById('selling_price').addEventListener('change', function() {
         var bestPriceField = document.getElementById('best_price');
@@ -242,6 +274,10 @@
                 bestPriceField.value = bestPrice.toFixed(2);
             }
         }
+        updateSummary();
     });
+    
+    // Initialize summary
+    updateSummary();
 </script>
 {% endblock %}

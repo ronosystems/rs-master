@@ -1475,7 +1475,6 @@ def add_bulk_product(request):
         model = request.POST.get('model', '').strip()
         brand = request.POST.get('brand', '').strip()
         category_id = request.POST.get('category_id')
-        description = request.POST.get('description', '')
         buying_price = request.POST.get('buying_price', 0)
         selling_price = request.POST.get('selling_price', 0)
         best_price = request.POST.get('best_price')
@@ -1483,6 +1482,9 @@ def add_bulk_product(request):
         stock_quantity = int(request.POST.get('stock_quantity', 1))
         reorder_level = request.POST.get('reorder_level', 5)
         warranty_months = request.POST.get('warranty_months', 12)
+        barcode = request.POST.get('barcode', '').strip().upper()
+        color = request.POST.get('color', '').strip()
+        description = request.POST.get('description', '').strip()
 
         if not branch_id:
             messages.error(request, 'Please select a branch')
@@ -1564,6 +1566,7 @@ def add_bulk_product(request):
                     brand=brand,
                     model=model,
                     sku_code=sku_code if sku_code else None,
+                    barcode=barcode if barcode else None,
                     category_id=category_id if category_id else None,
                     branch=branch,
                     supplier=supplier,
@@ -1575,7 +1578,8 @@ def add_bulk_product(request):
                     available_quantity=stock_quantity,
                     reorder_level=int(reorder_level),
                     warranty_months=int(warranty_months),
-                    is_active=True
+                    is_active=True,
+                    is_discontinued=False, 
                 )
 
                 # ✅ CREATE BranchStock record
@@ -1633,10 +1637,9 @@ def add_bulk_product(request):
     return render(request, 'tronic_master/add_bulk_product.html', context)
 
 
-
 @login_required
 def edit_bulk_product(request, product_id):
-    """Edit bulk product information"""
+    """Edit bulk product information - SKU CANNOT BE CHANGED"""
     tenant = request.user.tenant
 
     if not tenant:
@@ -1654,21 +1657,32 @@ def edit_bulk_product(request, product_id):
     suppliers = Supplier.objects.filter(tenant=tenant, is_active=True)
 
     if request.method == 'POST':
+        # ✅ Store original SKU before any changes
+        original_sku = product.sku_code
+        
+        # ✅ Get all POST data
         name = request.POST.get('name', '').strip()
         brand = request.POST.get('brand', '').strip()
         model = request.POST.get('model', '').strip()
         category_id = request.POST.get('category_id')
         branch_id = request.POST.get('branch_id')
         supplier_id = request.POST.get('supplier_id')
+        
+        # ✅ Barcode is optional
         barcode = request.POST.get('barcode', '').strip().upper()
-        sku_code = barcode
+        
+        # ✅ Get color and description
+        color = request.POST.get('color', '').strip()
+        description = request.POST.get('description', '').strip()
+        
+        # ✅ Get pricing
         buying_price = request.POST.get('buying_price', 0)
         selling_price = request.POST.get('selling_price', 0)
         best_price = request.POST.get('best_price')
         reorder_level = request.POST.get('reorder_level', 5)
         warranty_months = request.POST.get('warranty_months', 12)
-        specifications = request.POST.get('specifications', '')
-        color = request.POST.get('color', '')
+        
+        # ✅ ✅ ✅ GET is_active and is_discontinued from POST
         is_active = request.POST.get('is_active') == 'on'
         is_discontinued = request.POST.get('is_discontinued') == 'on'
 
@@ -1680,33 +1694,50 @@ def edit_bulk_product(request, product_id):
             messages.error(request, 'Selling price is required')
             return redirect('tronic_master:edit_bulk_product', product_id=product.id)
 
-        specs_dict = product.description if isinstance(product.description, dict) else {}
-        if specifications:
-            specs_dict['description'] = specifications
-        if color:
-            specs_dict['color'] = color
-        else:
-            specs_dict.pop('color', None)
-
         # Track old branch
         old_branch = product.branch
 
-        # Update product
+        # ✅ Update product - KEEP ORIGINAL SKU
         product.name = name
         product.brand = brand
         product.model = model
         product.category_id = category_id if category_id else None
         product.branch_id = branch_id if branch_id else None
         product.supplier_id = supplier_id if supplier_id else None
-        product.sku_code = sku_code if barcode else None
+        
+        # ✅ IMPORTANT: Keep the original SKU
+        product.sku_code = original_sku  # ❌ DO NOT change this!
+        
+        # ✅ Update barcode if field exists
+        if hasattr(product, 'barcode'):
+            product.barcode = barcode if barcode else None
+        
+        # ✅ Store color in description as JSON
+        if color:
+            if product.description and isinstance(product.description, dict):
+                product.description['color'] = color
+            else:
+                product.description = {'color': color} if color else {}
+        elif product.description and isinstance(product.description, dict):
+            product.description.pop('color', None)
+        
+        # ✅ Update description
+        if description:
+            if product.description and isinstance(product.description, dict):
+                product.description['description'] = description
+            else:
+                product.description = {'description': description} if description else {}
+        
         product.default_buying_price = float(buying_price) if buying_price else 0
         product.default_selling_price = float(selling_price) if selling_price else 0
         product.default_best_price = float(best_price) if best_price else None
         product.reorder_level = int(reorder_level) if reorder_level else 5
         product.warranty_months = int(warranty_months) if warranty_months else 12
-        product.description = specs_dict
+        
+        # ✅ ✅ ✅ Use the variables we defined
         product.is_active = is_active
         product.is_discontinued = is_discontinued
+        
         product.last_modified_by = request.user
         product.save()
 
@@ -1714,7 +1745,6 @@ def edit_bulk_product(request, product_id):
         if branch_id and old_branch and old_branch.id != int(branch_id):
             new_branch = get_object_or_404(Branch, id=branch_id, tenant=tenant)
 
-            # Remove from old branch
             old_stock = BranchStock.objects.filter(
                 tenant=tenant,
                 branch=old_branch,
@@ -1723,7 +1753,6 @@ def edit_bulk_product(request, product_id):
             if old_stock:
                 old_stock.delete()
 
-            # Add to new branch
             BranchStock.objects.create(
                 tenant=tenant,
                 branch=new_branch,
