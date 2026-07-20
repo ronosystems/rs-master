@@ -2346,6 +2346,12 @@ class Sale(models.Model):
         related_name='sales'
     )
 
+    invoice_no = models.CharField(
+        max_length=50, 
+        db_index=True, 
+        verbose_name="Invoice Number"
+    )
+
     # Customer
     customer = models.ForeignKey(
         Customer,
@@ -2357,8 +2363,6 @@ class Sale(models.Model):
     customer_name = models.CharField(max_length=200, blank=True, null=True)
     customer_phone = models.CharField(max_length=20, blank=True, null=True)
 
-    # Invoice - Auto-generated sequential number
-    invoice_no = models.CharField(max_length=50, unique=True, db_index=True)
 
     # Amounts
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
@@ -2395,11 +2399,12 @@ class Sale(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        unique_together = [['tenant', 'invoice_no']]
         indexes = [
             models.Index(fields=['tenant', 'invoice_no']),
             models.Index(fields=['tenant', 'status']),
             models.Index(fields=['tenant', 'created_at']),
-            models.Index(fields=['tenant', 'source']),  # ✅ Add index for source
+            models.Index(fields=['tenant', 'source']),
         ]
 
     def __str__(self):

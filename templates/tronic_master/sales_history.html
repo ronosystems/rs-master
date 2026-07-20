@@ -1,4 +1,4 @@
-<!-- templates/tronic_master/sales/sales_history.html -->
+<!-- templates/tronic_master/sales_history.html -->
 {% extends 'tronic_master/base_tronic.html' %}
 
 {% block title %}Sales History - Tech Master{% endblock %}
@@ -66,7 +66,7 @@
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" class="row g-3">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <input type="text" name="search" class="form-control" placeholder="Search by invoice or customer..." value="{{ search|default:'' }}">
                 </div>
                 <div class="col-md-2">
@@ -79,15 +79,30 @@
                     </select>
                 </div>
                 <div class="col-md-2">
+                    <select name="source" class="form-select">
+                        <option value="">All Sources</option>
+                        <option value="pos" {% if source_filter == 'pos' %}selected{% endif %}>POS</option>
+                        <option value="agent" {% if source_filter == 'agent' %}selected{% endif %}>Sales Agent</option>
+                        <option value="admin" {% if source_filter == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="online" {% if source_filter == 'online' %}selected{% endif %}>Online</option>
+                        <option value="bulk" {% if source_filter == 'bulk' %}selected{% endif %}>Bulk Sale</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <input type="date" name="date_from" class="form-control" value="{{ date_from|default:'' }}" placeholder="Date From">
                 </div>
                 <div class="col-md-2">
                     <input type="date" name="date_to" class="form-control" value="{{ date_to|default:'' }}" placeholder="Date To">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-1">
                     <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-search me-2"></i>Filter
+                        <i class="fas fa-search"></i>
                     </button>
+                </div>
+                <div class="col-md-1">
+                    <a href="{% url 'tronic_master:sales_history' %}" class="btn btn-secondary w-100">
+                        <i class="fas fa-sync-alt"></i>
+                    </a>
                 </div>
             </form>
         </div>
@@ -105,8 +120,9 @@
                             <th>Items</th>
                             <th>Amount</th>
                             <th>Payment Method</th>
+                            <th>Source</th>
                             <th>Status</th>
-                            <th>Cashier</th>
+                            <th>Served By</th>
                             <th>Date</th>
                             <th>Actions</th>
                         </tr>
@@ -133,6 +149,33 @@
                                 <span class="badge bg-secondary">{{ sale.get_payment_method_display }}</span>
                             </td>
                             <td>
+                                {% if sale.source == 'pos' %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-desktop me-1"></i>POS
+                                </span>
+                                {% elif sale.source == 'agent' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-user-tie me-1"></i>Agent
+                                </span>
+                                {% elif sale.source == 'admin' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-user-shield me-1"></i>Admin
+                                </span>
+                                {% elif sale.source == 'online' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-globe me-1"></i>Online
+                                </span>
+                                {% elif sale.source == 'bulk' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-boxes me-1"></i>Bulk
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-question me-1"></i>{{ sale.source|default:"Unknown" }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
                                 {% if sale.status == 'completed' %}
                                 <span class="badge bg-success">Completed</span>
                                 {% elif sale.status == 'pending' %}
@@ -141,6 +184,8 @@
                                 <span class="badge bg-danger">Cancelled</span>
                                 {% elif sale.status == 'refunded' %}
                                 <span class="badge bg-info">Refunded</span>
+                                {% elif sale.status == 'reversed' %}
+                                <span class="badge bg-dark">Reversed</span>
                                 {% else %}
                                 <span class="badge bg-secondary">{{ sale.status }}</span>
                                 {% endif %}
@@ -173,7 +218,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                 No sales found
                             </td>
@@ -195,7 +240,7 @@
             <ul class="pagination pagination-sm mb-0">
                 {% if sales.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ sales.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                    <a class="page-link" href="?page={{ sales.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if source_filter %}&source={{ source_filter }}{% endif %}">
                         <i class="fas fa-chevron-left"></i>
                     </a>
                 </li>
@@ -203,7 +248,7 @@
                 
                 {% for num in sales.paginator.page_range %}
                 <li class="page-item {% if sales.number == num %}active{% endif %}">
-                    <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                    <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if source_filter %}&source={{ source_filter }}{% endif %}">
                         {{ num }}
                     </a>
                 </li>
@@ -211,7 +256,7 @@
                 
                 {% if sales.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ sales.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                    <a class="page-link" href="?page={{ sales.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if source_filter %}&source={{ source_filter }}{% endif %}">
                         <i class="fas fa-chevron-right"></i>
                     </a>
                 </li>

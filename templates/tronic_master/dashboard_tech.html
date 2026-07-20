@@ -309,7 +309,8 @@
                                         <th class="border-0">Invoice</th>
                                         <th class="border-0">Customer</th>
                                         <th class="border-0 text-end">Amount</th>
-                                        <th class="border-0">Cashier</th>
+                                        <th class="border-0">Source</th>
+                                        <th class="border-0">Served By</th>
                                         <th class="border-0">Date</th>
                                         <th class="border-0 text-center">Status</th>
                                     </tr>
@@ -320,7 +321,34 @@
                                         <td><code class="bg-light px-2 py-1 rounded">{{ sale.invoice_no }}</code></td>
                                         <td>{{ sale.customer_name|default:"Walk-in" }}</td>
                                         <td class="text-end fw-bold text-success">KES {{ sale.total|floatformat:2 }}</td>
-                                        <td>{{ sale.cashier.username }}</td>
+                                        <td>
+                                            {% if sale.source == 'pos' %}
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-desktop me-1"></i>POS
+                                            </span>
+                                            {% elif sale.source == 'agent' %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-user-tie me-1"></i>Agent
+                                            </span>
+                                            {% elif sale.source == 'admin' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-user-shield me-1"></i>Admin
+                                            </span>
+                                            {% elif sale.source == 'online' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-globe me-1"></i>Online
+                                            </span>
+                                            {% elif sale.source == 'bulk' %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-boxes me-1"></i>Bulk
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-question me-1"></i>{{ sale.source|default:"Unknown" }}
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ sale.cashier.get_full_name|default:sale.cashier.username }}</td>
                                         <td class="text-muted small">{{ sale.created_at|date:"d/m/Y H:i" }}</td>
                                         <td class="text-center">
                                             <span class="badge bg-success bg-opacity-50 text-dark rounded-pill px-3 py-2">

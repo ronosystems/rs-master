@@ -37,7 +37,6 @@ from apps.tronic_master.models import (
 )
 from django.contrib.auth import get_user_model
 from apps.shared.permissions.models import  UserRoleAssignment
-from apps.tronic_master.utils import generate_invoice_number
 from apps.shared.roles.models import ProjectRole
 from django.views.decorators.csrf import csrf_exempt
 from apps.shared.portal.helpers import is_admin_user
@@ -2190,8 +2189,6 @@ def stock_adjustment(request, product_id):
     return redirect('tronic_master:product_detail', product_id=product.id)
 
 
-
-
 @login_required
 def add_unit(request, product_id):
     """Add multiple units to a product"""
@@ -3868,301 +3865,8 @@ class InventorySyncViewSet(viewsets.ViewSet):
 
 
 
-# ============================================
-# SALES AGENT - LOAN CREATION
-# ============================================
 
-@login_required
-def agent_sale(request):
-    """Sales Agent - Create a new sale from assigned stock (Admin sees all stock)"""
-    tenant = request.user.tenant
-    user = request.user
 
-    if not tenant:
-        messages.error(request, 'No tenant assigned')
-        return redirect('dashboard')
-
-    # ✅ Check if user is admin or superadmin
-    from apps.shared.portal.helpers import is_admin_user
-    
-    is_admin = is_admin_user(user)
-
-    # ✅ Get available units based on user role
-    if is_admin:
-        # Admin/Superadmin - See ALL available units across all branches
-        products = ProductUnit.objects.filter(
-            tenant=tenant,
-            status='available'
-        ).select_related('product', 'branch', 'current_owner').order_by('product__name')
-        
-        # Get all available units for stats
-        total_available = products.count()
-    else:
-        # Regular Sales Agent - See only their assigned stock
-        products = ProductUnit.objects.filter(
-            tenant=tenant,
-            current_owner=user,
-            status='available'
-        ).select_related('product', 'branch').order_by('product__name')
-        
-        # Count statistics for sales agent
-        total_available = products.count()
-
-    if request.method == 'POST':
-        # Get customer details
-        customer_name = request.POST.get('customer_name', '').strip()
-        customer_phone = request.POST.get('customer_phone', '').strip()
-        customer_id_number = request.POST.get('customer_id_number', '').strip()
-
-        next_of_kin_name = request.POST.get('next_of_kin_name', '').strip()
-        next_of_kin_phone = request.POST.get('next_of_kin_phone', '').strip()
-        next_of_kin_relationship = request.POST.get('next_of_kin_relationship', '').strip()
-
-        # Get IMEI/Serial
-        imei = request.POST.get('imei', '').strip()
-
-        # Get selling price (editable)
-        selling_price = request.POST.get('selling_price', '').strip()
-        payment_method = request.POST.get('payment_method', 'mpesa').strip()
-
-        # Validate
-        if not customer_name:
-            messages.error(request, 'Customer name is required')
-            return redirect('tronic_master:agent_sale')
-
-        if not customer_phone:
-            messages.error(request, 'Customer phone number is required')
-            return redirect('tronic_master:agent_sale')
-
-        if not imei:
-            messages.error(request, 'Please select a product by IMEI/Serial number')
-            return redirect('tronic_master:agent_sale')
-
-        if not selling_price:
-            messages.error(request, 'Selling price is required')
-            return redirect('tronic_master:agent_sale')
-
-        try:
-            selling_price = Decimal(str(selling_price))
-            if selling_price <= 0:
-                messages.error(request, 'Selling price must be greater than 0')
-                return redirect('tronic_master:agent_sale')
-        except (ValueError, TypeError):
-            messages.error(request, 'Invalid selling price')
-            return redirect('tronic_master:agent_sale')
-
-        # ✅ Find the unit by IMEI or Serial with proper permissions
-        if is_admin:
-            # Admin can sell any available unit
-            unit = ProductUnit.objects.filter(
-                tenant=tenant,
-                status='available'
-            ).filter(
-                Q(imei_number=imei) | Q(serial_number=imei)
-            ).first()
-        else:
-            # Agent can only sell their assigned units
-            unit = ProductUnit.objects.filter(
-                tenant=tenant,
-                current_owner=user,
-                status='available'
-            ).filter(
-                Q(imei_number=imei) | Q(serial_number=imei)
-            ).first()
-
-        if not unit:
-            messages.error(request, 'Product not found in available stock')
-            return redirect('tronic_master:agent_sale')
-
-        # ✅ Check if unit is still available (double-check)
-        unit.refresh_from_db()
-        if unit.status != 'available':
-            messages.error(request, f'Unit {imei} is no longer available (Status: {unit.get_status_display()})')
-            return redirect('tronic_master:agent_sale')
-
-        # ✅ Create or get customer
-        customer, created = Customer.objects.get_or_create(
-            tenant=tenant,
-            phone=customer_phone,
-            defaults={
-                'name': customer_name,
-                'id_number': customer_id_number,
-                'next_of_kin_name': next_of_kin_name,
-                'next_of_kin_phone': next_of_kin_phone,
-                'next_of_kin_relationship': next_of_kin_relationship,
-                'created_by': user
-            }
-        )
-
-        # ✅ Update customer if exists and fields are provided
-        if not created:
-            if customer_name and not customer.name:
-                customer.name = customer_name
-            if customer_id_number and not customer.id_number:
-                customer.id_number = customer_id_number
-            if next_of_kin_name and not customer.next_of_kin_name:
-                customer.next_of_kin_name = next_of_kin_name
-            if next_of_kin_phone and not customer.next_of_kin_phone:
-                customer.next_of_kin_phone = next_of_kin_phone
-            if next_of_kin_relationship and not customer.next_of_kin_relationship:
-                customer.next_of_kin_relationship = next_of_kin_relationship
-            customer.save()
-
-        # ✅ Generate invoice number
-        today = timezone.now()
-        invoice_prefix = f"SALE-{today.strftime('%Y%m%d')}"
-        last_sale = Sale.objects.filter(
-            tenant=tenant,
-            invoice_no__startswith=invoice_prefix
-        ).order_by('-invoice_no').first()
-
-        if last_sale:
-            try:
-                last_number = int(last_sale.invoice_no.split('-')[-1])
-                new_number = last_number + 1
-            except (ValueError, IndexError):
-                new_number = 1
-        else:
-            new_number = 1
-
-        invoice_no = f"{invoice_prefix}-{new_number:04d}"
-
-        # ✅ Create sale
-        sale = Sale.objects.create(
-            tenant=tenant,
-            customer=customer,
-            customer_name=customer_name,
-            customer_phone=customer_phone,
-            cashier=user,
-            invoice_no=invoice_no,
-            subtotal=selling_price,
-            total=selling_price,
-            payment_method=payment_method,
-            status='completed',
-            tax_inclusive=True,
-            branch=unit.branch
-        )
-
-        # ✅ Create sale item
-        sale_item = SaleItem.objects.create(
-            sale=sale,
-            product=unit.product,
-            product_unit=unit,
-            quantity=1,
-            price=selling_price,
-            subtotal=selling_price
-        )
-
-        # ✅ Mark unit as sold
-        unit.status = 'sold'
-        unit.sold_at_price = selling_price
-        unit.sold_date = timezone.now()
-        unit.sold_by = user
-        unit.save()
-
-        # ✅ Update product quantities
-        unit.product.update_quantities()
-
-        # ✅ Update customer total spent
-        customer.total_spent = (customer.total_spent or Decimal('0')) + selling_price
-        customer.save()
-
-        # ✅ Queue sync if offline
-        if getattr(settings, 'OFFLINE_MODE', False):
-            try:
-                from apps.shared.tenants.models import SyncQueue
-                
-                SyncQueue.objects.create(
-                    tenant_id=tenant.id,
-                    model_name='Sale',
-                    object_id=str(sale.id),
-                    operation='CREATE',
-                    data={
-                        'id': sale.id,
-                        'invoice_no': sale.invoice_no,
-                        'customer_id': customer.id if customer else None,
-                        'customer_name': customer_name,
-                        'customer_phone': customer_phone,
-                        'branch_id': unit.branch_id if unit.branch else None,
-                        'subtotal': str(sale.subtotal),
-                        'total': str(sale.total),
-                        'payment_method': payment_method,
-                        'status': 'completed',
-                        'cashier_id': user.id,
-                        'tenant_id': tenant.id,
-                        'created_at': sale.created_at.isoformat(),
-                    },
-                    priority=8  # High priority for sales
-                )
-
-                SyncQueue.objects.create(
-                    tenant_id=tenant.id,
-                    model_name='SaleItem',
-                    object_id=str(sale_item.id),
-                    operation='CREATE',
-                    data={
-                        'id': sale_item.id,
-                        'sale_id': sale.id,
-                        'product_id': unit.product_id,
-                        'product_unit_id': unit.id,
-                        'quantity': 1,
-                        'price': str(selling_price),
-                        'subtotal': str(selling_price),
-                        'tenant_id': tenant.id,
-                    },
-                    priority=8
-                )
-
-                SyncQueue.objects.create(
-                    tenant_id=tenant.id,
-                    model_name='ProductUnit',
-                    object_id=str(unit.id),
-                    operation='UPDATE',
-                    data={
-                        'id': unit.id,
-                        'status': 'sold',
-                        'sold_at_price': str(selling_price),
-                        'sold_date': unit.sold_date.isoformat(),
-                        'sold_by_id': user.id,
-                        'tenant_id': tenant.id,
-                    },
-                    priority=8
-                )
-                logger.debug(f"✅ Queued Sale sync: {sale.invoice_no}")
-            except Exception as e:
-                logger.error(f"Failed to queue Sale sync: {e}")
-
-        messages.success(request, f'Sale completed successfully! {unit.product.name} sold for KES {selling_price:.2f}')
-
-        # ✅ REDIRECT TO RECEIPT PAGE
-        return redirect('tronic_master:receipt', sale_id=sale.id)
-
-    # ✅ GET request - show the form
-    product_list = []
-    for unit in products:
-        product_list.append({
-            'id': unit.id,
-            'name': unit.product.name,
-            'brand': unit.product.brand,
-            'model': unit.product.model,
-            'sku': unit.product.sku_code,
-            'imei': unit.imei_number or '',
-            'serial': unit.serial_number or '',
-            'selling_price': float(unit.unit_selling_price or unit.product.default_selling_price),
-            'buying_price': float(unit.unit_buying_price or unit.product.default_buying_price),
-            'branch': unit.branch.name if unit.branch else 'Main Shop',
-            'owner': unit.current_owner.get_full_name() or unit.current_owner.username if unit.current_owner else 'Unassigned' if is_admin else None,
-            'condition': unit.get_condition_display() if hasattr(unit, 'get_condition_display') else 'New',
-        })
-
-    context = {
-        'tenant': tenant,
-        'products': product_list,
-        'total_available': total_available,
-        'is_admin': is_admin,  # ✅ Pass admin status to template
-        'active_tab': 'sales',
-    }
-    return render(request, 'tronic_master/agent_sale.html', context)
 
 
 # ============================================
@@ -4513,30 +4217,22 @@ def my_stock_sell(request, unit_id):
                 customer.next_of_kin_relationship = next_of_kin_relationship
             customer.save()
 
-        # Generate unique invoice number for this tenant
-        try:
-            invoice_no = generate_invoice_number(tenant, prefix="SALE")
-        except Exception as e:
-            logger.error(f"Error generating invoice number for tenant {tenant.id}: {e}")
-            from datetime import datetime
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
-            invoice_no = f"SALE-{timestamp}"
-
-        # Create sale
+        # ✅ FIXED: Let the model generate the invoice number automatically
+        # Do NOT manually generate invoice_no - Sale.save() handles it
         sale = Sale.objects.create(
             tenant=tenant,
             customer=customer,
             cashier=user,
             customer_name=customer_name,
             customer_phone=customer_phone,
-            invoice_no=invoice_no,
+            # invoice_no is AUTO-GENERATED by Sale.save()
             subtotal=selling_price,
             total=selling_price,
             payment_method=payment_method,
             status='completed',
             tax_inclusive=True,
             branch=unit.branch,
-            source='agent'
+            source='agent'  # ✅ Mark as agent sale
         )
 
         # Create sale item
@@ -4549,11 +4245,12 @@ def my_stock_sell(request, unit_id):
             subtotal=selling_price
         )
 
-        # Mark unit as sold
+        # ✅ Mark unit as sold and CLEAR the owner
         unit.status = 'sold'
         unit.sold_at_price = selling_price
         unit.sold_date = timezone.now()
         unit.sold_by = user
+        unit.current_owner = None  # ✅ IMPORTANT: Clear the owner
         unit.save()
 
         # Update product quantities
@@ -4563,7 +4260,7 @@ def my_stock_sell(request, unit_id):
         customer.total_spent = (customer.total_spent or Decimal('0')) + selling_price
         customer.save()
 
-        # Queue sync if offline
+        # ✅ Queue sync if offline
         if getattr(settings, 'OFFLINE_MODE', False):
             try:
                 SyncQueue.objects.create(
@@ -4573,7 +4270,7 @@ def my_stock_sell(request, unit_id):
                     operation='CREATE',
                     data={
                         'id': sale.id,
-                        'invoice_no': sale.invoice_no,
+                        'invoice_no': sale.invoice_no,  # ✅ Use the auto-generated one
                         'customer_id': customer.id if customer else None,
                         'customer_name': customer_name,
                         'customer_phone': customer_phone,
@@ -4582,6 +4279,7 @@ def my_stock_sell(request, unit_id):
                         'total': str(sale.total),
                         'payment_method': payment_method,
                         'status': 'completed',
+                        'source': 'agent',
                         'cashier_id': user.id,
                         'tenant_id': tenant.id,
                         'created_at': sale.created_at.isoformat(),
@@ -4618,6 +4316,7 @@ def my_stock_sell(request, unit_id):
                         'sold_at_price': str(selling_price),
                         'sold_date': unit.sold_date.isoformat(),
                         'sold_by_id': user.id,
+                        'current_owner_id': None,  # ✅ Sync the cleared owner
                         'tenant_id': tenant.id,
                     },
                     priority=8
@@ -4638,6 +4337,289 @@ def my_stock_sell(request, unit_id):
         'active_tab': 'my_stock',
     }
     return render(request, 'tronic_master/my_stock_sell.html', context)
+
+
+# ============================================
+# SALES AGENT - LOAN CREATION
+# ============================================
+
+@login_required
+def agent_sale(request):
+    """Sales Agent - Create a new sale from assigned stock (Admin sees all stock)"""
+    tenant = request.user.tenant
+    user = request.user
+
+    if not tenant:
+        messages.error(request, 'No tenant assigned')
+        return redirect('dashboard')
+
+    # ✅ Check if user is admin or superadmin
+    from apps.shared.portal.helpers import is_admin_user
+    
+    is_admin = is_admin_user(user)
+
+    # ✅ Get available units based on user role
+    if is_admin:
+        # Admin/Superadmin - See ALL available units across all branches
+        products = ProductUnit.objects.filter(
+            tenant=tenant,
+            status='available'
+        ).select_related('product', 'branch', 'current_owner').order_by('product__name')
+        
+        # Get all available units for stats
+        total_available = products.count()
+    else:
+        # Regular Sales Agent - See only their assigned stock
+        products = ProductUnit.objects.filter(
+            tenant=tenant,
+            current_owner=user,
+            status='available'
+        ).select_related('product', 'branch').order_by('product__name')
+        
+        # Count statistics for sales agent
+        total_available = products.count()
+
+    if request.method == 'POST':
+        # Get customer details
+        customer_name = request.POST.get('customer_name', '').strip()
+        customer_phone = request.POST.get('customer_phone', '').strip()
+        customer_id_number = request.POST.get('customer_id_number', '').strip()
+
+        next_of_kin_name = request.POST.get('next_of_kin_name', '').strip()
+        next_of_kin_phone = request.POST.get('next_of_kin_phone', '').strip()
+        next_of_kin_relationship = request.POST.get('next_of_kin_relationship', '').strip()
+
+        # Get IMEI/Serial
+        imei = request.POST.get('imei', '').strip()
+
+        # Get selling price (editable)
+        selling_price = request.POST.get('selling_price', '').strip()
+        payment_method = request.POST.get('payment_method', 'mpesa').strip()
+
+        # Validate
+        if not customer_name:
+            messages.error(request, 'Customer name is required')
+            return redirect('tronic_master:agent_sale')
+
+        if not customer_phone:
+            messages.error(request, 'Customer phone number is required')
+            return redirect('tronic_master:agent_sale')
+
+        if not imei:
+            messages.error(request, 'Please select a product by IMEI/Serial number')
+            return redirect('tronic_master:agent_sale')
+
+        if not selling_price:
+            messages.error(request, 'Selling price is required')
+            return redirect('tronic_master:agent_sale')
+
+        try:
+            selling_price = Decimal(str(selling_price))
+            if selling_price <= 0:
+                messages.error(request, 'Selling price must be greater than 0')
+                return redirect('tronic_master:agent_sale')
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid selling price')
+            return redirect('tronic_master:agent_sale')
+
+        # ✅ Find the unit by IMEI or Serial with proper permissions
+        if is_admin:
+            # Admin can sell any available unit
+            unit = ProductUnit.objects.filter(
+                tenant=tenant,
+                status='available'
+            ).filter(
+                Q(imei_number=imei) | Q(serial_number=imei)
+            ).first()
+        else:
+            # Agent can only sell their assigned units
+            unit = ProductUnit.objects.filter(
+                tenant=tenant,
+                current_owner=user,
+                status='available'
+            ).filter(
+                Q(imei_number=imei) | Q(serial_number=imei)
+            ).first()
+
+        if not unit:
+            messages.error(request, 'Product not found in available stock')
+            return redirect('tronic_master:agent_sale')
+
+        # ✅ Check if unit is still available (double-check)
+        unit.refresh_from_db()
+        if unit.status != 'available':
+            messages.error(request, f'Unit {imei} is no longer available (Status: {unit.get_status_display()})')
+            return redirect('tronic_master:agent_sale')
+
+        # ✅ Create or get customer
+        customer, created = Customer.objects.get_or_create(
+            tenant=tenant,
+            phone=customer_phone,
+            defaults={
+                'name': customer_name,
+                'id_number': customer_id_number,
+                'next_of_kin_name': next_of_kin_name,
+                'next_of_kin_phone': next_of_kin_phone,
+                'next_of_kin_relationship': next_of_kin_relationship,
+                'created_by': user
+            }
+        )
+
+        # ✅ Update customer if exists and fields are provided
+        if not created:
+            if customer_name and not customer.name:
+                customer.name = customer_name
+            if customer_id_number and not customer.id_number:
+                customer.id_number = customer_id_number
+            if next_of_kin_name and not customer.next_of_kin_name:
+                customer.next_of_kin_name = next_of_kin_name
+            if next_of_kin_phone and not customer.next_of_kin_phone:
+                customer.next_of_kin_phone = next_of_kin_phone
+            if next_of_kin_relationship and not customer.next_of_kin_relationship:
+                customer.next_of_kin_relationship = next_of_kin_relationship
+            customer.save()
+
+        # ✅ FIXED: Let the model generate the invoice number automatically
+        # Do NOT manually generate invoice_no - Sale.save() handles it
+        sale = Sale.objects.create(
+            tenant=tenant,
+            customer=customer,
+            customer_name=customer_name,
+            customer_phone=customer_phone,
+            cashier=user,
+            # invoice_no is AUTO-GENERATED by Sale.save()
+            subtotal=selling_price,
+            total=selling_price,
+            payment_method=payment_method,
+            status='completed',
+            tax_inclusive=True,
+            branch=unit.branch,
+            source='agent'  # ✅ Mark as agent sale
+        )
+
+        # ✅ Create sale item
+        sale_item = SaleItem.objects.create(
+            sale=sale,
+            product=unit.product,
+            product_unit=unit,
+            quantity=1,
+            price=selling_price,
+            subtotal=selling_price
+        )
+
+        # ✅ Mark unit as sold and CLEAR the owner
+        unit.status = 'sold'
+        unit.sold_at_price = selling_price
+        unit.sold_date = timezone.now()
+        unit.sold_by = user
+        unit.current_owner = None  # ✅ IMPORTANT: Clear the owner
+        unit.save()
+
+        # ✅ Update product quantities
+        unit.product.update_quantities()
+
+        # ✅ Update customer total spent
+        customer.total_spent = (customer.total_spent or Decimal('0')) + selling_price
+        customer.save()
+
+        # ✅ Queue sync if offline
+        if getattr(settings, 'OFFLINE_MODE', False):
+            try:
+                from apps.shared.tenants.models import SyncQueue
+                
+                SyncQueue.objects.create(
+                    tenant_id=tenant.id,
+                    model_name='Sale',
+                    object_id=str(sale.id),
+                    operation='CREATE',
+                    data={
+                        'id': sale.id,
+                        'invoice_no': sale.invoice_no,  # ✅ Use the auto-generated one
+                        'customer_id': customer.id if customer else None,
+                        'customer_name': customer_name,
+                        'customer_phone': customer_phone,
+                        'branch_id': unit.branch_id if unit.branch else None,
+                        'subtotal': str(sale.subtotal),
+                        'total': str(sale.total),
+                        'payment_method': payment_method,
+                        'status': 'completed',
+                        'source': 'agent',
+                        'cashier_id': user.id,
+                        'tenant_id': tenant.id,
+                        'created_at': sale.created_at.isoformat(),
+                    },
+                    priority=8  # High priority for sales
+                )
+
+                SyncQueue.objects.create(
+                    tenant_id=tenant.id,
+                    model_name='SaleItem',
+                    object_id=str(sale_item.id),
+                    operation='CREATE',
+                    data={
+                        'id': sale_item.id,
+                        'sale_id': sale.id,
+                        'product_id': unit.product_id,
+                        'product_unit_id': unit.id,
+                        'quantity': 1,
+                        'price': str(selling_price),
+                        'subtotal': str(selling_price),
+                        'tenant_id': tenant.id,
+                    },
+                    priority=8
+                )
+
+                SyncQueue.objects.create(
+                    tenant_id=tenant.id,
+                    model_name='ProductUnit',
+                    object_id=str(unit.id),
+                    operation='UPDATE',
+                    data={
+                        'id': unit.id,
+                        'status': 'sold',
+                        'sold_at_price': str(selling_price),
+                        'sold_date': unit.sold_date.isoformat(),
+                        'sold_by_id': user.id,
+                        'current_owner_id': None,  # ✅ Sync the cleared owner
+                        'tenant_id': tenant.id,
+                    },
+                    priority=8
+                )
+                logger.debug(f"✅ Queued Sale sync: {sale.invoice_no}")
+            except Exception as e:
+                logger.error(f"Failed to queue Sale sync: {e}")
+
+        messages.success(request, f'Sale completed successfully! {unit.product.name} sold for KES {selling_price:.2f}')
+
+        # ✅ REDIRECT TO RECEIPT PAGE
+        return redirect('tronic_master:receipt', sale_id=sale.id)
+
+    # ✅ GET request - show the form
+    product_list = []
+    for unit in products:
+        product_list.append({
+            'id': unit.id,
+            'name': unit.product.name,
+            'brand': unit.product.brand,
+            'model': unit.product.model,
+            'sku': unit.product.sku_code,
+            'imei': unit.imei_number or '',
+            'serial': unit.serial_number or '',
+            'selling_price': float(unit.unit_selling_price or unit.product.default_selling_price),
+            'buying_price': float(unit.unit_buying_price or unit.product.default_buying_price),
+            'branch': unit.branch.name if unit.branch else 'Main Shop',
+            'owner': unit.current_owner.get_full_name() or unit.current_owner.username if unit.current_owner else 'Unassigned' if is_admin else None,
+            'condition': unit.get_condition_display() if hasattr(unit, 'get_condition_display') else 'New',
+        })
+
+    context = {
+        'tenant': tenant,
+        'products': product_list,
+        'total_available': total_available,
+        'is_admin': is_admin,
+        'active_tab': 'sales',
+    }
+    return render(request, 'tronic_master/agent_sale.html', context)
 
 
 # ============================================
@@ -4802,9 +4784,6 @@ def my_stock_transfer(request, unit_id):
         'active_tab': 'my_stock',
     }
     return render(request, 'tronic_master/my_stock_transfer.html', context)
-
-
-
 
 @login_required
 def stock_take(request):
@@ -5405,10 +5384,6 @@ def sales_search_ajax(request):
     return JsonResponse({'results': results})
 
 
-# ============================================
-# SALES HISTORY
-# ============================================
-
 @login_required
 def sales_history(request):
     """View sales history"""
@@ -5423,6 +5398,7 @@ def sales_history(request):
     # Filters
     search = request.GET.get('search', '')
     status = request.GET.get('status', '')
+    source = request.GET.get('source', '')  
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
 
@@ -5433,6 +5409,8 @@ def sales_history(request):
         )
     if status:
         sales = sales.filter(status=status)
+    if source:  # ✅ Apply source filter
+        sales = sales.filter(source=source)
     if date_from:
         sales = sales.filter(created_at__date__gte=date_from)
     if date_to:
@@ -5441,6 +5419,9 @@ def sales_history(request):
     # Statistics
     total_sales = sales.aggregate(total=Sum('total'))['total'] or Decimal('0')
     total_count = sales.count()
+    today = timezone.now().date()
+    today_count = sales.filter(created_at__date=today).count()
+    today_revenue = sales.filter(created_at__date=today).aggregate(total=Sum('total'))['total'] or Decimal('0')
 
     # Pagination
     paginator = Paginator(sales, 20)
@@ -5452,8 +5433,12 @@ def sales_history(request):
         'sales': page_obj,
         'total_sales': total_sales,
         'total_count': total_count,
+        'today_count': today_count,
+        'today_revenue': today_revenue,
+        'today': today,
         'search': search,
         'status_filter': status,
+        'source_filter': source, 
         'date_from': date_from,
         'date_to': date_to,
         'active_tab': 'sales',
