@@ -15,7 +15,6 @@ from apps.shared.permissions.models import UserRoleAssignment
 from django.http import JsonResponse
 from django.core.cache import cache
 import logging
-from apps.shared.portal.project_router import get_project_redirect, DEFAULT_REDIRECT
 from apps.shared.utils.project_helpers import (
     PROJECT_ROLE_MAPPINGS,
     PROJECT_DASHBOARDS,
@@ -59,27 +58,49 @@ def portal_login(request):
             if user.is_super_admin:
                 return redirect('portal:super_admin_dashboard')
 
+            # ✅ If user has no tenant, redirect to support
+            if not tenant:
+                messages.error(request, 'No tenant assigned to your account. Please contact support.')
+                return redirect('portal:support')
+
             # ✅ If user has project type, redirect to the correct project
             if project_code:
-                project_redirects = {
-                    'TRONIC_MASTER': 'tronic_master:dashboard',
-                    'HOTEL_MASTER': 'hotel_master:dashboard',
-                    'FOOD_MASTER': 'food_master:dashboard',
-                    'RETAIL_MASTER': 'retail_master:dashboard',
-                    'HEALTH_MASTER': 'health_master:dashboard',
-                    'FASHION_MASTER': 'fashion_master:dashboard',
-                    'RENTAL_MASTER': 'rental_master:dashboard',
+                redirect_by_code = {
+                    '001': 'tronic_master:dashboard',
+                    '002': 'hotel_master:dashboard',
+                    '003': 'food_master:dashboard',
+                    '004': 'retail_master:dashboard',
+                    '005': 'health_master:dashboard',
+                    '006': 'fashion_master:dashboard',
+                    '007': 'rental_master:dashboard',
+                    '008': 'hardware_master:dashboard',
+                    '009': 'carwash_master:dashboard',
+                    '010': 'linquor_master:dashboard',
                 }
-                redirect_url = project_redirects.get(project_code)
+                redirect_url = redirect_by_code.get(project_code)
                 if redirect_url:
                     return redirect(redirect_url)
+                
+                # Try by project name as fallback
+                project_name = project_type.name.lower().strip()
+                project_app_map = {
+                    'tronic_master': 'tronic_master:dashboard',
+                    'hotel_master': 'hotel_master:dashboard',
+                    'food_master': 'food_master:dashboard',
+                    'retail_master': 'retail_master:dashboard',
+                    'health_master': 'health_master:dashboard',
+                    'fashion_master': 'fashion_master:dashboard',
+                    'rental_master': 'rental_master:dashboard',
+                    'hardware_master': 'hardware_master:dashboard',
+                    'carwash_master': 'carwash_master:dashboard',
+                    'linquor_master': 'linquor_master:dashboard',
+                }
+                for app_name, url in project_app_map.items():
+                    if app_name in project_name or project_name in app_name:
+                        return redirect(url)
 
-            # ✅ PROFESSIONAL FALLBACK - No project assigned
-            messages.info(
-                request,
-                'Welcome! Your account is being configured. '
-                'Please connect with our support team to get started.'
-            )
+            # ✅ If user has tenant but no project type, redirect to support
+            messages.warning(request, 'No project type assigned to your tenant. Please contact support.')
             return redirect('portal:support')
 
         else:
@@ -87,20 +108,16 @@ def portal_login(request):
 
     return render(request, 'shared/login.html')
 
-
-
 def portal_logout(request):
     """Logout"""
     logout(request)
     messages.success(request, 'You have been logged out.')
     return redirect('portal:login')
 
-
 @login_required
 def no_project_assigned(request):
     """Professional fallback page for users with no project assigned"""
     return redirect('portal:support')
-
 
 @login_required
 def profile(request):
@@ -128,8 +145,6 @@ def profile(request):
         'user': request.user,
     }
     return render(request, 'shared/profile.html', context)
-
-
 
 @login_required
 def change_password(request):
@@ -175,7 +190,6 @@ def change_password(request):
 
     return render(request, 'shared/change_password.html', context)
 
-
 def debug_redirect(request):
     """Debug view to show current project type"""
     user = request.user
@@ -218,29 +232,130 @@ def debug_redirect(request):
 
 @login_required
 def project_dashboard(request):
-    """Route to the correct project dashboard based on user role and tenant project type."""
+    """Route to the correct project dashboard"""
     user = request.user
 
     # Super Admin
     if user.is_super_admin:
         return redirect('portal:super_admin_dashboard')
 
+    # ✅ Check if user has a tenant
     tenant = getattr(user, 'tenant', None)
     if not tenant:
-        messages.error(request, 'No tenant assigned to your account')
-        return redirect(DEFAULT_REDIRECT)
+        messages.error(request, 'No tenant assigned to your account. Please contact support.')
+        return redirect('portal:support')
 
+    # ✅ Get project type
     project_type = getattr(tenant, 'project_type', None)
+    
+    # ✅ If no project type, redirect to support
     if not project_type:
-        messages.error(request, 'No project type assigned to your tenant')
-        return redirect(DEFAULT_REDIRECT)
-
+        messages.warning(request, 'No project type assigned to your tenant. Please contact support.')
+        return redirect('portal:support')
+    
+    # ✅ Get project name and code
+    project_name = project_type.name.lower().strip()
     project_code = project_type.code.upper()
+    
+    # ✅ Log for debugging
+    logger.info(f"Project Dashboard - User: {user.username}, Project Name: {project_name}, Code: {project_code}")
+    
+    # ✅ Redirect by code
+    redirect_by_code = {
+        '001': 'tronic_master:dashboard',
+        '002': 'hotel_master:dashboard',
+        '003': 'food_master:dashboard',
+        '004': 'retail_master:dashboard',
+        '005': 'health_master:dashboard',
+        '006': 'fashion_master:dashboard',
+        '007': 'rental_master:dashboard',
+        '008': 'hardware_master:dashboard',
+        '009': 'carwash_master:dashboard',
+        '010': 'linquor_master:dashboard',
+    }
+    
+    # ✅ Try to find redirect by code first
+    redirect_url = redirect_by_code.get(project_code)
+    
+    # ✅ If not found by code, try by name
+    if not redirect_url:
+        redirect_by_name = {
+            'tronic master': 'tronic_master:dashboard',
+            'tech master': 'tronic_master:dashboard',
+            'tronic_master': 'tronic_master:dashboard',
+            'tech_master': 'tronic_master:dashboard',
+            'hotel master': 'hotel_master:dashboard',
+            'hotel_master': 'hotel_master:dashboard',
+            'food master': 'food_master:dashboard',
+            'food_master': 'food_master:dashboard',
+            'retail master': 'retail_master:dashboard',
+            'retail_master': 'retail_master:dashboard',
+            'health master': 'health_master:dashboard',
+            'health_master': 'health_master:dashboard',
+            'fashion master': 'fashion_master:dashboard',
+            'fashion_master': 'fashion_master:dashboard',
+            'rental master': 'rental_master:dashboard',
+            'rental_master': 'rental_master:dashboard',
+            'hardware master': 'hardware_master:dashboard',
+            'hardware_master': 'hardware_master:dashboard',
+            'carwash master': 'carwash_master:dashboard',
+            'carwash_master': 'carwash_master:dashboard',
+            'liquor master': 'linquor_master:dashboard',
+            'linquor master': 'linquor_master:dashboard',
+            'linquor_master': 'linquor_master:dashboard',
+        }
+        
+        # Try exact match
+        redirect_url = redirect_by_name.get(project_name)
+        
+        # Try partial match
+        if not redirect_url:
+            for key, value in redirect_by_name.items():
+                if key in project_name or project_name in key:
+                    redirect_url = value
+                    break
+    
+    # ✅ If we found a redirect URL, use it
+    if redirect_url:
+        logger.info(f"Redirecting to: {redirect_url}")
+        return redirect(redirect_url)
+    
+    # ✅ Last resort - redirect to support
+    messages.warning(request, f'No dashboard found for project: {project_name}. Please contact support.')
+    return redirect('portal:support')
 
-    # ✅ Get the redirect URL (always returns a string)
-    redirect_url = get_project_redirect(project_code, 'dashboard')
-    return redirect(redirect_url)
-
+@login_required
+def tenant_dashboard(request):
+    """Tenant Dashboard - Shows tenant info but redirects to support if no tenant"""
+    tenant = request.user.tenant
+    
+    if not tenant:
+        messages.error(request, 'No tenant assigned to your account. Please contact support.')
+        return redirect('portal:support')
+    
+    # Get project type
+    project_type = getattr(tenant, 'project_type', None)
+    
+    # If no project type, redirect to support
+    if not project_type:
+        messages.warning(request, 'No project type assigned to your tenant. Please contact support.')
+        return redirect('portal:support')
+    
+    # Get user roles
+    from apps.shared.permissions.models import UserRoleAssignment
+    user_roles = UserRoleAssignment.objects.filter(
+        user=request.user,
+        is_active=True
+    ).select_related('role')
+    
+    context = {
+        'tenant': tenant,
+        'project_type': project_type,
+        'user_roles': user_roles,
+        'has_roles': user_roles.exists(),
+        'active_tab': 'dashboard',
+    }
+    return render(request, 'shared/tenant_dashboard.html', context)
 
 # ============================================
 # Helper function to show available project mappings
@@ -264,7 +379,6 @@ def get_project_roles(request):
         'roles': project_config,
         'dashboard': PROJECT_DASHBOARDS.get(project_code.upper()),
     })
-
 
 @login_required
 def support(request):
@@ -438,8 +552,6 @@ def tech_pos(request):
     }
     return render(request, 'tronic_master/pos.html', context)
 
-
-
 @login_required
 def verify_pin(request):
     """Verify user PIN before accessing POS"""
@@ -482,19 +594,16 @@ def verify_pin(request):
         'user': request.user,
     })
 
-
 @login_required
 def verify_pin_ajax(request):
     """AJAX endpoint for PIN verification - DEPRECATED"""
     return JsonResponse({'success': False, 'error': 'PIN verification is no longer supported'}, status=400)
-
 
 @login_required
 def clear_pin_verification(request):
     """Clear PIN verification - DEPRECATED"""
     messages.info(request, 'PIN verification cleared')
     return redirect('tronic_master:pos')
-
 
 @login_required
 def tech_dashboard(request):
@@ -596,9 +705,6 @@ def tech_dashboard(request):
     # No project role assigned
     messages.warning(request, 'You have not been assigned a project role. Please contact your administrator.')
     return redirect('portal:dashboard')
-
-
-
 
 @login_required
 def report_dashboard(request):
@@ -704,7 +810,6 @@ def report_dashboard(request):
     }
     return render(request, 'tronic_master/reports.html', context)
 
-
 @login_required
 def platform_analytics(request):
     """Platform Analytics - Super Admin only"""
@@ -801,7 +906,6 @@ def food_dashboard(request):
     }
     return render(request, 'food_master/dashboard_food.html', context)
 
-
 @login_required
 def food_menu(request):
     """Restaurant menu management - Admin only"""
@@ -812,13 +916,11 @@ def food_menu(request):
     context = {'active_tab': 'menu', 'tenant': request.user.tenant}
     return render(request, 'food_master/menu.html', context)
 
-
 @login_required
 def food_orders(request):
     """Restaurant orders management"""
     context = {'active_tab': 'orders', 'tenant': request.user.tenant}
     return render(request, 'food_master/orders.html', context)
-
 
 @login_required
 def food_tables(request):
@@ -829,7 +931,6 @@ def food_tables(request):
 
     context = {'active_tab': 'tables', 'tenant': request.user.tenant}
     return render(request, 'food_master/tables.html', context)
-
 
 @login_required
 def food_kitchen(request):
