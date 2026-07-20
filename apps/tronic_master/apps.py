@@ -17,15 +17,17 @@ class TechMasterConfig(AppConfig):
         logger.info("Tech Master app ready!")
 
     def setup_default_roles(self):
-        """Create default roles if they don't exist"""
+        """Create default roles for all tenants"""
         try:
             from apps.shared.roles.models import ProjectRole
             from apps.shared.tenants.models import Tenant
             from apps.tronic_master.permissions import TRONIC_MASTER_PERMISSIONS
             
-            tenant = Tenant.objects.first()
-            if not tenant:
-                logger.warning("No tenant found, skipping role creation")
+            # ✅ Get ALL tenants, not just the first one
+            tenants = Tenant.objects.filter(status='active')
+            
+            if not tenants.exists():
+                logger.warning("No active tenants found, skipping role creation")
                 return
             
             default_roles = {
@@ -105,23 +107,23 @@ class TechMasterConfig(AppConfig):
                 'Cashier': {
                     'description': 'Process sales at the counter',
                     'permissions': [
-                        'can_view_price_check',      # ✅ View Price Check
-                        'can_create_sale',            # ✅ Create Sale
-                        'can_process_payment',        # ✅ Process Payment
-                        'can_view_receipt',           # ✅ View Receipt
-                        'can_view_receipt_search',    # ✅ View Receipt Search
-                        'can_view_product_search',    # ✅ View Product Search
+                        'can_view_price_check',
+                        'can_create_sale',
+                        'can_process_payment',
+                        'can_view_receipt',
+                        'can_view_receipt_search',
+                        'can_view_product_search',
                     ],
                     'is_system_role': False
                 },
                 'Sales Agent': {
                     'description': 'Create sales from assigned stock',
                     'permissions': [
-                        'can_view_my_stock',          # ✅ View My Stock
-                        'can_view_agent_sale_form',   # ✅ View Agent Sale Form
-                        'can_view_my_sales',          # ✅ View My Sales 
-                        'can_view_price_check',       # ✅ View Price Check
-                        'can_view_receipt',           # ✅ View Receipt
+                        'can_view_my_stock',
+                        'can_view_agent_sale_form',
+                        'can_view_my_sales',
+                        'can_view_price_check',
+                        'can_view_receipt',
                     ],
                     'is_system_role': False
                 },
@@ -161,30 +163,35 @@ class TechMasterConfig(AppConfig):
                 },
             }
             
-            created = []
-            for role_name, role_data in default_roles.items():
-                role, created_flag = ProjectRole.objects.get_or_create(
-                    tenant=tenant,
-                    project_type='tronic_master',
-                    name=role_name,
-                    defaults={
-                        'description': role_data['description'],
-                        'permissions': role_data['permissions'],
-                        'is_system_role': role_data['is_system_role'],
-                    }
-                )
-                if created_flag:
-                    created.append(role_name)
-                else:
-                    # Update existing role permissions if needed
-                    # This ensures permissions are updated for existing roles
-                    if role.permissions != role_data['permissions']:
-                        role.permissions = role_data['permissions']
-                        role.save()
-                        logger.info(f"Updated permissions for role: {role_name}")
+            total_created = 0
+            total_updated = 0
             
-            if created:
-                logger.info(f"Created default Tech Master roles: {', '.join(created)}")
+            # ✅ Loop through all tenants
+            for tenant in tenants:
+                for role_name, role_data in default_roles.items():
+                    role, created = ProjectRole.objects.get_or_create(
+                        tenant=tenant,
+                        project_type='tronic_master',
+                        name=role_name,
+                        defaults={
+                            'description': role_data['description'],
+                            'permissions': role_data['permissions'],
+                            'is_system_role': role_data['is_system_role'],
+                        }
+                    )
+                    if created:
+                        total_created += 1
+                    else:
+                        # Update existing role permissions if needed
+                        if role.permissions != role_data['permissions']:
+                            role.permissions = role_data['permissions']
+                            role.save()
+                            total_updated += 1
+            
+            if total_created > 0:
+                logger.info(f"Created {total_created} default Tech Master roles across {tenants.count()} tenants")
+            if total_updated > 0:
+                logger.info(f"Updated {total_updated} existing Tech Master roles")
                 
         except Exception as e:
             logger.error(f"Error setting up default roles: {e}")
