@@ -41,9 +41,17 @@
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h3 class="mb-0">{{ product.name }} ({{ product.sku_code }})</h3>
                     <div>
-                        <a href="{% url 'tronic_master:edit_product' product.id %}" class="btn btn-warning btn-sm">
-                            <i class="fas fa-edit"></i> Edit Product
-                        </a>
+                        <!-- ✅ UNIFIED EDIT BUTTON - Works for both bulk and single -->
+                        {% if product.category.is_single_item %}
+                            <a href="{% url 'tronic_master:edit_single_product' product.id %}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i> Edit Product
+                            </a>
+                        {% else %}
+                            <a href="{% url 'tronic_master:edit_bulk_product' product.id %}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i> Edit Product
+                            </a>
+                        {% endif %}
+                        
                         <a href="{% url 'tronic_master:product_list' %}" class="btn btn-light btn-sm">
                             <i class="fas fa-arrow-left"></i> Back
                         </a>

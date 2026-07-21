@@ -1249,7 +1249,6 @@ def product_list(request):
     }
     return render(request, 'tronic_master/product_list.html', context)
 
-
 @login_required
 def product_detail(request, product_id):
     """View product details with all inventory units"""
@@ -1305,7 +1304,6 @@ def product_detail(request, product_id):
     }
     return render(request, 'tronic_master/product_detail.html', context)
 
-
 @login_required
 @check_product_limit
 def add_product_selection(request):
@@ -1315,6 +1313,9 @@ def add_product_selection(request):
 
 
 
+# ============================================
+#  SINGLE PRODUCT VIEW
+# ============================================
 @login_required
 @check_product_limit
 def add_single_product(request):
@@ -1453,7 +1454,185 @@ def add_single_product(request):
     }
     return render(request, 'tronic_master/add_single_product.html', context)
 
+@login_required
+def edit_single_product(request, product_id):
+    """Edit single product (IMEI/Serial tracked) - Edit product details only, NOT identifiers"""
+    tenant = request.user.tenant
 
+    if not tenant:
+        messages.error(request, 'No tenant assigned to your account')
+        return redirect('dashboard')
+
+    # ✅ Get the product
+    product = get_object_or_404(Product, id=product_id, tenant=tenant)
+    
+    # ✅ Check if this is a single item category
+    if not product.category.is_single_item:
+        messages.error(request, 'This is not a single item product')
+        return redirect('tronic_master:product_detail', product_id=product.id)
+
+    # ✅ Get all units for this product (for display only)
+    units = ProductUnit.objects.filter(
+        tenant=tenant,
+        product=product
+    ).order_by('created_at')
+
+    # ✅ Get the first unit for pricing reference
+    first_unit = units.first()
+    
+    # ✅ Get branches, categories, suppliers for dropdowns
+    branches = Branch.objects.filter(tenant=tenant, is_active=True)
+    categories = Category.objects.filter(tenant=tenant, is_active=True)
+    suppliers = Supplier.objects.filter(tenant=tenant, is_active=True)
+
+    if request.method == 'POST':
+        # ============================================
+        # GET FORM DATA - NO IDENTIFIERS
+        # ============================================
+        name = request.POST.get('name', '').strip()
+        brand = request.POST.get('brand', '').strip()
+        model = request.POST.get('model', '').strip()
+        category_id = request.POST.get('category_id')
+        branch_id = request.POST.get('branch_id')
+        supplier_id = request.POST.get('supplier_id')
+        
+        buying_price = request.POST.get('buying_price', 0)
+        selling_price = request.POST.get('selling_price', 0)
+        best_price = request.POST.get('best_price')
+        reorder_level = request.POST.get('reorder_level', 5)
+        warranty_months = request.POST.get('warranty_months', 12)
+
+        # ============================================
+        # VALIDATE REQUIRED FIELDS
+        # ============================================
+        if not name:
+            messages.error(request, 'Product name is required')
+            return redirect('tronic_master:edit_single_product', product_id=product.id)
+
+        if not branch_id:
+            messages.error(request, 'Please select a branch')
+            return redirect('tronic_master:edit_single_product', product_id=product.id)
+
+        if not selling_price:
+            messages.error(request, 'Selling price is required')
+            return redirect('tronic_master:edit_single_product', product_id=product.id)
+
+        try:
+            selling_price = Decimal(str(selling_price))
+            if selling_price <= 0:
+                messages.error(request, 'Selling price must be greater than 0')
+                return redirect('tronic_master:edit_single_product', product_id=product.id)
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid selling price')
+            return redirect('tronic_master:edit_single_product', product_id=product.id)
+
+        # ============================================
+        # UPDATE PRODUCT
+        # ============================================
+        branch = get_object_or_404(Branch, id=branch_id, tenant=tenant)
+        
+        supplier = None
+        if supplier_id:
+            supplier = get_object_or_404(Supplier, id=supplier_id, tenant=tenant)
+
+        # ✅ Validate category if changed
+        if category_id:
+            category = get_object_or_404(Category, id=category_id, tenant=tenant)
+            if not category.is_single_item:
+                messages.error(request, 'Selected category does not support single items')
+                return redirect('tronic_master:edit_single_product', product_id=product.id)
+            product.category = category
+
+        # ✅ Update product fields
+        product.name = name
+        product.brand = brand
+        product.model = model
+        product.branch = branch
+        product.supplier = supplier
+        product.default_buying_price = float(buying_price) if buying_price else 0
+        product.default_selling_price = float(selling_price) if selling_price else 0
+        product.default_best_price = float(best_price) if best_price else None
+        product.reorder_level = int(reorder_level) if reorder_level else 5
+        product.warranty_months = int(warranty_months) if warranty_months else 12
+        
+        product.save()
+
+        # ============================================
+        # ✅ UPDATE EXISTING UNITS - Update prices only
+        # ============================================
+        for unit in units:
+            # Only update unit prices if they don't have custom prices
+            # OR if the product price changed
+            if not unit.unit_buying_price or unit.unit_buying_price == 0:
+                unit.unit_buying_price = float(buying_price) if buying_price else None
+            if not unit.unit_selling_price or unit.unit_selling_price == 0:
+                unit.unit_selling_price = float(selling_price) if selling_price else None
+            if not unit.best_price or unit.best_price == 0:
+                unit.best_price = float(best_price) if best_price else None
+            unit.save()
+
+        # ✅ Update quantities (just in case)
+        product.update_quantities()
+
+        # ✅ Queue sync if offline
+        if getattr(settings, 'OFFLINE_MODE', False):
+            try:
+                SyncQueue.objects.create(
+                    tenant_id=tenant.id,
+                    model_name='Product',
+                    object_id=str(product.id),
+                    operation='UPDATE',
+                    data={
+                        'id': product.id,
+                        'sku_code': product.sku_code,
+                        'name': product.name,
+                        'brand': product.brand,
+                        'model': product.model,
+                        'default_buying_price': str(product.default_buying_price),
+                        'default_selling_price': str(product.default_selling_price),
+                        'default_best_price': str(product.default_best_price) if product.default_best_price else None,
+                        'reorder_level': product.reorder_level,
+                        'warranty_months': product.warranty_months,
+                        'is_active': product.is_active,
+                        'tenant_id': tenant.id,
+                    },
+                    priority=5
+                )
+                logger.debug(f"✅ Queued Product update sync: {product.sku_code}")
+            except Exception as e:
+                logger.error(f"Failed to queue Product sync: {e}")
+
+        messages.success(request, f'Product "{product.name}" updated successfully!')
+        return redirect('tronic_master:product_detail', product_id=product.id)
+
+    # ============================================
+    # GET REQUEST - PREPARE FORM
+    # ============================================
+    
+    # ✅ Get current values for form
+    current_buying_price = first_unit.unit_buying_price if first_unit and first_unit.unit_buying_price else product.default_buying_price
+    current_selling_price = first_unit.unit_selling_price if first_unit and first_unit.unit_selling_price else product.default_selling_price
+    current_best_price = first_unit.best_price if first_unit and first_unit.best_price else product.default_best_price
+
+    context = {
+        'tenant': tenant,
+        'product': product,
+        'units': units,
+        'unit_count': units.count(),
+        'branches': branches,
+        'categories': categories,
+        'suppliers': suppliers,
+        'current_buying_price': current_buying_price,
+        'current_selling_price': current_selling_price,
+        'current_best_price': current_best_price,
+        'is_edit': True,
+    }
+    return render(request, 'tronic_master/edit_single_product.html', context)
+
+
+# ============================================
+# BULK PRODUCT VIEW
+# ============================================
 @login_required
 @check_product_limit
 def add_bulk_product(request):
@@ -1636,7 +1815,6 @@ def add_bulk_product(request):
     }
     return render(request, 'tronic_master/add_bulk_product.html', context)
 
-
 @login_required
 def edit_bulk_product(request, product_id):
     """Edit bulk product information - SKU CANNOT BE CHANGED"""
@@ -1773,6 +1951,8 @@ def edit_bulk_product(request, product_id):
     return render(request, 'tronic_master/edit_bulk_product.html', context)
 
 
+
+
 @login_required
 def restock_product(request, product_id):
     """Restock a bulk product"""
@@ -1856,8 +2036,6 @@ def restock_product(request, product_id):
         'tenant': tenant,
     }
     return render(request, 'tronic_master/restock_product.html', context)
-
-
 
 @login_required
 def edit_product(request, product_id):

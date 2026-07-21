@@ -31,7 +31,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-muted mb-1">Total Products</h6>
-                            <h3 class="fw-bold mb-0">{{ total_products }}</h3>
+                            <h3 class="fw-bold mb-0">{{ products.paginator.count|default:0 }}</h3>
                         </div>
                         <div class="bg-primary bg-opacity-50 rounded p-3">
                             <i class="fas fa-box text-primary fa-2x"></i>
@@ -46,7 +46,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-muted mb-1">Total Stock Value</h6>
-                            <h3 class="fw-bold mb-0">KES {{ total_value|floatformat:0 }}</h3>
+                            <h3 class="fw-bold mb-0">KES {{ total_value|floatformat:0|default:"0" }}</h3>
                         </div>
                         <div class="bg-success bg-opacity-50 rounded p-3">
                             <i class="fas fa-money-bill text-success fa-2x"></i>
@@ -62,7 +62,7 @@
                         <div>
                             <h6 class="text-muted mb-1">Low Stock Items</h6>
                             <h3 class="fw-bold mb-0 text-warning">
-                                {{ total_count|default:0 }}
+                                {{ low_stock_count|default:0 }}
                             </h3>
                         </div>
                         <div class="bg-warning bg-opacity-50 rounded p-3">
@@ -79,7 +79,7 @@
                         <div>
                             <h6 class="text-muted mb-1">Out of Stock</h6>
                             <h3 class="fw-bold mb-0 text-danger">
-                                {{ total_count|default:0 }}
+                                {{ out_of_stock_count|default:0 }}
                             </h3>
                         </div>
                         <div class="bg-danger bg-opacity-50 rounded p-3">
@@ -168,6 +168,7 @@
                             <th>SKU</th>
                             <th>Product</th>
                             <th>Category</th>
+                            <th>Type</th>
                             <th>Price (KES)</th>
                             <th>Stock</th>
                             <th>Status</th>
@@ -203,6 +204,13 @@
                             </td>
                             <td>{{ product.category.name|default:"-" }}</td>
                             <td>
+                                {% if product.category.is_single_item %}
+                                    <span class="badge bg-info">Single</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Bulk</span>
+                                {% endif %}
+                            </td>
+                            <td>
                                 <div>Buy: KES {{ product.default_buying_price|floatformat:0 }}</div>
                                 <div class="fw-bold">Sell: KES {{ product.default_selling_price|floatformat:0 }}</div>
                             </td>
@@ -227,10 +235,21 @@
                                        class="btn btn-outline-primary" title="View">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{% url 'tronic_master:edit_product' product.id %}" 
-                                       class="btn btn-outline-secondary" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
+                                    <!-- ============================================ -->
+                                    <!-- ✅ FIXED: Unified Edit Button               -->
+                                    <!-- ============================================ -->
+                                    {% if product.category.is_single_item %}
+                                        <a href="{% url 'tronic_master:edit_single_product' product.id %}" 
+                                           class="btn btn-outline-secondary" title="Edit Single Product">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'tronic_master:edit_bulk_product' product.id %}" 
+                                           class="btn btn-outline-secondary" title="Edit Bulk Product">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    {% endif %}
+                                    <!-- ============================================ -->
                                     <button class="btn btn-outline-danger" 
                                             onclick="confirmDelete('{{ product.id }}', '{{ product.name }}')"
                                             title="Delete">
@@ -241,7 +260,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center py-4 text-muted">
+                            <td colspan="9" class="text-center py-4 text-muted">
                                 <i class="fas fa-inbox fa-3x d-block mb-3 opacity-50"></i>
                                 No products found matching your criteria.
                             </td>
@@ -325,14 +344,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('selectAll');
     const checkboxes = document.querySelectorAll('.product-checkbox');
     
-    selectAll.addEventListener('change', function() {
-        checkboxes.forEach(cb => cb.checked = this.checked);
-    });
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+    }
     
     checkboxes.forEach(cb => {
         cb.addEventListener('change', function() {
-            const allChecked = Array.from(checkboxes).every(c => c.checked);
-            selectAll.checked = allChecked;
+            if (selectAll) {
+                const allChecked = Array.from(checkboxes).every(c => c.checked);
+                selectAll.checked = allChecked;
+            }
         });
     });
 });

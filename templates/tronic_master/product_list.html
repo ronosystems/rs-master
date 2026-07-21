@@ -118,16 +118,21 @@
                                             </a>
                                             
                                             {% if user.is_super_admin or user.is_tenant_admin %}
-                                            <!-- CONDITIONAL EDIT BUTTON -->
+                                            <!-- ============================================ -->
+                                            <!-- ✅ FIXED: Conditional Edit Button           -->
+                                            <!-- ============================================ -->
                                             {% if product.category.is_single_item %}
-                                                <a href="{% url 'tronic_master:edit_product' product.id %}" class="btn btn-warning" title="Edit Single Product">
+                                                <!-- Single Item → Use edit_single_product -->
+                                                <a href="{% url 'tronic_master:edit_single_product' product.id %}" class="btn btn-warning" title="Edit Single Product">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
                                             {% else %}
+                                                <!-- Bulk Item → Use edit_bulk_product -->
                                                 <a href="{% url 'tronic_master:edit_bulk_product' product.id %}" class="btn btn-warning" title="Edit Bulk Product">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
                                             {% endif %}
+                                            <!-- ============================================ -->
                                             
                                             <a href="{% url 'tronic_master:delete_product' product.id %}" class="btn btn-danger" 
                                                onclick="return confirm('Are you sure you want to delete {{ product.name }}?')" title="Delete">

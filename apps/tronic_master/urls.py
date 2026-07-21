@@ -45,10 +45,11 @@ urlpatterns = [
     path('inventory/', inventory_views.product_list, name='product_list'),
     path('inventory/add/', inventory_views.add_product_selection, name='add_product_selection'),
     path('inventory/add-single/', inventory_views.add_single_product, name='add_single_product'),
+    path('edit_single_product/<int:product_id>/', views.edit_single_product, name='edit_single_product'),
     path('inventory/add-bulk/', inventory_views.add_bulk_product, name='add_bulk_product'),
+    path('inventory/<int:product_id>/edit-bulk/', inventory_views.edit_bulk_product, name='edit_bulk_product'),
     path('inventory/<int:product_id>/', inventory_views.product_detail, name='product_detail'),
     path('inventory/<int:product_id>/edit/', inventory_views.edit_product, name='edit_product'),
-    path('inventory/<int:product_id>/edit-bulk/', inventory_views.edit_bulk_product, name='edit_bulk_product'),
     path('inventory/<int:product_id>/delete/', inventory_views.delete_product, name='delete_product'),
     path('inventory/manage/', inventory_views.manage_products, name='manage_products'),
     
